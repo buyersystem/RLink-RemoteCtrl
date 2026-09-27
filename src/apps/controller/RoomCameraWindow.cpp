@@ -33,7 +33,8 @@
 #include "api/video/video_frame.h"
 #include "api/video/video_sink_interface.h"
 #include "libyuv/convert_argb.h"
-#include "src/apps/remote/InProcessSessionEngine.h"
+#include "src/apps/remote/ISessionMediaAccess.h"
+#include "src/webrtc/IWebRtcSession.h"
 #include "src/core/RoomState.h"
 
 namespace remote::controller {
@@ -350,9 +351,9 @@ private:
     bool thumbnail_ = false;
 };
 
-RoomCameraWindow::RoomCameraWindow(app::InProcessSessionEngine* engine,
+RoomCameraWindow::RoomCameraWindow(app::ISessionMediaAccess* media,
                                    QWidget* parent)
-    : FramelessMainWindow(parent), engine_(engine)
+    : FramelessMainWindow(parent), media_(media)
 {
     setWindowTitle(QStringLiteral("RLink - 房间摄像头"));
     setMinimumSize(340, 420);
@@ -438,7 +439,7 @@ RoomCameraWindow::~RoomCameraWindow()
 
 void RoomCameraWindow::SyncSnapshot(const SessionEngineSnapshot& snapshot)
 {
-    if (!engine_) {
+    if (!media_) {
         return;
     }
     QSet<QString> desired;
@@ -448,9 +449,9 @@ void RoomCameraWindow::SyncSnapshot(const SessionEngineSnapshot& snapshot)
     for (const auto& member : snapshot.room.members) {
         const bool local = member.deviceId == snapshot.localDeviceId;
         const bool localStarting = local &&
-            (snapshot.localCamera == LocalCameraState::kStarting ||
-             snapshot.localCamera == LocalCameraState::kPublishing ||
-             snapshot.localCamera == LocalCameraState::kStopping);
+            (snapshot.media.localCamera == LocalCameraState::kStarting ||
+             snapshot.media.localCamera == LocalCameraState::kPublishing ||
+             snapshot.media.localCamera == LocalCameraState::kStopping);
         if (local) {
             if (!member.cameraPublishing && !localStarting) {
                 continue;
@@ -478,7 +479,7 @@ void RoomCameraWindow::SyncSnapshot(const SessionEngineSnapshot& snapshot)
             tileHosts_.insert(deviceId, host);
             newHosts.push_back(host);
             if (local) {
-                engine_->SetLocalCameraPreviewSink(tile);
+                media_->SetLocalCameraPreviewSink(tile);
             }
         } else {
             tile->SetName(MemberName(member));
@@ -488,13 +489,13 @@ void RoomCameraWindow::SyncSnapshot(const SessionEngineSnapshot& snapshot)
             continue;
         }
         const auto pair = std::find_if(
-            snapshot.roomPeerConnections.begin(),
-            snapshot.roomPeerConnections.end(),
+            snapshot.roomActivity.peerConnections.begin(),
+            snapshot.roomActivity.peerConnections.end(),
             [&member](const RoomPeerConnectionSnapshot& candidate) {
                 return candidate.peerDeviceId == member.deviceId &&
                        candidate.state == RoomPeerConnectionState::kActive;
             });
-        const QString newPair = pair == snapshot.roomPeerConnections.end()
+        const QString newPair = pair == snapshot.roomActivity.peerConnections.end()
                                     ? QString()
                                     : QString::fromStdString(pair->pairId);
         const QString oldPair = pairBindings_.value(deviceId);
@@ -502,11 +503,11 @@ void RoomCameraWindow::SyncSnapshot(const SessionEngineSnapshot& snapshot)
             continue;
         }
         if (!oldPair.isEmpty()) {
-            engine_->SetRoomRemoteVideoSink(
+            media_->SetRoomRemoteVideoSink(
                 oldPair.toStdString(), kCameraMainVideoSlot, nullptr);
         }
         if (!newPair.isEmpty()) {
-            engine_->SetRoomRemoteVideoSink(
+            media_->SetRoomRemoteVideoSink(
                 newPair.toStdString(), kCameraMainVideoSlot, tile);
             pairBindings_.insert(deviceId, newPair);
         } else {
@@ -854,12 +855,12 @@ void RoomCameraWindow::RemoveTile(const QString& deviceId)
         return;
     }
     const QString pairId = pairBindings_.take(deviceId);
-    if (!pairId.isEmpty() && engine_) {
-        engine_->SetRoomRemoteVideoSink(
+    if (!pairId.isEmpty() && media_) {
+        media_->SetRoomRemoteVideoSink(
             pairId.toStdString(), kCameraMainVideoSlot, nullptr);
     }
-    if (engine_ && tile->IsLocal()) {
-        engine_->SetLocalCameraPreviewSink(nullptr);
+    if (media_ && tile->IsLocal()) {
+        media_->SetLocalCameraPreviewSink(nullptr);
     }
     auto* host = tileHosts_.take(deviceId);
     if (host) {
@@ -871,12 +872,12 @@ void RoomCameraWindow::RemoveTile(const QString& deviceId)
 
 void RoomCameraWindow::DetachAllSinks()
 {
-    if (!engine_) {
+    if (!media_) {
         return;
     }
-    engine_->SetLocalCameraPreviewSink(nullptr);
+    media_->SetLocalCameraPreviewSink(nullptr);
     for (auto it = pairBindings_.cbegin(); it != pairBindings_.cend(); ++it) {
-        engine_->SetRoomRemoteVideoSink(
+        media_->SetRoomRemoteVideoSink(
             it.value().toStdString(), kCameraMainVideoSlot, nullptr);
     }
     pairBindings_.clear();

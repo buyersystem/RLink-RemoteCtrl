@@ -17,14 +17,10 @@
 
 #include "api/video/adapted_video_track_source.h"
 #include "modules/desktop_capture/desktop_capturer.h"
+#include "src/core/DesktopCaptureTypes.h"
 #include "src/core/DisplayTopology.h"
 
 namespace remote {
-
-enum class DesktopCaptureImplementation : std::uint8_t {
-    kLibWebRtc,
-    kNativeDxgi,
-};
 
 // Captures one Windows display on a dedicated thread. WebRTC selects DXGI
 // Desktop Duplication once when the capturer is created and keeps GDI as the

@@ -7,7 +7,6 @@
 #include <functional>
 #include <memory>
 #include <optional>
-#include <thread>
 
 #include <QHash>
 #include <QElapsedTimer>
@@ -26,10 +25,10 @@ namespace remote {
 class WindowsInputExecutor;
 namespace app {
 class FileTransferController;
+class ISessionMediaAccess;
 }
 }
 
-class QComboBox;
 class QAction;
 class QCloseEvent;
 class QEvent;
@@ -37,8 +36,6 @@ class QFrame;
 class QGraphicsOpacityEffect;
 class QLabel;
 class QLineEdit;
-class QListWidget;
-class QParallelAnimationGroup;
 class QPropertyAnimation;
 class QProcess;
 class QPoint;
@@ -54,16 +51,26 @@ namespace remote::controller {
 
 class CameraWindow;
 class FileTransferWindow;
+class DiagnosticsPage;
+class DirectConnectPage;
+class OwnedDevicesPage;
+class RecentConnectionsPage;
 class RemoteSessionWindow;
+class RoomPage;
+struct RoomPageControls;
 class RoomCameraWindow;
+class SettingsPage;
+struct SettingsPageControls;
 
 class ControllerMainWindow final : public FramelessMainWindow,
                                    private ISessionEngineObserver,
                                    private app::IClipboardControllerObserver {
 public:
-    explicit ControllerMainWindow(std::unique_ptr<ISessionEngine> engine,
-                                  bool startEngineImmediately = true,
-                                  QWidget* parent = nullptr);
+    explicit ControllerMainWindow(
+        std::unique_ptr<ISessionEngine> engine,
+        bool startEngineImmediately = true,
+        app::ISessionMediaAccess* sessionMedia = nullptr,
+        QWidget* parent = nullptr);
     ~ControllerMainWindow() override;
 
     void ActivateFromExternalLaunch();
@@ -95,6 +102,14 @@ private:
     void OnClipboardStateChanged(
         const app::ClipboardControllerSnapshot& snapshot) override;
     void BuildUi();
+    void BuildShellAndRoomPage();
+    RoomPageControls& RoomControls();
+    void BuildDeviceAndRecentPages();
+    void BuildDiagnosticsPage();
+    void BuildSettingsPage();
+    SettingsPageControls& SettingsControls();
+    void BuildHelpAndAuthorPages();
+    void ConnectUiSignals();
     void BuildSystemTray();
     void ShowFromSystemTray();
     void QuitFromSystemTray();
@@ -105,8 +120,8 @@ private:
     void OpenSoftwareUpdate();
     void QuitForSoftwareUpdate();
     bool InitializeEngine();
-    void CompleteEngineInitialization(
-        const SessionCommandResult& startResult);
+    void ApplyEngineInitializationState(
+        const SessionEngineSnapshot& snapshot);
     void ApplyAuthenticationAvailability(bool authenticated);
     void StartSession(const QString& deviceId,
                       const QString& deviceName,
@@ -200,10 +215,9 @@ private:
         softwareUpdateController_;
     bool softwareUpdatePromptOpen_ = false;
     std::unique_ptr<ISessionEngine> engine_;
-    std::jthread engineStartThread_;
-    QLineEdit* deviceIdEdit_ = nullptr;
-    QLineEdit* verificationCodeEdit_ = nullptr;
-    QPushButton* connectButton_ = nullptr;
+    app::ISessionMediaAccess* sessionMedia_ = nullptr;
+    SessionEngineState engineInitializationUiState_ =
+        SessionEngineState::kStopped;
     QTimer* assistedSessionTimeoutTimer_ = nullptr;
     bool assistedSessionPending_ = false;
     bool assistedSessionActive_ = false;
@@ -211,8 +225,6 @@ private:
     bool assistedSessionTimedOut_ = false;
     bool ownedDeviceSessionPending_ = false;
     QString lastDirectSessionToastError_;
-    QLabel* runtimeStatus_ = nullptr;
-    QLabel* decoderStatus_ = nullptr;
     QLabel* connectivityPill_ = nullptr;
     QFrame* profileCard_ = nullptr;
     QLabel* profileAvatar_ = nullptr;
@@ -224,8 +236,6 @@ private:
     QLabel* accountMenuName_ = nullptr;
     QLabel* accountMenuDetail_ = nullptr;
     QPushButton* softwareUpdateAction_ = nullptr;
-    QLabel* softwareUpdateStatusLabel_ = nullptr;
-    QPushButton* softwareUpdateCheckButton_ = nullptr;
     QGraphicsOpacityEffect* accountMenuOpacity_ = nullptr;
     QTimer* accountMenuMotionTimer_ = nullptr;
     QElapsedTimer accountMenuMotionClock_;
@@ -234,57 +244,15 @@ private:
     int accountMenuMotionDurationMs_ = 0;
     bool accountMenuMotionHiding_ = false;
     QTimer* accountMenuHoverTimer_ = nullptr;
-    QFrame* deviceLoginPrompt_ = nullptr;
-    QLabel* deviceLoginStatus_ = nullptr;
-    QPushButton* deviceLoginButton_ = nullptr;
-    QFrame* deviceIdentityCard_ = nullptr;
-    QFrame* deviceDirectAssistCard_ = nullptr;
-    QFrame* deviceStatusCard_ = nullptr;
-    QLabel* deviceAccountLabel_ = nullptr;
-    QLabel* localDeviceId_ = nullptr;
-    QPushButton* copyDeviceIdButton_ = nullptr;
-    QLabel* localVerificationCode_ = nullptr;
-    QPushButton* copyVerificationCodeButton_ = nullptr;
-    QPushButton* shareLocalCredentialsButton_ = nullptr;
-    QLabel* connectionHint_ = nullptr;
-    QComboBox* createRoomCapacity_ = nullptr;
-    QPushButton* createRoomButton_ = nullptr;
-    QLineEdit* roomIdEdit_ = nullptr;
-    QPushButton* joinRoomButton_ = nullptr;
-    QLabel* roomActionHint_ = nullptr;
-    QFrame* roomEntryPanel_ = nullptr;
-    QFrame* roomPanel_ = nullptr;
-    QStackedWidget* roomWorkspaceStack_ = nullptr;
-    QParallelAnimationGroup* roomWorkspaceAnimation_ = nullptr;
-    QWidget* roomWorkspaceTransitionLayer_ = nullptr;
+    RoomPage* roomPage_ = nullptr;
     bool roomWorkspaceTargetActive_ = false;
     bool roomWorkspaceTransitionPending_ = false;
     quint64 roomWorkspaceTransitionRequest_ = 0;
-    QLabel* roomIdLabel_ = nullptr;
-    QPushButton* copyRoomIdButton_ = nullptr;
-    QLabel* roomOccupancyLabel_ = nullptr;
-    QLabel* roomOwnerLabel_ = nullptr;
-    QLabel* roomScreenSharerLabel_ = nullptr;
-    QLabel* roomControllerLabel_ = nullptr;
-    QLabel* roomPeerConnectivityLabel_ = nullptr;
-    QLabel* roomSeatUsageLabel_ = nullptr;
-    QLabel* roomMemberSummaryLabel_ = nullptr;
-    QLabel* roomMemberFooterLabel_ = nullptr;
-    QListWidget* roomMemberList_ = nullptr;
     QString renderedRoomMemberKey_;
-    QComboBox* activeRoomCapacity_ = nullptr;
-    QPushButton* applyRoomCapacityButton_ = nullptr;
-    QPushButton* roomScreenShareButton_ = nullptr;
-    QPushButton* roomCameraButton_ = nullptr;
-    QPushButton* roomMicrophoneButton_ = nullptr;
-    QPushButton* roomSpeakerButton_ = nullptr;
-    QPushButton* roomCameraGalleryButton_ = nullptr;
-    QPushButton* roomFileTransferButton_ = nullptr;
     QPushButton* fileTransferNavButton_ = nullptr;
-    QPushButton* leaveRoomButton_ = nullptr;
-    QLabel* roomStageLabel_ = nullptr;
     CustomTitleBar* titleBar_ = nullptr;
     QStackedWidget* pageStack_ = nullptr;
+    SettingsPage* settingsPage_ = nullptr;
     QPushButton* roomNavButton_ = nullptr;
     QPushButton* deviceNavButton_ = nullptr;
     QPushButton* myDevicesNavButton_ = nullptr;
@@ -306,76 +274,23 @@ private:
     bool sessionEngineStarted_ = false;
     bool applicationExitPrepared_ = false;
     bool authenticationAvailable_ = true;
-    QComboBox* animationLevelSelector_ = nullptr;
-    QComboBox* themeModeSelector_ = nullptr;
-    QComboBox* fontFamilySelector_ = nullptr;
-    QComboBox* fontSizeSelector_ = nullptr;
-    QComboBox* autoStartSelector_ = nullptr;
-    QComboBox* startupVisibilitySelector_ = nullptr;
-    QComboBox* closeButtonBehaviorSelector_ = nullptr;
-    QComboBox* defaultRoomCapacitySelector_ = nullptr;
-    QComboBox* desktopCaptureSelector_ = nullptr;
-    QComboBox* videoEncoderSelector_ = nullptr;
-    QComboBox* ffmpegHardwareBackendSelector_ = nullptr;
-    QComboBox* ffmpegX264PresetSelector_ = nullptr;
-    QComboBox* videoDecoderSelector_ = nullptr;
-    QComboBox* videoRendererSelector_ = nullptr;
     bool videoPipelineSettingsBusy_ = false;
     bool videoPipelineSettingsApplyPending_ = false;
-    QComboBox* dragPointerSampleRateSelector_ = nullptr;
-    QComboBox* remotePasteEnabledSelector_ = nullptr;
-    QComboBox* clipboardFormatsSelector_ = nullptr;
-    QComboBox* clipboardLargeFileLimitSelector_ = nullptr;
-    QComboBox* clipboardCacheRetentionSelector_ = nullptr;
-    QComboBox* clipboardCacheCapacitySelector_ = nullptr;
-    QLabel* clipboardCachePathLabel_ = nullptr;
-    QLabel* clipboardCacheUsageLabel_ = nullptr;
-    QPushButton* clearClipboardCacheButton_ = nullptr;
-    QLabel* decoderBenchmarkSummary_ = nullptr;
-    QPushButton* decoderBenchmarkButton_ = nullptr;
     QProcess* decoderBenchmarkProcess_ = nullptr;
     bool decoderBenchmarkManualRequest_ = false;
     QString decoderBenchmarkHardwareFingerprint_;
-    QLabel* encoderBenchmarkSummary_ = nullptr;
-    QPushButton* encoderBenchmarkButton_ = nullptr;
     QProcess* encoderBenchmarkProcess_ = nullptr;
     bool encoderBenchmarkManualRequest_ = false;
     QString encoderBenchmarkHardwareFingerprint_;
     QString encoderBenchmarkCaptureBackend_;
     QString encoderBenchmarkX264Preset_;
-    QComboBox* cameraGalleryBehaviorSelector_ = nullptr;
-    QComboBox* cameraDeviceSelector_ = nullptr;
-    QComboBox* microphoneDeviceSelector_ = nullptr;
-    QComboBox* speakerDeviceSelector_ = nullptr;
-    QLabel* mediaDeviceStatusLabel_ = nullptr;
-    QPushButton* refreshMediaDevicesButton_ = nullptr;
     QTimer* mediaDeviceRefreshDebounceTimer_ = nullptr;
-    QLabel* devicePageSignalStatus_ = nullptr;
-    QVBoxLayout* recentRoomsLayout_ = nullptr;
-    QVBoxLayout* recentDevicesLayout_ = nullptr;
-    QVBoxLayout* ownedDevicesCardsLayout_ = nullptr;
-    QLabel* ownedDevicesSummaryLabel_ = nullptr;
-    QFrame* ownedDevicesEmptyState_ = nullptr;
-    QLabel* ownedDevicesEmptyArtwork_ = nullptr;
-    QPushButton* ownedDevicesRefreshButton_ = nullptr;
     QWidget* localDevicePage_ = nullptr;
-    QWidget* ownedDevicesPage_ = nullptr;
-    QWidget* recentConnectionsPage_ = nullptr;
-    QWidget* debugPage_ = nullptr;
+    DirectConnectPage* directConnectPage_ = nullptr;
+    OwnedDevicesPage* ownedDevicesPage_ = nullptr;
+    RecentConnectionsPage* recentConnectionsPage_ = nullptr;
+    DiagnosticsPage* debugPage_ = nullptr;
     bool darkInterfaceTheme_ = false;
-    quint64 renderedOwnedDevicesRevision_ = 0;
-    SessionConnectivityState renderedOwnedDevicesConnectivity_ =
-        SessionConnectivityState::kNotConfigured;
-    QFrame* recentEmptyState_ = nullptr;
-    QFrame* recentDevicesEmptyState_ = nullptr;
-    QHash<QString, QLabel*> debugValueLabels_;
-    QWidget* statsCardsWidget_ = nullptr;
-    QPushButton* screenFrameRateLogButton_ = nullptr;
-    bool screenFrameRateLogEnabled_ = false;
-    QPushButton* inputEventStatsButton_ = nullptr;
-    bool inputEventStatsEnabled_ = false;
-    QPushButton* copyDebugButton_ = nullptr;
-    QPushButton* copyMediaDebugButton_ = nullptr;
     QString debugCopyText_;
     QString mediaDebugCopyText_;
     QString statsDebugCopyText_;

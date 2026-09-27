@@ -12,19 +12,17 @@
 #include <optional>
 #include <thread>
 
-#include "src/apps/remote/InProcessSessionEngine.h"
+#include "src/apps/remote/ISessionMediaAccess.h"
 #include "src/protocol/RemoteInputProtocol.h"
 
 namespace remote::controller {
 
 class RemoteInputDispatcher final {
 public:
-    void SetEngine(app::InProcessSessionEngine* engine,
-                   bool directSession = false)
+    void SetMediaAccess(app::ISessionMediaAccess* media)
     {
         std::lock_guard lock(mutex_);
-        engine_ = engine;
-        directSession_ = directSession;
+        media_ = media;
     }
 
     void SetEnabled(bool enabled)
@@ -37,23 +35,20 @@ public:
     {
         std::lock_guard lock(mutex_);
         enabled_ = false;
-        engine_ = nullptr;
-        directSession_ = false;
+        media_ = nullptr;
     }
 
     bool Send(const RemoteInputEvent& event)
     {
         std::lock_guard lock(mutex_);
-        return enabled_ && engine_ &&
-            (directSession_ ? engine_->SendDirectInput(event)
-                            : engine_->SendRoomInput(event)).accepted;
+        return enabled_ && media_ &&
+            media_->SendRemoteInput(event).accepted;
     }
 
 private:
     std::mutex mutex_;
-    app::InProcessSessionEngine* engine_ = nullptr;
+    app::ISessionMediaAccess* media_ = nullptr;
     bool enabled_ = false;
-    bool directSession_ = false;
 };
 
 class HighResolutionPointerMoveScheduler final {

@@ -17,6 +17,8 @@
 #include <algorithm>
 
 #include "AccessTokenService.h"
+#include "DirectSessionRegistry.h"
+#include "RoomRegistry.h"
 #include "SignalServer.h"
 #include "src/server/auth/LogtoUserInfoClient.h"
 #include "src/server/auth/LogtoWebhookServer.h"
@@ -338,6 +340,14 @@ int main(int argc, char* argv[])
         QStringLiteral("auth-storage-self-test"),
         QStringLiteral(
             "Test UserInfo classification and SQLite identity ownership, then exit."));
+    const QCommandLineOption directSessionRegistrySelfTestOption(
+        QStringLiteral("direct-session-registry-self-test"),
+        QStringLiteral(
+            "Test direct-session ownership and device indexes, then exit."));
+    const QCommandLineOption roomRegistrySelfTestOption(
+        QStringLiteral("room-registry-self-test"),
+        QStringLiteral(
+            "Test room state ownership and indexes, then exit."));
     const QCommandLineOption webhookListenOption(
         QStringLiteral("logto-webhook-listen"),
         QStringLiteral(
@@ -375,6 +385,8 @@ int main(int argc, char* argv[])
                        disableBusinessRateLimitsTestOnlyOption,
                        logtoIssuerOption,
                        identityDatabaseOption, authStorageSelfTestOption,
+                       directSessionRegistrySelfTestOption,
+                       roomRegistrySelfTestOption,
                        webhookListenOption, webhookPortOption,
                        webhookSigningKeyFileOption,
                        managementClientIdOption,
@@ -383,6 +395,32 @@ int main(int argc, char* argv[])
 
     if (parser.isSet(authStorageSelfTestOption)) {
         return RunAuthStorageSelfTest();
+    }
+    if (parser.isSet(directSessionRegistrySelfTestOption)) {
+        QString errorMessage;
+        const bool passed =
+            remote::signaling_server::RunDirectSessionRegistrySelfTest(
+                &errorMessage);
+        QTextStream(stdout)
+            << "DIRECT_SESSION_REGISTRY="
+            << (passed ? "PASS" : "FAIL") << Qt::endl;
+        if (!passed) {
+            return Fail(errorMessage);
+        }
+        return 0;
+    }
+    if (parser.isSet(roomRegistrySelfTestOption)) {
+        QString errorMessage;
+        const bool passed =
+            remote::signaling_server::RunRoomRegistrySelfTest(
+                &errorMessage);
+        QTextStream(stdout)
+            << "ROOM_REGISTRY="
+            << (passed ? "PASS" : "FAIL") << Qt::endl;
+        if (!passed) {
+            return Fail(errorMessage);
+        }
+        return 0;
     }
     const bool usesLogto = parser.isSet(logtoIssuerOption);
     if (usesLogto && parser.isSet(messageAuthTestOnlyOption)) {

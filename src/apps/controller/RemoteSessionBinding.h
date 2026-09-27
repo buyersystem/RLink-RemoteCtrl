@@ -7,7 +7,7 @@
 
 #include <QString>
 
-#include "src/core/ISessionEngine.h"
+#include "src/core/SessionEngineTypes.h"
 
 namespace remote::controller {
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-only
 // Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd)
 
-#include "QtWebSocketSignalingClient.h"
+#include "QtWebSocketSignalingClient.Internal.h"
 
 #include <algorithm>
 #include <atomic>
@@ -35,17 +35,7 @@
 #include "SignalingJsonCodec.h"
 
 namespace remote {
-namespace {
-
-constexpr int kProtocolVersion = 5;
-constexpr quint64 kMaximumMessageBytes = 1024 * 1024;
-constexpr std::size_t kMaximumAccessTokenBytes = 16 * 1024;
-constexpr std::size_t kMaximumRememberedMessageIds = 4096;
-
-using signaling_json::ReadStringArray;
-using signaling_json::StringArray;
-using signaling_json::ToQString;
-using signaling_json::ToString;
+namespace signaling_client_detail {
 
 SignalingOperationResult Success()
 {
@@ -228,112 +218,9 @@ bool ReadRoomSnapshot(const QJsonValue& value, RoomSnapshot* snapshot)
     return true;
 }
 
-}  // namespace
+}  // namespace signaling_client_detail
 
-class QtWebSocketSignalingClient::Impl final {
-public:
-#include "QtWebSocketSignalingClient.Lifecycle.inc"
-#include "QtWebSocketSignalingClient.OwnedDevices.inc"
-#include "QtWebSocketSignalingClient.LegacySession.inc"
-#include "QtWebSocketSignalingClient.RoomCommands.inc"
-#include "QtWebSocketSignalingClient.PairTransport.inc"
-#include "QtWebSocketSignalingClient.Connection.inc"
-#include "QtWebSocketSignalingClient.Negotiation.inc"
-#include "QtWebSocketSignalingClient.Recovery.inc"
-#include "QtWebSocketSignalingClient.Dispatch.inc"
-    SignalingOperationResult SendEnvelope(const QString& type,
-                                          const std::string& sessionId,
-                                          const QJsonObject& payload)
-    {
-        if (socket_.state() != QAbstractSocket::ConnectedState) {
-            return Failure("signaling_socket_not_connected",
-                           "The signaling WebSocket is not connected.");
-        }
-        QJsonObject envelope;
-        envelope.insert(QStringLiteral("protocolVersion"), kProtocolVersion);
-        envelope.insert(
-            QStringLiteral("messageId"),
-            QUuid::createUuid().toString(QUuid::WithoutBraces));
-        envelope.insert(QStringLiteral("type"), type);
-        if (!sessionId.empty()) {
-            envelope.insert(QStringLiteral("sessionId"), ToQString(sessionId));
-        }
-        envelope.insert(QStringLiteral("payload"), payload);
-        const QString message = QString::fromUtf8(
-            QJsonDocument(envelope).toJson(QJsonDocument::Compact));
-        if (socket_.sendTextMessage(message) < 0) {
-            return Failure("signaling_send_failed",
-                           "The signaling message could not be queued.");
-        }
-        return Success();
-    }
 
-    SignalingOperationResult RequireRegistered() const
-    {
-        if (State() == SignalingConnectionState::kRegistered) {
-            return Success();
-        }
-        return Failure("signaling_not_registered",
-                       "The device is not registered with signaling.");
-    }
-
-    bool RememberMessageId(const std::string& messageId)
-    {
-        if (!receivedMessageIds_.insert(messageId).second) {
-            return false;
-        }
-        receivedMessageOrder_.push_back(messageId);
-        if (receivedMessageOrder_.size() > kMaximumRememberedMessageIds) {
-            receivedMessageIds_.erase(receivedMessageOrder_.front());
-            receivedMessageOrder_.pop_front();
-        }
-        return true;
-    }
-
-    void SetState(SignalingConnectionState state)
-    {
-        if (state_.exchange(state, std::memory_order_acq_rel) == state) {
-            return;
-        }
-        if (observer_) {
-            observer_->OnSignalingStateChanged(state);
-        }
-    }
-
-    void NotifyError(const std::string& code, const std::string& message)
-    {
-        if (observer_) {
-            observer_->OnSignalingError(code, message);
-        }
-    }
-
-    void Fail(const std::string& code, const std::string& message)
-    {
-        if (State() == SignalingConnectionState::kFailed) {
-            return;
-        }
-        SetState(SignalingConnectionState::kFailed);
-        NotifyError(code, message);
-    }
-
-    QWebSocket socket_;
-    QTimer heartbeatTimer_;
-    QTimer heartbeatDeadline_;
-    QTimer authenticationDeadline_;
-    QTimer reconnectTimer_;
-    QElapsedTimer heartbeatRoundTrip_;
-    bool heartbeatOutstanding_ = false;
-    bool manualDisconnect_ = true;
-    bool fatalDisconnect_ = false;
-    std::uint32_t reconnectAttempt_ = 0;
-    ISignalingClientObserver* observer_ = nullptr;
-    SignalingClientConfig config_;
-    QUrl endpoint_;
-    std::atomic<SignalingConnectionState> state_{
-        SignalingConnectionState::kDisconnected};
-    std::unordered_set<std::string> receivedMessageIds_;
-    std::deque<std::string> receivedMessageOrder_;
-};
 
 QtWebSocketSignalingClient::QtWebSocketSignalingClient()
     : impl_(std::make_unique<Impl>())

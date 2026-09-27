@@ -23,7 +23,7 @@ class QStackedWidget;
 class QVBoxLayout;
 
 namespace remote::app {
-class InProcessSessionEngine;
+class ISessionMediaAccess;
 }
 
 namespace remote::controller {
@@ -32,7 +32,7 @@ class RoomCameraTile;
 
 class RoomCameraWindow final : public FramelessMainWindow {
 public:
-    explicit RoomCameraWindow(app::InProcessSessionEngine* engine,
+    explicit RoomCameraWindow(app::ISessionMediaAccess* media,
                               QWidget* parent = nullptr);
     ~RoomCameraWindow() override;
 
@@ -59,7 +59,7 @@ private:
     void RemoveTile(const QString& deviceId);
     void DetachAllSinks();
 
-    app::InProcessSessionEngine* engine_ = nullptr;
+    app::ISessionMediaAccess* media_ = nullptr;
     QStackedWidget* viewStack_ = nullptr;
     QWidget* galleryHeader_ = nullptr;
     QWidget* focusPage_ = nullptr;

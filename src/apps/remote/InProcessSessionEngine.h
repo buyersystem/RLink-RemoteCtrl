@@ -3,8 +3,9 @@
 
 #pragma once
 
+#include <atomic>
 #include <chrono>
-#include <condition_variable>
+#include <functional>
 #include <memory>
 #include <mutex>
 #include <optional>
@@ -13,17 +14,14 @@
 #include <unordered_map>
 #include <vector>
 
-#include "api/media_stream_interface.h"
-#include "api/scoped_refptr.h"
-#include "api/video/video_frame.h"
-#include "api/video/video_sink_interface.h"
-#include "DirectSessionRuntimeState.h"
+#include "DirectSessionCoordinator.h"
+#include "ISessionMediaAccess.h"
+#include "LocalMediaCoordinator.h"
+#include "RoomSessionCoordinator.h"
+#include "ScreenShareCoordinator.h"
 #include "src/core/ISessionEngine.h"
 #include "src/core/SessionController.h"
 #include "src/signaling/ISignalingClient.h"
-#include "src/platform/win/WindowsDesktopCaptureSource.h"
-#include "src/platform/win/WindowsCameraCaptureSource.h"
-#include "src/platform/win/WindowsCursorMonitor.h"
 #include "src/platform/win/MfH264EncoderCapabilityProbe.h"
 #include "src/webrtc/VideoDecoderRuntimeStatus.h"
 #include "src/webrtc/VideoEncoderRuntimeStatus.h"
@@ -32,6 +30,8 @@ namespace remote {
 
 class WebRtcRuntime;
 class LibWebRtcSession;
+class WindowsCursorMonitor;
+struct WindowsCursorObservation;
 struct RoomMemberActionEnvelope;
 
 namespace testing {
@@ -40,7 +40,16 @@ class InProcessSessionEngineTestAccess;
 
 namespace app {
 
+struct InProcessSessionMediaState;
+class SessionStatsPoller;
+class InProcessSessionMediaAdapter;
+
 struct InProcessSessionEngineOptions {
+    // Runs startup completion work on the signaling transport's owner thread.
+    // Required when a thread-affine signaling client is configured. Returning
+    // false reports that the work could not be queued.
+    std::function<bool(std::function<void()>)>
+        ownerThreadDispatcher;
     bool includeLoopbackAdapter = false;
     bool enableRealDesktopCapture = true;
     bool enableRealCameraCapture = true;
@@ -86,18 +95,13 @@ public:
                            InProcessSessionEngineOptions options = {});
     ~InProcessSessionEngine() override;
 
+    ISessionMediaAccess* MediaAccess() noexcept;
+
     InProcessSessionEngine(const InProcessSessionEngine&) = delete;
     InProcessSessionEngine& operator=(const InProcessSessionEngine&) = delete;
 
     void SetObserver(ISessionEngineObserver* observer) override;
     SessionCommandResult Start() override;
-    // Staged startup keeps the Qt-owned signaling transport on its owner
-    // thread while allowing expensive WebRTC/media initialization to run on
-    // a worker. Start() remains the synchronous compatibility entry point.
-    SessionCommandResult BeginStart();
-    SessionCommandResult InitializeRuntimeForStart();
-    SessionCommandResult CompleteStart(
-        const SessionCommandResult& runtimeResult);
     void Stop() override;
     // Updates only the signaling credential retained for future
     // authentication/reconnect. Active PeerConnections and DataChannels are
@@ -114,15 +118,6 @@ public:
 
     SessionCommandResult ConnectDirectDevice(
         const DirectSessionConnectRequest& request) override;
-    SessionCommandResult ConnectDevice(
-        const std::string& deviceId,
-        SessionPurpose purpose) override;
-    SessionCommandResult ConnectOwnedDevice(
-        const std::string& deviceId,
-        SessionPurpose purpose) override;
-    SessionCommandResult ConnectAssistedDevice(
-        const std::string& deviceId,
-        const std::string& verificationCode) override;
     SessionCommandResult RefreshOwnedDevices() override;
     SessionCommandResult AcceptIncomingSession(
         const std::string& sessionId) override;
@@ -141,7 +136,7 @@ public:
     SessionCommandResult LeaveRoom() override;
     // Used after an unrecoverable P2P failure. Local media/session state is
     // torn down immediately; a server leave is sent now or after WSS returns.
-    SessionCommandResult ExitRoomAfterRecoveryFailure();
+    SessionCommandResult ExitRoomAfterRecoveryFailure() override;
     SessionCommandResult RefreshLocalDisplays() override;
     SessionCommandResult SelectRoomScreenShareDisplay(
         const std::string& stableDisplayKey) override;
@@ -169,10 +164,6 @@ public:
         std::uint64_t screenShareEpoch) override;
     SessionCommandResult SendRoomInput(
         const RemoteInputEvent& event) override;
-    SessionCommandResult SendDirectInput(
-        const RemoteInputEvent& event);
-    SessionCommandResult SendRemoteInput(
-        const RemoteInputEvent& event);
     SessionCommandResult SetRoomScreenFrameRate(
         const std::string& pairId,
         std::uint32_t framesPerSecond) override;
@@ -189,6 +180,23 @@ public:
         const std::string& peerDeviceId,
         const std::string& clipboardSessionId,
         const ClipboardMessage& message) override;
+    SessionCommandResult SetLocalCameraEnabled(bool enabled) override;
+    SessionCommandResult SetLocalMicrophoneEnabled(bool enabled) override;
+    SessionCommandResult SetRoomAudioPlaybackMuted(bool muted) override;
+    SessionCommandResult RefreshLocalMediaDevices() override;
+    SessionCommandResult SelectLocalCameraDevice(
+        const std::string& deviceId) override;
+    SessionCommandResult SelectLocalMicrophoneDevice(
+        const std::string& deviceId) override;
+    SessionCommandResult SelectLocalSpeakerDevice(
+        const std::string& deviceId) override;
+
+private:
+    friend class InProcessSessionMediaAdapter;
+
+    using RemoteCursorCallback = ISessionMediaAccess::RemoteCursorCallback;
+    SessionCommandResult SendDirectInput(const RemoteInputEvent& event);
+    SessionCommandResult SendRemoteInput(const RemoteInputEvent& event);
     SessionCommandResult SendRemoteFileMessage(
         const std::string& peerDeviceId,
         const FileTransferMessage& message);
@@ -200,63 +208,19 @@ public:
         const ScreenStreamPreferenceRequest& preference);
     SessionCommandResult RequestDirectSharedDisplaySwitch(
         const std::string& stableDisplayKey);
-    SessionCommandResult SetLocalCameraEnabled(bool enabled) override;
-    SessionCommandResult SetLocalMicrophoneEnabled(bool enabled) override;
     SessionCommandResult SetRemoteAudioPlaybackMuted(bool muted);
-    SessionCommandResult SetRoomAudioPlaybackMuted(bool muted) override;
-    SessionCommandResult RefreshLocalMediaDevices() override;
-    SessionCommandResult SelectLocalCameraDevice(
-        const std::string& deviceId) override;
-    SessionCommandResult SelectLocalMicrophoneDevice(
-        const std::string& deviceId) override;
-    SessionCommandResult SelectLocalSpeakerDevice(
-        const std::string& deviceId) override;
-
-    // Media adapters use these concrete-engine hooks. UI code continues to
-    // depend only on ISessionEngine; desktop/camera capture sources and Qt
-    // render sinks remain outside the control-plane interface.
-    SessionCommandResult SetRoomVideoSource(
-        const std::string& slot,
-        webrtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source,
-        const std::string& trackId,
-        std::optional<std::string> expectedRoomId = std::nullopt,
-        std::optional<std::uint64_t> expectedCameraGeneration =
-            std::nullopt);
-    SessionCommandResult ClearRoomVideoSource(
-        const std::string& slot);
-    SessionCommandResult SetRoomVideoSlotSendingActive(
-        const std::string& slot,
-        bool active);
-    SessionCommandResult SetRoomRemoteVideoSink(
-        const std::string& pairId,
-        const std::string& slot,
-        webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink);
-    SessionCommandResult SetDirectRemoteVideoSink(
-        webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink);
-    SessionCommandResult NotifyRoomScreenFirstFramePresented(
-        const std::string& pairId,
-        std::uint64_t screenShareGeneration,
-        std::uint32_t startupElapsedMs);
-    void SetLocalCameraPreviewSink(
-        webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink);
-    void SetRemoteInputSink(IRemoteInputSink* sink);
-    void SetRemoteFileTransferSink(IFileTransferSink* sink);
-    void SetRemoteClipboardSink(IClipboardSink* sink);
-    using RemoteCursorCallback = std::function<void(
-        const std::string& pairId,
-        const RemoteCursorEnvelope& envelope)>;
-    void SetRemoteCursorCallback(RemoteCursorCallback callback);
-    void SetPreferredHardwareDecoderName(std::string name);
-    SessionCommandResult ApplyVideoPipelinePreferences(
-        DesktopCaptureImplementation desktopCaptureImplementation,
-        VideoEncoderPreference videoEncoderPreference,
-        FfmpegX264Preset quality,
-        FfmpegHardwareBackend ffmpegHardwareBackend,
-        std::string preferredAutomaticEncoderId,
-        VideoDecoderPreference videoDecoderPreference);
 
 private:
     friend class remote::testing::InProcessSessionEngineTestAccess;
+
+    SessionCommandResult BeginStart();
+    SessionCommandResult InitializeRuntimeForStart();
+    SessionCommandResult CompleteStart(
+        const SessionCommandResult& runtimeResult);
+    void CompleteStartOnOwnerThread(
+        std::uint64_t startupGeneration,
+        const SessionCommandResult& runtimeResult);
+    void MarkStartupDispatchFailed(std::uint64_t startupGeneration);
 
     void OnSignalingStateChanged(SignalingConnectionState state) override;
     void OnDeviceRegistered(const std::string& deviceId) override;
@@ -337,6 +301,8 @@ private:
     void DisposeClosedSession();
     void ResetSessionStateLocked();
     void ResetRoomStateLocked();
+    static bool ShouldBoostDesktopCaptureForInput(
+        const RemoteInputEvent& event);
     void StopLocalDesktopCapture();
     void StopDirectDesktopCapture();
     void StartRemoteCursorPublishing(
@@ -393,6 +359,20 @@ private:
         const std::string& label,
         std::span<const std::uint8_t> payload,
         bool binary);
+    bool DispatchRoomPairTransferData(
+        const std::string& pairId,
+        const std::string& label,
+        std::span<const std::uint8_t> payload);
+    void DispatchRoomPairReliableData(
+        const std::string& pairId,
+        std::span<const std::uint8_t> payload);
+    bool DispatchRoomPairScreenData(
+        const std::string& pairId,
+        std::span<const std::uint8_t> payload);
+    void DispatchRoomPairInputData(
+        const std::string& pairId,
+        std::span<const std::uint8_t> payload,
+        bool fastChannel);
     void OnRoomPairRemoteTrackAdded(
         const std::string& pairId,
         const RemoteTrackInfo& track);
@@ -408,6 +388,7 @@ private:
     void PublishSnapshot();
     void StartStatsPolling();
     void StopStatsPolling();
+    void PollStatsOnce();
 
     class RoomPairBridge;
     struct RoomPairRuntime;
@@ -444,58 +425,28 @@ private:
     std::vector<std::jthread> retiredCameraStopThreads_;
     std::vector<std::jthread> mediaDeviceOperationThreads_;
     std::vector<std::jthread> clipboardWarmupThreads_;
-    std::jthread statsPollingThread_;
-    std::condition_variable_any statsPollingCondition_;
-    std::mutex statsPollingWaitMutex_;
-    std::unordered_map<
-        std::string,
-        webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface>>
-        localRoomVideoTracks_;
-    std::unordered_map<
-        std::string,
-        webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface>>
-        idleRoomVideoTracks_;
-    webrtc::scoped_refptr<WindowsDesktopCaptureSource>
-        localDesktopCaptureSource_;
-    webrtc::scoped_refptr<WindowsCameraCaptureSource>
-        localCameraCaptureSource_;
-    webrtc::VideoSinkInterface<webrtc::VideoFrame>*
-        localCameraPreviewSink_ = nullptr;
-    webrtc::scoped_refptr<webrtc::VideoTrackInterface>
-        localCameraPreviewTrack_;
-    webrtc::scoped_refptr<webrtc::AudioSourceInterface>
-        localMicrophoneAudioSource_;
-    webrtc::scoped_refptr<webrtc::AudioTrackInterface>
-        localMicrophoneAudioTrack_;
-    std::optional<SessionDescription> pendingRemoteDescription_;
-    std::vector<IceCandidate> pendingRemoteCandidates_;
+    std::mutex startupThreadMutex_;
+    std::jthread startupThread_;
+    std::shared_ptr<std::atomic_uint64_t> startupDispatchGeneration_ =
+        std::make_shared<std::atomic_uint64_t>(0);
+    std::unique_ptr<SessionStatsPoller> statsPoller_;
+    std::unique_ptr<InProcessSessionMediaState> mediaState_;
+    std::unique_ptr<InProcessSessionMediaAdapter> mediaAccess_;
+    std::unique_ptr<WindowsCursorMonitor> cursorMonitor_;
     mutable std::mutex mutex_;
     ISessionEngineObserver* observer_ = nullptr;
     std::function<void(const SignalingAccountDeletionResult&)>
         accountDeletionResultCallback_;
     SessionEngineSnapshot snapshot_;
     SessionEngineCapabilities capabilities_;
-    bool localIsOfferer_ = false;
-    bool offerNegotiationStarted_ = false;
-    DirectSessionRuntimeState directSession_;
-    bool roomAudioDevicesApplied_ = false;
-    bool sessionCloseRequested_ = false;
-    bool sessionEndSignalSent_ = false;
-    bool cancelWhenSessionIdKnown_ = false;
-    bool serverSessionActive_ = false;
-    bool signalingRecoveryPending_ = false;
-    bool peerSignalingSuspended_ = false;
-    std::string sessionRecoveryToken_;
-    std::string roomRecoveryToken_;
-    std::string roomScreenShareGrantId_;
-    std::string roomControlGrantId_;
-    std::string roomControlGrantScreenSharerDeviceId_;
-    std::string roomControlGrantControllerDeviceId_;
+    DirectSessionCoordinator directSession_;
+    RoomSessionCoordinator roomSession_;
+    LocalMediaCoordinator localMedia_;
+    ScreenShareCoordinator screenShare_;
     IRemoteInputSink* remoteInputSink_ = nullptr;
     IFileTransferSink* remoteFileTransferSink_ = nullptr;
     IClipboardSink* remoteClipboardSink_ = nullptr;
     RemoteCursorCallback remoteCursorCallback_;
-    WindowsCursorMonitor cursorMonitor_;
     std::optional<RemoteCursorPosition> latestLocalCursorPosition_;
     std::optional<RemoteCursorShape> latestLocalCursorShape_;
     std::uint64_t nextCursorSequence_ = 0;
@@ -505,16 +456,6 @@ private:
     std::uint64_t cursorShapesReceived_ = 0;
     // One sequence spans both input DataChannels so late reliable button
     // transitions cannot overwrite newer fast pointer state.
-    std::uint64_t nextRoomInputSequence_ = 0;
-    std::uint64_t nextRoomScreenControlSequence_ = 0;
-    std::uint32_t localScreenFrameRate_ = kDefaultScreenFrameRate;
-    std::uint64_t localScreenShareGeneration_ = 0;
-    std::uint64_t localCameraTrackGeneration_ = 0;
-    std::unordered_map<std::string, ScreenStreamPreferenceRequest>
-        roomScreenStreamPreferences_;
-    bool roomRecoveryPending_ = false;
-    bool roomLeaveRequested_ = false;
-    std::string deferredRoomLeaveId_;
 };
 
 }  // namespace app

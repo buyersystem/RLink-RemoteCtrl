@@ -8,7 +8,6 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 #include "api/media_stream_interface.h"
@@ -24,6 +23,9 @@
 namespace remote {
 
 class PeerConnectionStatsCollector;
+class DataChannelManager;
+class MediaSlotManager;
+class PeerNegotiator;
 
 class LibWebRtcSession final : public IWebRtcSession,
                                public webrtc::PeerConnectionObserver {
@@ -118,52 +120,9 @@ public:
 
 private:
     class CallbackGate;
-    class DataChannelBinding;
-    struct VideoSlotBinding {
-        webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver;
-        webrtc::scoped_refptr<webrtc::VideoTrackInterface> remoteTrack;
-        webrtc::VideoSinkInterface<webrtc::VideoFrame>* remoteSink = nullptr;
-        std::uint32_t configuredMaxFrameRate = 0;
-        std::uint32_t configuredOutputWidth = 0;
-        std::uint32_t configuredOutputHeight = 0;
-        std::uint64_t configuredStartBitrateBps = 0;
-        std::uint64_t configuredMaxBitrateBps = 0;
-        AdaptiveScreenFrameRateState adaptiveFrameRate;
-        std::uint64_t adaptiveFrameRateRevision = 0;
-        std::string adaptiveFrameRateError;
-        bool sendingActive = false;
-        bool startBitrateBootstrapPending = true;
-        std::uint32_t bitrateBootstrapAttempts = 0;
-        std::uint32_t bitrateBootstrapSuccesses = 0;
-        std::uint32_t mediaReadyBitrateRestarts = 0;
-        std::uint32_t allocationProbePulses = 0;
-        std::uint32_t bitrateProbeFloorReleases = 0;
-        bool bitrateProbeFloorActive = false;
-        std::string bitrateBootstrapError;
-    };
-    struct AudioSlotBinding {
-        std::string name;
-        webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver;
-        webrtc::scoped_refptr<webrtc::AudioTrackInterface> remoteTrack;
-        bool remotePlaybackEnabled = true;
-    };
-
     OperationId NextOperationId();
     webrtc::scoped_refptr<webrtc::PeerConnectionInterface>
         PeerConnection() const;
-    void CreateLocalDescription(OperationId operationId,
-                                 SessionDescriptionType type,
-                                 bool iceRestart = false);
-    void SetLocalDescription(
-        OperationId operationId,
-        SessionDescription description,
-        std::unique_ptr<webrtc::SessionDescriptionInterface> nativeDescription);
-    void AttachDataChannel(
-        webrtc::scoped_refptr<webrtc::DataChannelInterface> channel);
-    void HandleDataChannelState(
-        webrtc::scoped_refptr<webrtc::DataChannelInterface> channel);
-    void HandleDataMessage(const std::string& label,
-                           const webrtc::DataBuffer& buffer);
     void UpdatePeerConnectionState(
         webrtc::PeerConnectionInterface::PeerConnectionState state);
     void UpdateIceConnectionState(
@@ -202,6 +161,9 @@ private:
     std::shared_ptr<CallbackGate> callbackGate_;
     webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> factory_;
     std::unique_ptr<PeerConnectionStatsCollector> statsCollector_;
+    std::unique_ptr<DataChannelManager> dataChannelManager_;
+    std::unique_ptr<PeerNegotiator> peerNegotiator_;
+    std::unique_ptr<MediaSlotManager> mediaSlots_;
     webrtc::scoped_refptr<webrtc::PeerConnectionInterface> peerConnection_;
     IWebRtcSessionObserver* observer_ = nullptr;
     bool fastDesktopBweStartup_ = false;
@@ -217,13 +179,6 @@ private:
             webrtc::PeerConnectionInterface::PeerConnectionState::kNew;
     webrtc::PeerConnectionInterface::IceConnectionState iceConnectionState_ =
         webrtc::PeerConnectionInterface::kIceConnectionNew;
-    std::unordered_map<std::string, std::unique_ptr<DataChannelBinding>>
-        dataChannels_;
-    std::unordered_map<std::string, VideoSlotBinding> videoSlots_;
-    std::vector<std::string> videoSlotOrder_;
-    AudioSlotBinding audioSlot_;
-    webrtc::VideoSinkInterface<webrtc::VideoFrame>* remoteVideoSink_ = nullptr;
-    webrtc::scoped_refptr<webrtc::VideoTrackInterface> remoteVideoTrack_;
 };
 
 }  // namespace remote

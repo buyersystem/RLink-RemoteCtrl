@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstring>
+#include <functional>
 #include <memory>
 #include <thread>
 
@@ -45,6 +46,10 @@
 
 #include "api/make_ref_counted.h"
 #include "InProcessSessionEngine.h"
+#include "DirectSessionCoordinator.h"
+#include "LocalMediaCoordinator.h"
+#include "RoomSessionCoordinator.h"
+#include "ScreenShareCoordinator.h"
 #include "EncoderBenchmarkProfileCache.h"
 #include "src/platform/win/WindowsDesktopCaptureSource.h"
 #include "src/platform/win/WindowsHardwareFingerprint.h"
@@ -646,6 +651,14 @@ bool IsUtilityInvocation(const QStringList& arguments)
         if (argument == QStringLiteral("--status-once") ||
             argument == QStringLiteral("--startup-config-self-test") ||
             argument == QStringLiteral("--auth-coordinator-self-test") ||
+            argument == QStringLiteral(
+                "--direct-session-coordinator-self-test") ||
+            argument == QStringLiteral(
+                "--room-session-coordinator-self-test") ||
+            argument == QStringLiteral(
+                "--local-media-coordinator-self-test") ||
+            argument == QStringLiteral(
+                "--screen-share-coordinator-self-test") ||
             argument == QStringLiteral("--theme-roundtrip-self-test") ||
             argument == QStringLiteral("--signaling-policy-self-test") ||
             argument == QStringLiteral("--decoder-optimal-probe") ||
@@ -862,6 +875,17 @@ std::unique_ptr<remote::app::InProcessSessionEngine> CreateSessionEngine(
     const QString& deviceVerificationCode)
 {
     remote::app::InProcessSessionEngineOptions engineOptions;
+    const QPointer<QObject> ownerThreadContext(
+        QCoreApplication::instance());
+    engineOptions.ownerThreadDispatcher =
+        [ownerThreadContext](std::function<void()> task) {
+            if (!ownerThreadContext || !task) {
+                return false;
+            }
+            return QMetaObject::invokeMethod(
+                ownerThreadContext.data(), std::move(task),
+                Qt::QueuedConnection);
+        };
     const QSettings mediaSettings;
     const auto hardwareProfile =
         remote::QueryWindowsCompatibilityProfile();
@@ -1060,6 +1084,272 @@ int RunSignalingPolicySelfTest()
                    : "FAIL")
            << Qt::endl;
     output << "SIGNALING_POLICY_SELF_TEST="
+           << (passed ? "PASS" : "FAIL") << Qt::endl;
+    return passed ? 0 : 1;
+}
+
+int RunDirectSessionCoordinatorSelfTest()
+{
+    remote::app::DirectSessionCoordinator coordinator;
+    remote::app::DirectSessionStartPlan plan;
+
+    remote::DirectSessionConnectRequest invalidAssistance;
+    invalidAssistance.targetDeviceId = "123456789";
+    invalidAssistance.purpose = remote::SessionPurpose::kRemoteControl;
+    invalidAssistance.authorization =
+        remote::DirectAuthorizationMethod::kVerificationCode;
+    invalidAssistance.verificationCode = "12x456";
+    const auto invalidResult = coordinator.PrepareOutgoingStart(
+        invalidAssistance, &plan);
+
+    remote::DirectSessionConnectRequest ownedRequest;
+    ownedRequest.targetDeviceId = "987654321";
+    ownedRequest.purpose = remote::SessionPurpose::kRemoteControl;
+    ownedRequest.authorization =
+        remote::DirectAuthorizationMethod::kOwnedAccount;
+    const auto ownedResult = coordinator.PrepareOutgoingStart(
+        ownedRequest, &plan);
+    remote::SessionEngineSnapshot outgoingSnapshot;
+    outgoingSnapshot.error.code = "old_error";
+    outgoingSnapshot.error.message = "old message";
+    coordinator.ApplyOutgoingStart(&outgoingSnapshot, plan);
+
+    remote::SessionEngineSnapshot incomingSnapshot;
+    incomingSnapshot.state =
+        remote::SessionEngineState::kAwaitingLocalApproval;
+    incomingSnapshot.sessionId = "incoming-session";
+    incomingSnapshot.error.code = "old_error";
+    incomingSnapshot.error.message = "old message";
+    const auto wrongIncoming = coordinator.ValidateIncomingDecision(
+        incomingSnapshot, "other-session", false);
+    const auto validIncoming = coordinator.ValidateIncomingDecision(
+        incomingSnapshot, "incoming-session", false);
+    coordinator.ApplyIncomingAccepted(&incomingSnapshot);
+
+    const bool validationPassed =
+        !invalidResult.accepted &&
+        invalidResult.errorCode == "invalid_assistance_credentials" &&
+        ownedResult.accepted &&
+        plan.origin == remote::SessionOrigin::kOwnedDevice &&
+        plan.permissions ==
+            std::vector<std::string>({"viewScreen", "controlInput"});
+    const bool outgoingTransitionPassed =
+        outgoingSnapshot.state ==
+            remote::SessionEngineState::kConnecting &&
+        outgoingSnapshot.origin == remote::SessionOrigin::kOwnedDevice &&
+        outgoingSnapshot.remoteControlRole ==
+            remote::RemoteControlRole::kController &&
+        outgoingSnapshot.peerDeviceId == "987654321" &&
+        outgoingSnapshot.error.code.empty() &&
+        outgoingSnapshot.error.message.empty();
+    const bool incomingTransitionPassed =
+        !wrongIncoming.accepted &&
+        wrongIncoming.errorCode == "incoming_session_not_found" &&
+        validIncoming.accepted &&
+        incomingSnapshot.state ==
+            remote::SessionEngineState::kConnecting &&
+        incomingSnapshot.error.code.empty() &&
+        incomingSnapshot.error.message.empty();
+    const bool passed = validationPassed && outgoingTransitionPassed &&
+        incomingTransitionPassed;
+
+    QTextStream output(stdout);
+    output << "DIRECT_SESSION_REQUEST_POLICY="
+           << (validationPassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "DIRECT_SESSION_OUTGOING_TRANSITION="
+           << (outgoingTransitionPassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "DIRECT_SESSION_INCOMING_TRANSITION="
+           << (incomingTransitionPassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "DIRECT_SESSION_COORDINATOR_SELF_TEST="
+           << (passed ? "PASS" : "FAIL") << Qt::endl;
+    return passed ? 0 : 1;
+}
+
+int RunRoomSessionCoordinatorSelfTest()
+{
+    remote::app::RoomSessionCoordinator coordinator;
+
+    remote::SessionEngineSnapshot createSnapshot;
+    const auto invalidCapacity = coordinator.ValidateCapacity(1);
+    const auto validCreate = coordinator.ValidateCreate(createSnapshot, 4);
+    coordinator.ApplyCreateRequested(&createSnapshot, 4);
+    const bool createPassed =
+        !invalidCapacity.accepted &&
+        invalidCapacity.errorCode == "invalid_room_capacity" &&
+        validCreate.accepted &&
+        createSnapshot.room.membership ==
+            remote::RoomMembershipState::kCreating &&
+        createSnapshot.room.capacity == 4;
+
+    remote::SessionEngineSnapshot joinSnapshot;
+    const auto emptyJoin = coordinator.ValidateJoin(joinSnapshot, {});
+    const auto validJoin = coordinator.ValidateJoin(joinSnapshot, "room-1");
+    coordinator.ApplyJoinRequested(&joinSnapshot, "room-1");
+    const bool joinPassed =
+        !emptyJoin.accepted &&
+        emptyJoin.errorCode == "room_id_empty" &&
+        validJoin.accepted &&
+        joinSnapshot.room.membership ==
+            remote::RoomMembershipState::kJoinPending &&
+        joinSnapshot.room.roomId == "room-1";
+
+    const auto invalidAvailability =
+        coordinator.ValidateAvailabilityQuery({});
+    remote::SessionEngineSnapshot availabilitySnapshot;
+    coordinator.ApplyAvailabilityQuery(
+        &availabilitySnapshot, {"room-1", "room-2"});
+    const bool availabilityPassed =
+        !invalidAvailability.accepted &&
+        invalidAvailability.errorCode ==
+            "invalid_room_availability_query" &&
+        availabilitySnapshot.roomActivity.availabilities.size() == 2 &&
+        availabilitySnapshot.roomActivity.availabilities.front().state ==
+            remote::RoomAvailabilityState::kChecking;
+
+    remote::SessionEngineSnapshot leaveSnapshot;
+    leaveSnapshot.room.membership = remote::RoomMembershipState::kActive;
+    leaveSnapshot.room.roomId = "room-1";
+    std::string roomId;
+    const auto leave = coordinator.PrepareLeave(&leaveSnapshot, &roomId);
+    coordinator.ApplyLeaveFailed(
+        &leaveSnapshot, "network_error", "network unavailable");
+    const bool leavePassed =
+        leave.accepted && roomId == "room-1" &&
+        leaveSnapshot.room.membership ==
+            remote::RoomMembershipState::kActive &&
+        leaveSnapshot.room.errorCode == "network_error";
+
+    const bool passed = createPassed && joinPassed &&
+        availabilityPassed && leavePassed;
+    QTextStream output(stdout);
+    output << "ROOM_SESSION_CREATE_POLICY="
+           << (createPassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "ROOM_SESSION_JOIN_POLICY="
+           << (joinPassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "ROOM_SESSION_AVAILABILITY_POLICY="
+           << (availabilityPassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "ROOM_SESSION_LEAVE_TRANSITION="
+           << (leavePassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "ROOM_SESSION_COORDINATOR_SELF_TEST="
+           << (passed ? "PASS" : "FAIL") << Qt::endl;
+    return passed ? 0 : 1;
+}
+
+int RunLocalMediaCoordinatorSelfTest()
+{
+    remote::app::LocalMediaCoordinator coordinator;
+    remote::MediaDeviceCategorySnapshot category;
+    category.devices.push_back({"camera-1", "Camera 1", true});
+
+    const bool normalizationPassed =
+        remote::app::LocalMediaCoordinator::NormalizeDeviceId({}) ==
+            remote::kSystemDefaultMediaDeviceId &&
+        remote::app::LocalMediaCoordinator::NormalizeDeviceId(
+            "camera-1") == "camera-1";
+    const auto valid = coordinator.ValidateSelection(
+        category, "camera-1",
+        remote::app::LocalMediaDeviceKind::kCamera);
+    const auto unavailable = coordinator.ValidateSelection(
+        category, "camera-2",
+        remote::app::LocalMediaDeviceKind::kCamera);
+    category.state = remote::MediaDeviceSelectionState::kSwitching;
+    const auto switching = coordinator.ValidateSelection(
+        category, "camera-1",
+        remote::app::LocalMediaDeviceKind::kCamera);
+    const bool validationPassed = valid.accepted &&
+        !unavailable.accepted &&
+        unavailable.errorCode == "camera_device_unavailable" &&
+        !switching.accepted &&
+        switching.errorCode == "camera_device_switch_in_progress";
+
+    category.state = remote::MediaDeviceSelectionState::kReady;
+    category.preferredDeviceId = "camera-2";
+    coordinator.UpdateAvailability(
+        category, remote::app::LocalMediaDeviceKind::kCamera);
+    const bool availabilityPassed =
+        category.state ==
+            remote::MediaDeviceSelectionState::kUnavailable &&
+        category.errorCode == "camera_device_unavailable" &&
+        category.errorMessage ==
+            "The selected camera is not connected.";
+
+    const auto cameraGeneration = coordinator.BeginCameraOperation();
+    const bool cameraGenerationPassed = cameraGeneration == 1 &&
+        coordinator.IsCurrentCameraOperation(cameraGeneration) &&
+        !coordinator.IsCurrentCameraOperation(cameraGeneration + 1);
+
+    const bool passed = normalizationPassed && validationPassed &&
+        availabilityPassed && cameraGenerationPassed;
+    QTextStream output(stdout);
+    output << "LOCAL_MEDIA_NORMALIZATION="
+           << (normalizationPassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "LOCAL_MEDIA_SELECTION_POLICY="
+           << (validationPassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "LOCAL_MEDIA_AVAILABILITY="
+           << (availabilityPassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "LOCAL_MEDIA_CAMERA_GENERATION="
+           << (cameraGenerationPassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "LOCAL_MEDIA_COORDINATOR_SELF_TEST="
+           << (passed ? "PASS" : "FAIL") << Qt::endl;
+    return passed ? 0 : 1;
+}
+
+int RunScreenShareCoordinatorSelfTest()
+{
+    remote::app::ScreenShareCoordinator coordinator;
+    const bool generationPassed =
+        coordinator.NextGeneration() == 1 &&
+        coordinator.BeginShare() == 1 &&
+        coordinator.IsCurrentGeneration(1) &&
+        coordinator.NextGeneration() == 2;
+    coordinator.CommitGeneration(2);
+    const bool committedGenerationPassed =
+        coordinator.IsCurrentGeneration(2) &&
+        !coordinator.IsCurrentGeneration(1);
+
+    remote::DisplayTopologySnapshot topology;
+    remote::DisplayDescriptor primary;
+    primary.sessionDisplayId = 1;
+    primary.stableDisplayKey = "primary";
+    primary.primary = true;
+    remote::DisplayDescriptor secondary;
+    secondary.sessionDisplayId = 2;
+    secondary.stableDisplayKey = "secondary";
+    topology.displays = {primary, secondary};
+    const auto preferred =
+        remote::app::ScreenShareCoordinator::SelectDisplay(
+            topology, "secondary");
+    const auto fallback =
+        remote::app::ScreenShareCoordinator::SelectDisplay(
+            topology, "missing");
+    const bool selectionPassed = preferred && fallback &&
+        preferred->stableDisplayKey == "secondary" &&
+        fallback->stableDisplayKey == "primary";
+
+    remote::ScreenStreamPreferenceRequest request;
+    request.maxWidth = 1280;
+    request.maxHeight = 720;
+    request.framesPerSecond = 30;
+    const auto policy =
+        remote::app::ScreenShareCoordinator::ResolvePolicy(
+            1920, 1080, request);
+    const bool policyPassed = policy.width == 1280 &&
+        policy.height == 720 && policy.framesPerSecond == 30 &&
+        remote::app::ScreenShareCoordinator::MaximumCaptureFrameRate(
+            remote::DesktopCaptureImplementation::kLibWebRtc) ==
+            remote::kMaximumScreenFrameRate;
+
+    const bool passed = generationPassed &&
+        committedGenerationPassed && selectionPassed && policyPassed;
+    QTextStream output(stdout);
+    output << "SCREEN_SHARE_GENERATION="
+           << (generationPassed && committedGenerationPassed
+                   ? "PASS" : "FAIL") << Qt::endl;
+    output << "SCREEN_SHARE_DISPLAY_SELECTION="
+           << (selectionPassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "SCREEN_SHARE_POLICY="
+           << (policyPassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "SCREEN_SHARE_COORDINATOR_SELF_TEST="
            << (passed ? "PASS" : "FAIL") << Qt::endl;
     return passed ? 0 : 1;
 }
@@ -1273,6 +1563,26 @@ int main(int argc, char* argv[])
     if (application.arguments().contains(
             QStringLiteral("--signaling-policy-self-test"))) {
         return RunSignalingPolicySelfTest();
+    }
+
+    if (application.arguments().contains(
+            QStringLiteral("--direct-session-coordinator-self-test"))) {
+        return RunDirectSessionCoordinatorSelfTest();
+    }
+
+    if (application.arguments().contains(
+            QStringLiteral("--room-session-coordinator-self-test"))) {
+        return RunRoomSessionCoordinatorSelfTest();
+    }
+
+    if (application.arguments().contains(
+            QStringLiteral("--local-media-coordinator-self-test"))) {
+        return RunLocalMediaCoordinatorSelfTest();
+    }
+
+    if (application.arguments().contains(
+            QStringLiteral("--screen-share-coordinator-self-test"))) {
+        return RunScreenShareCoordinatorSelfTest();
     }
 
     if (application.arguments().contains(
@@ -1606,24 +1916,40 @@ int main(int argc, char* argv[])
     if (application.arguments().contains(QStringLiteral("--status-once"))) {
         remote::app::InProcessSessionEngine engine;
         const auto result = engine.Start();
+        auto snapshot = engine.Snapshot();
+        const auto deadline = std::chrono::steady_clock::now() +
+            std::chrono::seconds(60);
+        while (result.accepted &&
+               snapshot.state == remote::SessionEngineState::kStarting &&
+               std::chrono::steady_clock::now() < deadline) {
+            QCoreApplication::processEvents(QEventLoop::AllEvents, 10);
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            snapshot = engine.Snapshot();
+        }
+        const bool ready = result.accepted &&
+            snapshot.state == remote::SessionEngineState::kReady;
         QTextStream output(stdout);
         output << "REMOTEC_PRODUCT_SHELL_READY="
-               << (result.accepted ? "YES" : "NO") << Qt::endl;
+               << (ready ? "YES" : "NO") << Qt::endl;
         // Transitional marker retained for existing product smoke scripts.
         output << "CONTROLLER_PRODUCT_SHELL_READY="
-               << (result.accepted ? "YES" : "NO") << Qt::endl;
+               << (ready ? "YES" : "NO") << Qt::endl;
         if (!result.accepted) {
             output << QString::fromStdString(result.errorMessage) << Qt::endl;
+        } else if (!ready) {
+            output << QString::fromStdString(snapshot.error.message)
+                   << Qt::endl;
         }
         engine.Stop();
-        return result.accepted ? 0 : 1;
+        return ready ? 0 : 1;
     }
 
     if (application.arguments().contains(
             QStringLiteral("--theme-roundtrip-self-test"))) {
         auto engine = std::make_unique<remote::app::InProcessSessionEngine>();
+        auto* sessionMedia = engine->MediaAccess();
         remote::controller::ControllerMainWindow window(
-            std::move(engine), false);
+            std::move(engine), false, sessionMedia);
         window.setAttribute(Qt::WA_DontShowOnScreen, true);
         window.resize(1600, 900);
         window.show();
@@ -1678,12 +2004,14 @@ int main(int argc, char* argv[])
             auto engine = CreateSessionEngine(
                 configuration, deviceVerificationCode);
             auto* enginePointer = engine.get();
+            auto* sessionMedia = engine->MediaAccess();
             remote::app::RemoteCApplicationCoordinator::MainWindowSession
                 session;
             session.window = std::make_unique<
                 remote::controller::ControllerMainWindow>(
                     std::move(engine),
-                    !configuration.authenticationRequired);
+                    !configuration.authenticationRequired,
+                    sessionMedia);
             session.updateAccessToken =
                 [enginePointer](const QString& latestAccessToken) {
                     if (!enginePointer) {

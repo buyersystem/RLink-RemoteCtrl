@@ -17,6 +17,7 @@
 #include "FramelessWindow.h"
 #include "RemoteSessionBinding.h"
 #include "src/core/MediaDevice.h"
+#include "src/core/IRemoteSessionControl.h"
 #include "src/core/SessionDiagnostics.h"
 #include "src/protocol/RemoteInputProtocol.h"
 #include "src/protocol/RemoteCursorProtocol.h"
@@ -36,7 +37,7 @@ class QToolButton;
 class QWidget;
 
 namespace remote::app {
-    class InProcessSessionEngine;
+    class ISessionMediaAccess;
 }
 
 namespace remote::controller {
@@ -48,14 +49,16 @@ namespace remote::controller {
     class RemoteSessionWindow final : public FramelessMainWindow {
     public:
         RemoteSessionWindow(RemoteSessionBinding binding,
-            app::InProcessSessionEngine* sessionEngine = nullptr,
+            IRemoteSessionControl* sessionControl = nullptr,
+            app::ISessionMediaAccess* sessionMedia = nullptr,
             QWidget* parent = nullptr);
         ~RemoteSessionWindow() override;
 
         RemoteSessionWindow(const RemoteSessionWindow&) = delete;
         RemoteSessionWindow& operator=(const RemoteSessionWindow&) = delete;
 
-        void BindSessionVideo(app::InProcessSessionEngine* engine,
+        void BindSessionVideo(IRemoteSessionControl* sessionControl,
+            app::ISessionMediaAccess* media,
             RemoteSessionBinding binding);
         void RefreshControlState();
         void UpdateDiagnostics(
@@ -173,7 +176,8 @@ namespace remote::controller {
         QElapsedTimer sessionElapsed_;
         QElapsedTimer screenStartupElapsed_;
         QTimer* durationTimer_ = nullptr;
-        app::InProcessSessionEngine* sessionEngine_ = nullptr;
+        IRemoteSessionControl* sessionControl_ = nullptr;
+        app::ISessionMediaAccess* sessionMedia_ = nullptr;
         bool sessionVideoSinkBound_ = false;
         bool sessionVideoSinkRetryScheduled_ = false;
         bool roomScreenPreferenceRetryScheduled_ = false;
