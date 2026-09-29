@@ -31,35 +31,105 @@
 namespace remote::update {
 namespace {
 
-constexpr auto kStableManifestUrl =
+constexpr auto kCnbStableManifestUrl =
+    "https://cnb.cool/dyh-Rlink/RLink-RemoteCtrl/"
+    "-/releases/latest/download/RLink-update.json";
+constexpr auto kGithubStableManifestUrl =
     "https://github.com/dyhwdnmd/RLink-RemoteCtrl/"
     "releases/latest/download/RLink-update.json";
 constexpr auto kLastAutomaticCheckSetting =
     "updates/lastAutomaticCheckUtc";
 constexpr qint64 kAutomaticCheckIntervalSeconds = 24 * 60 * 60;
 constexpr qint64 kMaximumManifestBytes = 256 * 1024;
+constexpr qsizetype kMaximumManifestUrls = 4;
+constexpr qsizetype kMaximumPackageUrls = 8;
 
-bool IsAllowedDownloadUrl(const QUrl& url)
+bool IsCleanHttpsUrl(const QUrl& url)
 {
     if (!url.isValid() || url.scheme().compare(
             QStringLiteral("https"), Qt::CaseInsensitive) != 0) {
         return false;
     }
+    return url.userInfo().isEmpty() && url.fragment().isEmpty();
+}
+
+bool IsAllowedRepositoryUrl(const QUrl& url)
+{
+    if (!IsCleanHttpsUrl(url)) {
+        return false;
+    }
     const QString host = url.host().toLower();
-    return host == QStringLiteral("github.com") ||
-        host == QStringLiteral("objects.githubusercontent.com") ||
-        host == QStringLiteral("release-assets.githubusercontent.com");
+    const QString path = url.path().toLower();
+    return (host == QStringLiteral("github.com") &&
+            path.startsWith(QStringLiteral(
+                "/dyhwdnmd/rlink-remotectrl/"))) ||
+        (host == QStringLiteral("cnb.cool") &&
+         path.startsWith(QStringLiteral(
+             "/dyh-rlink/rlink-remotectrl/")));
+}
+
+bool IsAllowedManifestUrl(const QUrl& url)
+{
+    return IsAllowedRepositoryUrl(url) &&
+        url.query().isEmpty() &&
+        url.fileName().compare(QStringLiteral("RLink-update.json"),
+                               Qt::CaseInsensitive) == 0;
+}
+
+bool IsAllowedManifestResponseUrl(const QUrl& url)
+{
+    // Every request starts from a repository URL checked above. Both GitHub
+    // and CNB may redirect release assets to a short-lived HTTPS CDN URL.
+    return IsCleanHttpsUrl(url);
 }
 
 bool IsAllowedPackageUrl(const QUrl& url)
 {
-    return url.isValid() &&
-        url.scheme().compare(QStringLiteral("https"),
-                             Qt::CaseInsensitive) == 0 &&
-        url.host().compare(QStringLiteral("github.com"),
-                           Qt::CaseInsensitive) == 0 &&
-        url.path().startsWith(QStringLiteral(
-            "/dyhwdnmd/RLink-RemoteCtrl/releases/download/"));
+    return IsAllowedRepositoryUrl(url);
+}
+
+void AppendUniqueUrl(QList<QUrl>* urls, const QUrl& url)
+{
+    for (const QUrl& existing : *urls) {
+        if (existing.matches(url, QUrl::NormalizePathSegments |
+                                  QUrl::StripTrailingSlash)) {
+            return;
+        }
+    }
+    urls->push_back(url);
+}
+
+QList<QUrl> LoadManifestUrls()
+{
+    QList<QUrl> urls;
+    const QString configurationPath = QDir(
+        QCoreApplication::applicationDirPath())
+        .filePath(QStringLiteral("RemoteC.bootstrap.json"));
+    QFile file(configurationPath);
+    if (file.open(QIODevice::ReadOnly) && file.size() <= 64 * 1024) {
+        QJsonParseError parseError;
+        const QJsonDocument document =
+            QJsonDocument::fromJson(file.readAll(), &parseError);
+        if (parseError.error == QJsonParseError::NoError &&
+            document.isObject()) {
+            const QJsonArray configured = document.object()
+                .value(QStringLiteral("updateManifestUrls")).toArray();
+            for (const QJsonValue& value : configured) {
+                if (urls.size() >= kMaximumManifestUrls - 2) {
+                    break;
+                }
+                const QUrl url(value.toString().trimmed());
+                if (IsAllowedManifestUrl(url)) {
+                    AppendUniqueUrl(&urls, url);
+                }
+            }
+        }
+    }
+    AppendUniqueUrl(
+        &urls, QUrl(QString::fromLatin1(kCnbStableManifestUrl)));
+    AppendUniqueUrl(
+        &urls, QUrl(QString::fromLatin1(kGithubStableManifestUrl)));
+    return urls;
 }
 
 QVector<int> ParseVersion(const QString& version)
@@ -142,7 +212,7 @@ QString QuoteWindowsArgument(const QString& value)
 SoftwareUpdateController::SoftwareUpdateController(QObject* parent)
     : QObject(parent),
       network_(new QNetworkAccessManager(this)),
-      manifestUrl_(QString::fromLatin1(kStableManifestUrl))
+      manifestUrls_(LoadManifestUrls())
 {
     snapshot_.installedVersion =
         QCoreApplication::applicationVersion().trimmed();
@@ -192,10 +262,13 @@ void SoftwareUpdateController::CheckForUpdates(bool manualRequest)
         return;
     }
 
-    packageUrl_ = {};
+    packageUrls_.clear();
     packageSha256_.clear();
     packageSize_ = -1;
     responseBody_.clear();
+    manifestErrors_.clear();
+    nextManifestIndex_ = 0;
+    activeManifestUrl_ = {};
     snapshot_.state = State::kChecking;
     snapshot_.manualRequest = manualRequest;
     snapshot_.mandatory = false;
@@ -205,7 +278,22 @@ void SoftwareUpdateController::CheckForUpdates(bool manualRequest)
     snapshot_.summary = QStringLiteral("正在检查更新…");
     PublishSnapshot();
 
-    QNetworkRequest request(manifestUrl_);
+    StartNextManifestRequest();
+}
+
+void SoftwareUpdateController::StartNextManifestRequest()
+{
+    if (nextManifestIndex_ >= manifestUrls_.size()) {
+        const QString detail = manifestErrors_.isEmpty()
+            ? QStringLiteral("没有可用的更新清单地址。")
+            : manifestErrors_.join(QStringLiteral("；"));
+        SetFailure(QStringLiteral("检查更新失败：%1").arg(detail),
+                   snapshot_.manualRequest);
+        return;
+    }
+    responseBody_.clear();
+    activeManifestUrl_ = manifestUrls_.at(nextManifestIndex_++);
+    QNetworkRequest request(activeManifestUrl_);
     request.setHeader(QNetworkRequest::UserAgentHeader,
                       QStringLiteral("RLink/%1 Windows")
                           .arg(snapshot_.installedVersion));
@@ -229,6 +317,13 @@ void SoftwareUpdateController::CheckForUpdates(bool manualRequest)
     });
 }
 
+void SoftwareUpdateController::FailCurrentManifest(const QString& message)
+{
+    manifestErrors_.push_back(QStringLiteral("%1：%2")
+        .arg(activeManifestUrl_.host(), message));
+    StartNextManifestRequest();
+}
+
 void SoftwareUpdateController::FinishCheck(QNetworkReply* reply)
 {
     if (!reply || reply != activeReply_) {
@@ -237,7 +332,6 @@ void SoftwareUpdateController::FinishCheck(QNetworkReply* reply)
         }
         return;
     }
-    const bool manualRequest = snapshot_.manualRequest;
     activeReply_ = nullptr;
     responseBody_.append(reply->readAll());
     const QUrl finalUrl = reply->url();
@@ -248,26 +342,19 @@ void SoftwareUpdateController::FinishCheck(QNetworkReply* reply)
     reply->deleteLater();
 
     if (responseBody_.size() > kMaximumManifestBytes) {
-        SetFailure(QStringLiteral("服务器返回的更新清单过大。"), manualRequest);
+        FailCurrentManifest(QStringLiteral("更新清单过大"));
         return;
     }
     if (httpStatus == 404) {
-        snapshot_.state = State::kUpToDate;
-        snapshot_.manualRequest = manualRequest;
-        snapshot_.latestVersion = snapshot_.installedVersion;
-        snapshot_.summary = QStringLiteral("当前已是最新版本");
-        snapshot_.errorMessage.clear();
-        PublishSnapshot();
+        FailCurrentManifest(QStringLiteral("未找到更新清单"));
         return;
     }
     if (error != QNetworkReply::NoError) {
-        SetFailure(QStringLiteral("检查更新失败：%1").arg(networkError),
-                   manualRequest);
+        FailCurrentManifest(networkError);
         return;
     }
-    if (!IsAllowedDownloadUrl(finalUrl)) {
-        SetFailure(QStringLiteral("更新清单被重定向到不受信任的地址。"),
-                   manualRequest);
+    if (!IsAllowedManifestResponseUrl(finalUrl)) {
+        FailCurrentManifest(QStringLiteral("被重定向到不受信任的地址"));
         return;
     }
 
@@ -276,7 +363,7 @@ void SoftwareUpdateController::FinishCheck(QNetworkReply* reply)
         QJsonDocument::fromJson(responseBody_, &parseError);
     if (parseError.error != QJsonParseError::NoError ||
         !document.isObject()) {
-        SetFailure(QStringLiteral("更新清单格式无效。"), manualRequest);
+        FailCurrentManifest(QStringLiteral("更新清单格式无效"));
         return;
     }
     const QJsonObject root = document.object();
@@ -286,8 +373,28 @@ void SoftwareUpdateController::FinishCheck(QNetworkReply* reply)
     const QString minimumSupportedVersion = root
         .value(QStringLiteral("minimumSupportedVersion"))
         .toString().trimmed();
-    const QUrl packageUrl(
+    QList<QUrl> packageUrls;
+    const QJsonArray configuredPackageUrls =
+        package.value(QStringLiteral("urls")).toArray();
+    if (configuredPackageUrls.size() > kMaximumPackageUrls) {
+        packageUrls.clear();
+    }
+    for (const QJsonValue& value : configuredPackageUrls) {
+        if (configuredPackageUrls.size() > kMaximumPackageUrls) {
+            break;
+        }
+        const QUrl url(value.toString().trimmed());
+        if (!IsAllowedPackageUrl(url)) {
+            packageUrls.clear();
+            break;
+        }
+        AppendUniqueUrl(&packageUrls, url);
+    }
+    const QUrl legacyPackageUrl(
         package.value(QStringLiteral("url")).toString().trimmed());
+    if (IsAllowedPackageUrl(legacyPackageUrl)) {
+        AppendUniqueUrl(&packageUrls, legacyPackageUrl);
+    }
     const QString packageSha256 = NormalizedSha256(
         package.value(QStringLiteral("sha256")).toString());
     const qint64 packageSize =
@@ -301,10 +408,10 @@ void SoftwareUpdateController::FinishCheck(QNetworkReply* reply)
         ParseVersion(latestVersion).size() != 3 ||
         (!minimumSupportedVersion.isEmpty() &&
          ParseVersion(minimumSupportedVersion).size() != 3) ||
-        !IsAllowedPackageUrl(packageUrl) ||
+        packageUrls.isEmpty() ||
         packageSha256.isEmpty() || packageSize <= 0) {
-        SetFailure(QStringLiteral("更新清单缺少有效的版本或安装包信息。"),
-                   manualRequest);
+        FailCurrentManifest(
+            QStringLiteral("缺少有效的版本或安装包信息"));
         return;
     }
 
@@ -325,7 +432,7 @@ void SoftwareUpdateController::FinishCheck(QNetworkReply* reply)
     snapshot_.releaseNotesUrl = QUrl(
         root.value(QStringLiteral("releaseNotesUrl")).toString());
     snapshot_.errorMessage.clear();
-    packageUrl_ = packageUrl;
+    packageUrls_ = packageUrls;
     packageSha256_ = packageSha256;
     packageSize_ = packageSize;
 
@@ -347,7 +454,7 @@ void SoftwareUpdateController::FinishCheck(QNetworkReply* reply)
 bool SoftwareUpdateController::LaunchUpdater(QString* errorMessage)
 {
     if (snapshot_.state != State::kUpdateAvailable ||
-        packageUrl_.isEmpty() || packageSha256_.isEmpty() ||
+        packageUrls_.isEmpty() || packageSha256_.isEmpty() ||
         packageSize_ <= 0) {
         if (errorMessage) {
             *errorMessage = QStringLiteral("当前没有可安装的更新。" );
@@ -389,9 +496,8 @@ bool SoftwareUpdateController::LaunchUpdater(QString* errorMessage)
         return false;
     }
 
-    const QStringList arguments = {
-        QStringLiteral("--manifest-url"), manifestUrl_.toString(),
-        QStringLiteral("--package-url"), packageUrl_.toString(),
+    QStringList arguments = {
+        QStringLiteral("--manifest-url"), activeManifestUrl_.toString(),
         QStringLiteral("--package-sha256"), packageSha256_,
         QStringLiteral("--package-size"), QString::number(packageSize_),
         QStringLiteral("--target-dir"), applicationDirectory,
@@ -400,6 +506,10 @@ bool SoftwareUpdateController::LaunchUpdater(QString* errorMessage)
         QStringLiteral("--target-version"), snapshot_.latestVersion,
         QStringLiteral("--parent-pid"),
             QString::number(QCoreApplication::applicationPid())};
+    for (const QUrl& packageUrl : packageUrls_) {
+        arguments.push_back(QStringLiteral("--package-url"));
+        arguments.push_back(packageUrl.toString());
+    }
 #ifdef Q_OS_WIN
     QStringList quotedArguments;
     quotedArguments.reserve(arguments.size());

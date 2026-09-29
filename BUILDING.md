@@ -33,6 +33,12 @@ CMake targets map to the sources as follows:
 | `RemoteCSignalServer` | exe | Qt HTTP/WS signaling server |
 | `RLinkUpdater` | exe | standalone updater (no Qt) |
 
+The refactored source tree uses `.h/.cpp` files only. Large implementations
+are split by responsibility as `ClassName.Topic.cpp`, for example
+`InProcessSessionEngine.Room.cpp`; they remain parts of the class declared in
+the matching header. `cmake\targets.cmake` is the authoritative target/source
+list.
+
 ## 2. Prerequisites
 
 Use the versions from the currently verified environment when possible:
@@ -447,6 +453,18 @@ project with toolset `v143` into the repository root's `build\` directory (the
 generated solution is `build\RLinkRemoteCtrl.sln`). The generator is
 multi-configuration, so one configure supports both configurations:
 
+### Open the project in Visual Studio
+
+Run `cmake_configure.bat` once, then open the generated solution:
+
+```powershell
+start .\build\RLinkRemoteCtrl.sln
+```
+
+Select `Release | x64`; the client project is `RLinkAPP`. Do not open the old
+`build\RLink.sln` or `ControllerApp.vcxproj`. If either still exists, it is a
+local artifact left by an earlier build layout.
+
 ```powershell
 cmake --build --preset windows-msvc-x64-v143-release -j   # -> x64\Release
 cmake --build --preset windows-msvc-x64-v143-debug   -j   # -> x64\Debug
@@ -484,6 +502,13 @@ Test-Path .\x64\Debug\avcodec-62.dll
 
 Every command should return `True`. Debug uses the debug-flavoured platform
 plugin `qwindowsd.dll`, not `qwindows.dll`.
+
+`x64\Release` is a reusable build-output directory. CMake does not remove files
+that no longer belong to a target, so an old executable such as
+`RemoteCApp.exe` can remain after the project is upgraded. It is not the
+current client. Do not publish the complete `x64\Release` directory; create a
+curated package directory and verify that `RLinkAPP.exe` is its client entry
+point.
 
 ## 7. Troubleshooting
 

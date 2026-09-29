@@ -45,7 +45,7 @@ RLink 是一款面向 Windows 的高性能开源远程桌面与多人协作工�
 
 - **界面外观**：支持**浅色、深色或跟随系统主题**，并可调整动画效果、字体和字号。
 - **启动行为**：支持设置**开机启动、启动后的窗口状态和关闭按钮行为**。
-- **软件更新**：自动检查 GitHub Releases，也可以从账户菜单或设置页手动检查；更新窗口会展示**版本号、更新摘要和更新内容**。低于最低支持版本时会要求完成**强制更新**或退出软件；开始安装后会先安全结束当前会话，只保留独立更新进度窗口，完成后自动重启。
+- **软件更新**：默认先从 CNB 检查并下载更新，GitHub 作为自动兜底；也可以从账户菜单或设置页手动检查。更新窗口会展示**版本号、更新摘要和更新内容**；清单或安装包镜像失败时会自动切换。低于最低支持版本时会要求完成**强制更新**或退出软件。
 - **远控偏好**：可以选择桌面采集、视频编码、视频解码和画面渲染方式，也可以调整编码质量与拖动采样率。
 - **快捷键**：集中展示全屏、远程复制等常用操作的快捷键，方便随时查看。
 
@@ -123,6 +123,10 @@ cmake --build --preset windows-msvc-x64-v143-release -j
 也可直接用 CMake 预设：`cmake --preset windows-msvc-x64-v143` 后
 `cmake --build --preset windows-msvc-x64-v143-release -j`。
 
+要在 Visual Studio 中阅读或编译，先完成上面的 configure，再打开
+`build\RLinkRemoteCtrl.sln`。`build\RLink.sln` 和 `ControllerApp.vcxproj`
+属于旧构建产物，不是当前入口。
+
 Debug 构建使用 `cmake --build --preset windows-msvc-x64-v143-debug -j`，
 需要先按构建指南准备 Debug 版 WebRTC。
 
@@ -133,7 +137,7 @@ Debug 构建使用 `cmake --build --preset windows-msvc-x64-v143-debug -j`，
 - `RemoteCSignalServer.exe`：RLink 的 WSS 信令服务。
 
 公开仓库提供源码编译、自建信令服务和 FFmpeg 依赖构建所需内容。
-安装包制作、正式版本签名与 GitHub Release 发布流程由项目维护者在本地完成，
+安装包制作、正式版本签名与 GitHub/CNB Release 发布流程由项目维护者在本地完成，
 不属于公开源码构建步骤。
 
 桌面采集和硬件编解码依赖当前 Windows 会话、显示器和驱动，最终发布

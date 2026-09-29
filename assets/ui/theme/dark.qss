@@ -55,6 +55,18 @@ QFrame#profileCard:hover {
     background: #192638;
     border-color: #3C506B;
 }
+QToolButton#profileUpdateButton {
+    background: #243453;
+    border: 1px solid #3D527A;
+}
+QToolButton#profileUpdateButton:hover {
+    background: #2D4165;
+    border-color: #5570A3;
+}
+QToolButton#profileUpdateButton:pressed {
+    background: #1D2C46;
+    border-color: #435A86;
+}
 QLabel#profileAvatar {
     background: #24344E;
     color: #F1F5FB;

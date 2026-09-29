@@ -1,10 +1,10 @@
 # 应用层：会话引擎与业务控制器
 
-> 自动生成于 2026-09-06，源码树 `1ae783c8db12-dirty`。请运行 `tools/Generate-SourceSymbolReference.ps1` 刷新。
+> 自动生成于 2026-09-28，源码树 `f12aea4209d9-dirty`。请运行 `tools/Generate-SourceSymbolReference.ps1` 刷新。
 
 direct/room 会话引擎、媒体路由、文件传输、远程粘贴与缓存状态机。
 
-本册共收录 50 个源码文件。函数与变量的中文作用优先采用源码紧邻注释；无注释时根据符号命名生成阅读提示，最终语义仍以源码为准。
+本册共收录 69 个源码文件。函数与变量的中文作用优先采用源码紧邻注释；无注释时根据符号命名生成阅读提示，最终语义仍以源码为准。
 
 ## `src/apps/remote/ClipboardCacheManager.cpp`
 
@@ -435,6 +435,64 @@ direct/room 会话引擎、媒体路由、文件传输、远程粘贴与缓存�
 | [L185](../src/apps/remote/ClipboardController.h#L185) | `GenerateId` | 声明 | `std::string GenerateId(const char* prefix)` | 实现 generate id 对应的业务或工具逻辑。 |
 | [L186](../src/apps/remote/ClipboardController.h#L186) | `ClipboardCacheRoot` | 声明 | `std::filesystem::path ClipboardCacheRoot() const` | 实现 clipboard cache root 对应的业务或工具逻辑。 |
 
+## `src/apps/remote/DirectSessionCoordinator.cpp`
+
+[打开源码](../src/apps/remote/DirectSessionCoordinator.cpp) · **文件作用：** 实现 direct session coordinator 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L11](../src/apps/remote/DirectSessionCoordinator.cpp#L11) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L16](../src/apps/remote/DirectSessionCoordinator.cpp#L16) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L23](../src/apps/remote/DirectSessionCoordinator.cpp#L23) | `DirectSessionCoordinator::PrepareOutgoingStart` | 定义 | `SessionCommandResult DirectSessionCoordinator::PrepareOutgoingStart( const DirectSessionConnectRequest& request, DirectSessionStartPlan* plan) const` | 实现 prepare outgoing start 对应的业务或工具逻辑。 |
+| [L79](../src/apps/remote/DirectSessionCoordinator.cpp#L79) | `DirectSessionCoordinator::ApplyOutgoingStart` | 定义 | `void DirectSessionCoordinator::ApplyOutgoingStart( SessionEngineSnapshot* snapshot, const DirectSessionStartPlan& plan) const` | 更新或应用 apply outgoing start 相关逻辑。 |
+| [L101](../src/apps/remote/DirectSessionCoordinator.cpp#L101) | `DirectSessionCoordinator::ValidateIncomingDecision` | 定义 | `SessionCommandResult DirectSessionCoordinator::ValidateIncomingDecision( const SessionEngineSnapshot& snapshot, const std::string& sessionId, bool rejecting) const` | 判断 validate incoming decision 相关逻辑。 |
+| [L120](../src/apps/remote/DirectSessionCoordinator.cpp#L120) | `DirectSessionCoordinator::ApplyIncomingAccepted` | 定义 | `void DirectSessionCoordinator::ApplyIncomingAccepted( SessionEngineSnapshot* snapshot) const` | 更新或应用 apply incoming accepted 相关逻辑。 |
+| [L131](../src/apps/remote/DirectSessionCoordinator.cpp#L131) | `DirectSessionCoordinator::Reset` | 定义 | `void DirectSessionCoordinator::Reset()` | 重置或移除 reset 相关逻辑。 |
+
+## `src/apps/remote/DirectSessionCoordinator.h`
+
+[打开源码](../src/apps/remote/DirectSessionCoordinator.h) · **文件作用：** 声明 direct session coordinator 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L16](../src/apps/remote/DirectSessionCoordinator.h#L16) | `InProcessSessionEngine` | class | 定义 InProcessSessionEngine 的 class 类型和相关状态。 |
+| [L18](../src/apps/remote/DirectSessionCoordinator.h#L18) | `DirectSessionStartPlan` | struct | 定义 DirectSessionStartPlan 的 struct 类型和相关状态。 |
+| [L27](../src/apps/remote/DirectSessionCoordinator.h#L27) | `DirectSessionCoordinator` | class | Owns direct-session command policy and lifecycle transitions. Transport and media callbacks are migrated here in later batches while the engine remains the public ISessionEngine... |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L16](../src/apps/remote/DirectSessionCoordinator.h#L16) | `InProcessSessionEngine` | `class InProcessSessionEngine;` | 保存 in process session engine 相关配置或运行状态。 |
+| [L19](../src/apps/remote/DirectSessionCoordinator.h#L19) | `request` | `DirectSessionConnectRequest request;` | 保存 request 相关配置或运行状态。 |
+| [L20](../src/apps/remote/DirectSessionCoordinator.h#L20) | `origin` | `SessionOrigin origin = SessionOrigin::kManualDeviceId;` | 保存 origin 相关配置或运行状态。 |
+| [L21](../src/apps/remote/DirectSessionCoordinator.h#L21) | `permissions` | `std::vector<std::string> permissions;` | 保存 permissions 相关配置或运行状态。 |
+| [L47](../src/apps/remote/DirectSessionCoordinator.h#L47) | `localIsOfferer_` | `bool localIsOfferer_ = false;` | 保存 local is offerer 相关配置或运行状态。 |
+| [L48](../src/apps/remote/DirectSessionCoordinator.h#L48) | `offerNegotiationStarted_` | `bool offerNegotiationStarted_ = false;` | 保存 offer negotiation started 相关配置或运行状态。 |
+| [L49](../src/apps/remote/DirectSessionCoordinator.h#L49) | `sessionCloseRequested_` | `bool sessionCloseRequested_ = false;` | 保存 session close requested 相关配置或运行状态。 |
+| [L50](../src/apps/remote/DirectSessionCoordinator.h#L50) | `sessionEndSignalSent_` | `bool sessionEndSignalSent_ = false;` | 保存 session end signal sent 相关配置或运行状态。 |
+| [L51](../src/apps/remote/DirectSessionCoordinator.h#L51) | `cancelWhenSessionIdKnown_` | `bool cancelWhenSessionIdKnown_ = false;` | 保存 cancel when session id known 相关配置或运行状态。 |
+| [L52](../src/apps/remote/DirectSessionCoordinator.h#L52) | `serverSessionActive_` | `bool serverSessionActive_ = false;` | 保存能力或开关状态：server session active。 |
+| [L53](../src/apps/remote/DirectSessionCoordinator.h#L53) | `signalingRecoveryPending_` | `bool signalingRecoveryPending_ = false;` | 保存待处理队列或请求：signaling recovery pending。 |
+| [L54](../src/apps/remote/DirectSessionCoordinator.h#L54) | `peerSignalingSuspended_` | `bool peerSignalingSuspended_ = false;` | 保存 peer signaling suspended 相关配置或运行状态。 |
+| [L55](../src/apps/remote/DirectSessionCoordinator.h#L55) | `sessionRecoveryToken_` | `std::string sessionRecoveryToken_;` | 保存 session recovery token 相关配置或运行状态。 |
+| [L56](../src/apps/remote/DirectSessionCoordinator.h#L56) | `pendingRemoteDescription_` | `std::optional<SessionDescription> pendingRemoteDescription_;` | 保存 pending remote description 相关配置或运行状态。 |
+| [L57](../src/apps/remote/DirectSessionCoordinator.h#L57) | `pendingRemoteCandidates_` | `std::vector<IceCandidate> pendingRemoteCandidates_;` | 保存 pending remote candidates 相关配置或运行状态。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L29](../src/apps/remote/DirectSessionCoordinator.h#L29) | `PrepareOutgoingStart` | 声明 | `[[nodiscard]] SessionCommandResult PrepareOutgoingStart( const DirectSessionConnectRequest& request, DirectSessionStartPlan* plan) const` | 实现 prepare outgoing start 对应的业务或工具逻辑。 |
+| [L32](../src/apps/remote/DirectSessionCoordinator.h#L32) | `ApplyOutgoingStart` | 声明 | `void ApplyOutgoingStart( SessionEngineSnapshot* snapshot, const DirectSessionStartPlan& plan) const` | 更新或应用 apply outgoing start 相关逻辑。 |
+| [L36](../src/apps/remote/DirectSessionCoordinator.h#L36) | `ValidateIncomingDecision` | 声明 | `[[nodiscard]] SessionCommandResult ValidateIncomingDecision( const SessionEngineSnapshot& snapshot, const std::string& sessionId, bool rejecting) const` | 判断 validate incoming decision 相关逻辑。 |
+| [L40](../src/apps/remote/DirectSessionCoordinator.h#L40) | `ApplyIncomingAccepted` | 声明 | `void ApplyIncomingAccepted(SessionEngineSnapshot* snapshot) const` | 更新或应用 apply incoming accepted 相关逻辑。 |
+| [L42](../src/apps/remote/DirectSessionCoordinator.h#L42) | `Reset` | 声明 | `void Reset()` | 重置或移除 reset 相关逻辑。 |
+
 ## `src/apps/remote/DirectSessionRuntimeState.h`
 
 [打开源码](../src/apps/remote/DirectSessionRuntimeState.h) · **文件作用：** 声明 direct session runtime state 相关类型、接口、配置和成员状态。
@@ -489,62 +547,40 @@ direct/room 会话引擎、媒体路由、文件传输、远程粘贴与缓存�
 | [L38](../src/apps/remote/EncoderBenchmarkProfileCache.h#L38) | `LoadEncoderBenchmarkProfile` | 定义 | `inline QJsonObject LoadEncoderBenchmarkProfile( const QSettings& settings, const QString& hardwareFingerprint, const QString& captureBackend, const QString& quality, int policyVersion)` | 读取或恢复 load encoder benchmark profile 相关逻辑。 |
 | [L109](../src/apps/remote/EncoderBenchmarkProfileCache.h#L109) | `SaveEncoderBenchmarkProfile` | 定义 | `inline void SaveEncoderBenchmarkProfile( QSettings& settings, QJsonObject profile)` | 保存或写入 save encoder benchmark profile 相关逻辑。 |
 
-## `src/apps/remote/FileTransferController.Chunking.inc`
+## `src/apps/remote/FileTransferController.Chunking.cpp`
 
-[打开源码](../src/apps/remote/FileTransferController.Chunking.inc) · **文件作用：** `FileTransferController` 的实现切片，集中实现 chunking 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/apps/remote/FileTransferController.Chunking.inc#L4) | `FileTransferController::SendAvailableChunks` | 定义 | `void FileTransferController::SendAvailableChunks( const std::string& transferId)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-
-## `src/apps/remote/FileTransferController.Commands.inc`
-
-[打开源码](../src/apps/remote/FileTransferController.Commands.inc) · **文件作用：** `FileTransferController` 的实现切片，集中实现 commands 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/FileTransferController.Chunking.cpp) · **文件作用：** 实现 file transfer controller chunking 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/FileTransferController.Commands.inc#L4) | `FileTransferController::SendFile` | 定义 | `FileTransferCommandResult FileTransferController::SendFile( const std::string& peerDeviceId, const std::filesystem::path& sourcePath)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L37](../src/apps/remote/FileTransferController.Commands.inc#L37) | `FileTransferController::AcceptIncoming` | 定义 | `FileTransferCommandResult FileTransferController::AcceptIncoming( const std::string& transferId, const std::filesystem::path& destinationDirectory, bool replaceExisting)` | 处理并回复 accept incoming 相关逻辑。 |
-| [L69](../src/apps/remote/FileTransferController.Commands.inc#L69) | `FileTransferController::RejectIncoming` | 定义 | `FileTransferCommandResult FileTransferController::RejectIncoming( const std::string& transferId)` | 处理并回复 reject incoming 相关逻辑。 |
-| [L102](../src/apps/remote/FileTransferController.Commands.inc#L102) | `FileTransferController::Cancel` | 定义 | `FileTransferCommandResult FileTransferController::Cancel( const std::string& transferId)` | 判断 cancel 相关逻辑。 |
-| [L154](../src/apps/remote/FileTransferController.Commands.inc#L154) | `FileTransferController::Resume` | 定义 | `FileTransferCommandResult FileTransferController::Resume( const std::string& transferId)` | 实现 resume 对应的业务或工具逻辑。 |
+| [L16](../src/apps/remote/FileTransferController.Chunking.cpp#L16) | `FileTransferController::SendAvailableChunks` | 定义 | `void FileTransferController::SendAvailableChunks( const std::string& transferId)` | 发送或发布 send available chunks 相关逻辑。 |
+
+## `src/apps/remote/FileTransferController.Commands.cpp`
+
+[打开源码](../src/apps/remote/FileTransferController.Commands.cpp) · **文件作用：** 实现 file transfer controller commands 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L15](../src/apps/remote/FileTransferController.Commands.cpp#L15) | `FileTransferController::SendFile` | 定义 | `FileTransferCommandResult FileTransferController::SendFile( const std::string& peerDeviceId, const std::filesystem::path& sourcePath)` | 发送或发布 send file 相关逻辑。 |
+| [L48](../src/apps/remote/FileTransferController.Commands.cpp#L48) | `FileTransferController::AcceptIncoming` | 定义 | `FileTransferCommandResult FileTransferController::AcceptIncoming( const std::string& transferId, const std::filesystem::path& destinationDirectory, bool replaceExisting)` | 处理并回复 accept incoming 相关逻辑。 |
+| [L80](../src/apps/remote/FileTransferController.Commands.cpp#L80) | `FileTransferController::RejectIncoming` | 定义 | `FileTransferCommandResult FileTransferController::RejectIncoming( const std::string& transferId)` | 处理并回复 reject incoming 相关逻辑。 |
+| [L113](../src/apps/remote/FileTransferController.Commands.cpp#L113) | `FileTransferController::Cancel` | 定义 | `FileTransferCommandResult FileTransferController::Cancel( const std::string& transferId)` | 判断 cancel 相关逻辑。 |
+| [L165](../src/apps/remote/FileTransferController.Commands.cpp#L165) | `FileTransferController::Resume` | 定义 | `FileTransferCommandResult FileTransferController::Resume( const std::string& transferId)` | 实现 resume 对应的业务或工具逻辑。 |
 
 ## `src/apps/remote/FileTransferController.cpp`
 
 [打开源码](../src/apps/remote/FileTransferController.cpp) · **文件作用：** 实现 file transfer controller 相关函数与文件级辅助逻辑。
 
-### 类型
-
-| 行 | 类型 | 种类 | 作用 |
-|---:|---|---|---|
-| [L74](../src/apps/remote/FileTransferController.cpp#L74) | `FileTransferController::TransferRecord` | struct | 定义 FileTransferController::TransferRecord 的 struct 类型和相关状态。 |
-| [L75](../src/apps/remote/FileTransferController.cpp#L75) | `RateSample` | struct | 定义 RateSample 的 struct 类型和相关状态。 |
-
-### 成员与文件级变量
-
-| 行 | 变量 | 声明 | 作用 |
-|---:|---|---|---|
-| [L19](../src/apps/remote/FileTransferController.cpp#L19) | `kControlBackpressureRetryCount` | `constexpr int kControlBackpressureRetryCount = 200;` | 定义 control backpressure retry count 的编译期常量或产品边界。 |
-| [L23](../src/apps/remote/FileTransferController.cpp#L23) | `kFileTransferChunkBytes` | `constexpr std::size_t kFileTransferChunkBytes = 60 * 1024;` | 定义 file transfer chunk bytes 的编译期常量或产品边界。 |
-| [L24](../src/apps/remote/FileTransferController.cpp#L24) | `kFileTransferSendBurstBytes` | `constexpr std::uint64_t kFileTransferSendBurstBytes = 1024 * 1024;` | 定义 file transfer send burst bytes 的编译期常量或产品边界。 |
-| [L25](../src/apps/remote/FileTransferController.cpp#L25) | `kFileTransferMaximumInFlightBytes` | `constexpr std::uint64_t kFileTransferMaximumInFlightBytes = 2 * 1024 * 1024;` | 定义 file transfer maximum in flight bytes 的编译期常量或产品边界。 |
-| [L26](../src/apps/remote/FileTransferController.cpp#L26) | `kFileTransferProgressAckBytes` | `constexpr std::uint64_t kFileTransferProgressAckBytes = 256 * 1024;` | 定义 file transfer progress ack bytes 的编译期常量或产品边界。 |
-| [L33](../src/apps/remote/FileTransferController.cpp#L33) | `kMaximumFileResyncAttempts` | `constexpr std::uint32_t kMaximumFileResyncAttempts = 3;` | 定义 maximum file resync attempts 的编译期常量或产品边界。 |
-
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L40](../src/apps/remote/FileTransferController.cpp#L40) | `IsTerminal` | 定义 | `bool IsTerminal(FileTransferState state)` | 判断 is terminal 相关逻辑。 |
-| [L49](../src/apps/remote/FileTransferController.cpp#L49) | `IsFileTransferBackpressure` | 定义 | `bool IsFileTransferBackpressure(const SessionCommandResult& result)` | 判断 is file transfer backpressure 相关逻辑。 |
-| [L55](../src/apps/remote/FileTransferController.cpp#L55) | `Accepted` | 定义 | `FileTransferCommandResult Accepted(std::string transferId)` | 处理并回复 accepted 相关逻辑。 |
-| [L63](../src/apps/remote/FileTransferController.cpp#L63) | `Rejected` | 定义 | `FileTransferCommandResult Rejected(std::string errorCode, std::string errorMessage)` | 处理并回复 rejected 相关逻辑。 |
-| [L105](../src/apps/remote/FileTransferController.cpp#L105) | `FileTransferController::PublishSnapshots` | 定义 | `void FileTransferController::PublishSnapshots()` | 发送或发布 publish snapshots 相关逻辑。 |
-| [L127](../src/apps/remote/FileTransferController.cpp#L127) | `FileTransferController::GenerateTransferId` | 定义 | `std::string FileTransferController::GenerateTransferId()` | 实现 generate transfer id 对应的业务或工具逻辑。 |
+| [L18](../src/apps/remote/FileTransferController.cpp#L18) | `FileTransferController::PublishSnapshots` | 定义 | `void FileTransferController::PublishSnapshots()` | 发送或发布 publish snapshots 相关逻辑。 |
+| [L40](../src/apps/remote/FileTransferController.cpp#L40) | `FileTransferController::GenerateTransferId` | 定义 | `std::string FileTransferController::GenerateTransferId()` | 实现 generate transfer id 对应的业务或工具逻辑。 |
 
 ## `src/apps/remote/FileTransferController.h`
 
@@ -639,71 +675,119 @@ direct/room 会话引擎、媒体路由、文件传输、远程粘贴与缓存�
 | [L152](../src/apps/remote/FileTransferController.h#L152) | `PublishSnapshots` | 声明 | `void PublishSnapshots()` | 发送或发布 publish snapshots 相关逻辑。 |
 | [L153](../src/apps/remote/FileTransferController.h#L153) | `GenerateTransferId` | 声明 | `std::string GenerateTransferId()` | 实现 generate transfer id 对应的业务或工具逻辑。 |
 
-## `src/apps/remote/FileTransferController.Lifecycle.inc`
+## `src/apps/remote/FileTransferController.Lifecycle.cpp`
 
-[打开源码](../src/apps/remote/FileTransferController.Lifecycle.inc) · **文件作用：** `FileTransferController` 的实现切片，集中实现 lifecycle 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/apps/remote/FileTransferController.Lifecycle.inc#L4) | `FileTransferController::FileTransferController` | 定义 | `FileTransferController::FileTransferController( SendCallback send, std::unique_ptr<WindowsFileTransferService> fileService) : send_(std::move(send)), storage_(std::make_unique<FileTransferStorage>( std::move(fileServi...` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L15](../src/apps/remote/FileTransferController.Lifecycle.inc#L15) | `FileTransferController::~FileTransferController` | 定义 | `FileTransferController::~FileTransferController()` | 停止相关活动并释放 FileTransferController 实例拥有的资源。 |
-| [L38](../src/apps/remote/FileTransferController.Lifecycle.inc#L38) | `FileTransferController::SetObserver` | 定义 | `void FileTransferController::SetObserver( IFileTransferControllerObserver* observer)` | 更新或应用 set observer 相关逻辑。 |
-| [L48](../src/apps/remote/FileTransferController.Lifecycle.inc#L48) | `FileTransferController::Transfers` | 定义 | `std::vector<FileTransferSnapshot> FileTransferController::Transfers() const` | 实现 transfers 对应的业务或工具逻辑。 |
-| [L63](../src/apps/remote/FileTransferController.Lifecycle.inc#L63) | `FileTransferController::UpdatePeerConnectivity` | 定义 | `void FileTransferController::UpdatePeerConnectivity( const std::vector<std::string>& activePeerDeviceIds, const std::vector<std::string>& recoveringPeerDeviceIds)` | 更新或应用 update peer connectivity 相关逻辑。 |
-
-## `src/apps/remote/FileTransferController.Receive.inc`
-
-[打开源码](../src/apps/remote/FileTransferController.Receive.inc) · **文件作用：** `FileTransferController` 的实现切片，集中实现 receive 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/FileTransferController.Lifecycle.cpp) · **文件作用：** 实现 file transfer controller lifecycle 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/FileTransferController.Receive.inc#L4) | `FileTransferController::PrepareIncoming` | 定义 | `void FileTransferController::PrepareIncoming( const std::string& transferId)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L75](../src/apps/remote/FileTransferController.Receive.inc#L75) | `FileTransferController::ProcessEnvelope` | 定义 | `void FileTransferController::ProcessEnvelope(FileTransferEnvelope envelope)` | 接收并处理 process envelope 相关逻辑。 |
+| [L19](../src/apps/remote/FileTransferController.Lifecycle.cpp#L19) | `FileTransferController::FileTransferController` | 定义 | `FileTransferController::FileTransferController( SendCallback send, std::unique_ptr<WindowsFileTransferService> fileService) : send_(std::move(send)), storage_(std::make_unique<FileTransferStorage>( std::move(fileServi...` | 构造并初始化 FileTransferController 实例。 |
+| [L30](../src/apps/remote/FileTransferController.Lifecycle.cpp#L30) | `FileTransferController::~FileTransferController` | 定义 | `FileTransferController::~FileTransferController()` | 停止相关活动并释放 FileTransferController 实例拥有的资源。 |
+| [L53](../src/apps/remote/FileTransferController.Lifecycle.cpp#L53) | `FileTransferController::SetObserver` | 定义 | `void FileTransferController::SetObserver( IFileTransferControllerObserver* observer)` | 更新或应用 set observer 相关逻辑。 |
+| [L63](../src/apps/remote/FileTransferController.Lifecycle.cpp#L63) | `FileTransferController::Transfers` | 定义 | `std::vector<FileTransferSnapshot> FileTransferController::Transfers() const` | 实现 transfers 对应的业务或工具逻辑。 |
+| [L78](../src/apps/remote/FileTransferController.Lifecycle.cpp#L78) | `FileTransferController::UpdatePeerConnectivity` | 定义 | `void FileTransferController::UpdatePeerConnectivity( const std::vector<std::string>& activePeerDeviceIds, const std::vector<std::string>& recoveringPeerDeviceIds)` | 更新或应用 update peer connectivity 相关逻辑。 |
 
-## `src/apps/remote/FileTransferController.Reliability.inc`
+## `src/apps/remote/FileTransferController.Receive.cpp`
 
-[打开源码](../src/apps/remote/FileTransferController.Reliability.inc) · **文件作用：** `FileTransferController` 的实现切片，集中实现 reliability 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/apps/remote/FileTransferController.Reliability.inc#L4) | `FileTransferController::CheckStalledTransfers` | 定义 | `void FileTransferController::CheckStalledTransfers()` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L97](../src/apps/remote/FileTransferController.Reliability.inc#L97) | `FileTransferController::SendWithBackpressureRetry` | 定义 | `SessionCommandResult FileTransferController::SendWithBackpressureRetry( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send with backpressure retry 相关逻辑。 |
-| [L117](../src/apps/remote/FileTransferController.Reliability.inc#L117) | `FileTransferController::SendOnce` | 定义 | `SessionCommandResult FileTransferController::SendOnce( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send once 相关逻辑。 |
-| [L130](../src/apps/remote/FileTransferController.Reliability.inc#L130) | `FileTransferController::FailTransfer` | 定义 | `void FileTransferController::FailTransfer( const std::string& transferId, std::string errorCode, std::string errorMessage, bool notifyPeer)` | 实现 fail transfer 对应的业务或工具逻辑。 |
-| [L161](../src/apps/remote/FileTransferController.Reliability.inc#L161) | `FileTransferController::SendProtocolError` | 定义 | `void FileTransferController::SendProtocolError( const std::string& peerDeviceId, const std::string& transferId, const std::string& errorCode, const std::string& errorMessage)` | 发送或发布 send protocol error 相关逻辑。 |
-
-## `src/apps/remote/FileTransferController.Send.inc`
-
-[打开源码](../src/apps/remote/FileTransferController.Send.inc) · **文件作用：** `FileTransferController` 的实现切片，集中实现 send 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/FileTransferController.Receive.cpp) · **文件作用：** 实现 file transfer controller receive 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/FileTransferController.Send.inc#L4) | `FileTransferController::PrepareOutgoing` | 定义 | `void FileTransferController::PrepareOutgoing( const std::string& transferId)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
+| [L18](../src/apps/remote/FileTransferController.Receive.cpp#L18) | `FileTransferController::PrepareIncoming` | 定义 | `void FileTransferController::PrepareIncoming( const std::string& transferId)` | 实现 prepare incoming 对应的业务或工具逻辑。 |
+| [L89](../src/apps/remote/FileTransferController.Receive.cpp#L89) | `FileTransferController::ProcessEnvelope` | 定义 | `void FileTransferController::ProcessEnvelope(FileTransferEnvelope envelope)` | 接收并处理 process envelope 相关逻辑。 |
 
-## `src/apps/remote/FileTransferController.Worker.inc`
+## `src/apps/remote/FileTransferController.Reliability.cpp`
 
-[打开源码](../src/apps/remote/FileTransferController.Worker.inc) · **文件作用：** `FileTransferController` 的实现切片，集中实现 worker 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/FileTransferController.Reliability.cpp) · **文件作用：** 实现 file transfer controller reliability 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/FileTransferController.Worker.inc#L4) | `FileTransferController::OnFileTransferMessage` | 定义 | `void FileTransferController::OnFileTransferMessage( const FileTransferEnvelope& envelope)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L10](../src/apps/remote/FileTransferController.Worker.inc#L10) | `FileTransferController::WorkerMain` | 定义 | `void FileTransferController::WorkerMain(std::stop_token stopToken)` | 实现 worker main 对应的业务或工具逻辑。 |
-| [L78](../src/apps/remote/FileTransferController.Worker.inc#L78) | `FileTransferController::Post` | 定义 | `bool FileTransferController::Post(std::function<void()> task)` | 实现 post 对应的业务或工具逻辑。 |
-| [L91](../src/apps/remote/FileTransferController.Worker.inc#L91) | `FileTransferController::PostPriority` | 定义 | `bool FileTransferController::PostPriority(std::function<void()> task)` | 实现 post priority 对应的业务或工具逻辑。 |
-| [L104](../src/apps/remote/FileTransferController.Worker.inc#L104) | `FileTransferController::PostAfter` | 定义 | `bool FileTransferController::PostAfter( std::chrono::milliseconds delay, std::function<void()> task)` | 实现 post after 对应的业务或工具逻辑。 |
-| [L124](../src/apps/remote/FileTransferController.Worker.inc#L124) | `FileTransferController::ResetRateLocked` | 定义 | `void FileTransferController::ResetRateLocked(TransferRecord& transfer)` | 重置或移除 reset rate locked 相关逻辑。 |
-| [L137](../src/apps/remote/FileTransferController.Worker.inc#L137) | `FileTransferController::UpdateProgressLocked` | 定义 | `void FileTransferController::UpdateProgressLocked( TransferRecord& transfer, std::uint64_t transferredBytes)` | 更新或应用 update progress locked 相关逻辑。 |
-| [L154](../src/apps/remote/FileTransferController.Worker.inc#L154) | `FileTransferController::RefreshRateLocked` | 定义 | `bool FileTransferController::RefreshRateLocked( TransferRecord& transfer, std::chrono::steady_clock::time_point now)` | 刷新 refresh rate locked 相关逻辑。 |
+| [L17](../src/apps/remote/FileTransferController.Reliability.cpp#L17) | `FileTransferController::CheckStalledTransfers` | 定义 | `void FileTransferController::CheckStalledTransfers()` | 校验 check stalled transfers 相关逻辑。 |
+| [L110](../src/apps/remote/FileTransferController.Reliability.cpp#L110) | `FileTransferController::SendWithBackpressureRetry` | 定义 | `SessionCommandResult FileTransferController::SendWithBackpressureRetry( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send with backpressure retry 相关逻辑。 |
+| [L130](../src/apps/remote/FileTransferController.Reliability.cpp#L130) | `FileTransferController::SendOnce` | 定义 | `SessionCommandResult FileTransferController::SendOnce( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send once 相关逻辑。 |
+| [L143](../src/apps/remote/FileTransferController.Reliability.cpp#L143) | `FileTransferController::FailTransfer` | 定义 | `void FileTransferController::FailTransfer( const std::string& transferId, std::string errorCode, std::string errorMessage, bool notifyPeer)` | 实现 fail transfer 对应的业务或工具逻辑。 |
+| [L174](../src/apps/remote/FileTransferController.Reliability.cpp#L174) | `FileTransferController::SendProtocolError` | 定义 | `void FileTransferController::SendProtocolError( const std::string& peerDeviceId, const std::string& transferId, const std::string& errorCode, const std::string& errorMessage)` | 发送或发布 send protocol error 相关逻辑。 |
+
+## `src/apps/remote/FileTransferController.Send.cpp`
+
+[打开源码](../src/apps/remote/FileTransferController.Send.cpp) · **文件作用：** 实现 file transfer controller send 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L14](../src/apps/remote/FileTransferController.Send.cpp#L14) | `FileTransferController::PrepareOutgoing` | 定义 | `void FileTransferController::PrepareOutgoing( const std::string& transferId)` | 实现 prepare outgoing 对应的业务或工具逻辑。 |
+
+## `src/apps/remote/FileTransferController.Worker.cpp`
+
+[打开源码](../src/apps/remote/FileTransferController.Worker.cpp) · **文件作用：** 实现 file transfer controller worker 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L18](../src/apps/remote/FileTransferController.Worker.cpp#L18) | `FileTransferController::OnFileTransferMessage` | 定义 | `void FileTransferController::OnFileTransferMessage( const FileTransferEnvelope& envelope)` | 接收并处理 on file transfer message 相关逻辑。 |
+| [L24](../src/apps/remote/FileTransferController.Worker.cpp#L24) | `FileTransferController::WorkerMain` | 定义 | `void FileTransferController::WorkerMain(std::stop_token stopToken)` | 实现 worker main 对应的业务或工具逻辑。 |
+| [L92](../src/apps/remote/FileTransferController.Worker.cpp#L92) | `FileTransferController::Post` | 定义 | `bool FileTransferController::Post(std::function<void()> task)` | 实现 post 对应的业务或工具逻辑。 |
+| [L105](../src/apps/remote/FileTransferController.Worker.cpp#L105) | `FileTransferController::PostPriority` | 定义 | `bool FileTransferController::PostPriority(std::function<void()> task)` | 实现 post priority 对应的业务或工具逻辑。 |
+| [L118](../src/apps/remote/FileTransferController.Worker.cpp#L118) | `FileTransferController::PostAfter` | 定义 | `bool FileTransferController::PostAfter( std::chrono::milliseconds delay, std::function<void()> task)` | 实现 post after 对应的业务或工具逻辑。 |
+| [L138](../src/apps/remote/FileTransferController.Worker.cpp#L138) | `FileTransferController::ResetRateLocked` | 定义 | `void FileTransferController::ResetRateLocked(TransferRecord& transfer)` | 重置或移除 reset rate locked 相关逻辑。 |
+| [L151](../src/apps/remote/FileTransferController.Worker.cpp#L151) | `FileTransferController::UpdateProgressLocked` | 定义 | `void FileTransferController::UpdateProgressLocked( TransferRecord& transfer, std::uint64_t transferredBytes)` | 更新或应用 update progress locked 相关逻辑。 |
+| [L168](../src/apps/remote/FileTransferController.Worker.cpp#L168) | `FileTransferController::RefreshRateLocked` | 定义 | `bool FileTransferController::RefreshRateLocked( TransferRecord& transfer, std::chrono::steady_clock::time_point now)` | 刷新 refresh rate locked 相关逻辑。 |
+
+## `src/apps/remote/FileTransferControllerInternal.h`
+
+[打开源码](../src/apps/remote/FileTransferControllerInternal.h) · **文件作用：** 声明 file transfer controller internal 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L74](../src/apps/remote/FileTransferControllerInternal.h#L74) | `FileTransferController::TransferRecord` | struct | 定义 FileTransferController::TransferRecord 的 struct 类型和相关状态。 |
+| [L75](../src/apps/remote/FileTransferControllerInternal.h#L75) | `RateSample` | struct | 定义 RateSample 的 struct 类型和相关状态。 |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L18](../src/apps/remote/FileTransferControllerInternal.h#L18) | `kControlBackpressureRetryCount` | `inline constexpr int kControlBackpressureRetryCount = 200;` | 定义 control backpressure retry count 的编译期常量或产品边界。 |
+| [L23](../src/apps/remote/FileTransferControllerInternal.h#L23) | `kFileTransferChunkBytes` | `inline constexpr std::size_t kFileTransferChunkBytes = 60 * 1024;` | 定义 file transfer chunk bytes 的编译期常量或产品边界。 |
+| [L24](../src/apps/remote/FileTransferControllerInternal.h#L24) | `kFileTransferSendBurstBytes` | `inline constexpr std::uint64_t kFileTransferSendBurstBytes = 1024 * 1024;` | 定义 file transfer send burst bytes 的编译期常量或产品边界。 |
+| [L27](../src/apps/remote/FileTransferControllerInternal.h#L27) | `kFileTransferProgressAckBytes` | `inline constexpr std::uint64_t kFileTransferProgressAckBytes = 256 * 1024;` | 定义 file transfer progress ack bytes 的编译期常量或产品边界。 |
+| [L35](../src/apps/remote/FileTransferControllerInternal.h#L35) | `kMaximumFileResyncAttempts` | `inline constexpr std::uint32_t kMaximumFileResyncAttempts = 3;` | 定义 maximum file resync attempts 的编译期常量或产品边界。 |
+| [L76](../src/apps/remote/FileTransferControllerInternal.h#L76) | `at` | `std::chrono::steady_clock::time_point at;` | 保存 at 相关配置或运行状态。 |
+| [L77](../src/apps/remote/FileTransferControllerInternal.h#L77) | `bytes` | `std::uint64_t bytes = 0;` | 保存计数、尺寸或速率指标：bytes。 |
+| [L80](../src/apps/remote/FileTransferControllerInternal.h#L80) | `snapshot` | `FileTransferSnapshot snapshot;` | 保存可跨层读取的状态快照：snapshot。 |
+| [L81](../src/apps/remote/FileTransferControllerInternal.h#L81) | `sourcePath` | `std::filesystem::path sourcePath;` | 保存路径、地址或显示名称：source path。 |
+| [L82](../src/apps/remote/FileTransferControllerInternal.h#L82) | `destination` | `FileTransferDestination destination;` | 保存 destination 相关配置或运行状态。 |
+| [L83](../src/apps/remote/FileTransferControllerInternal.h#L83) | `sha256` | `std::array<std::uint8_t, 32> sha256{};` | 保存 sha256 相关配置或运行状态。 |
+| [L84](../src/apps/remote/FileTransferControllerInternal.h#L84) | `nextSendOffset` | `std::uint64_t nextSendOffset = 0;` | 保存 next send offset 相关配置或运行状态。 |
+| [L85](../src/apps/remote/FileTransferControllerInternal.h#L85) | `receiverCommittedOffset` | `std::uint64_t receiverCommittedOffset = 0;` | 保存 receiver committed offset 相关配置或运行状态。 |
+| [L86](../src/apps/remote/FileTransferControllerInternal.h#L86) | `lastAcknowledgedOffset` | `std::uint64_t lastAcknowledgedOffset = 0;` | 保存 last acknowledged offset 相关配置或运行状态。 |
+| [L87](../src/apps/remote/FileTransferControllerInternal.h#L87) | `progressPublishedAt` | `std::chrono::steady_clock::time_point progressPublishedAt{};` | 保存 progress published at 相关配置或运行状态。 |
+| [L88](../src/apps/remote/FileTransferControllerInternal.h#L88) | `lastAcknowledgedAt` | `std::chrono::steady_clock::time_point lastAcknowledgedAt{};` | 保存 last acknowledged at 相关配置或运行状态。 |
+| [L89](../src/apps/remote/FileTransferControllerInternal.h#L89) | `lastProgressAt` | `std::chrono::steady_clock::time_point lastProgressAt{};` | 保存 last progress at 相关配置或运行状态。 |
+| [L90](../src/apps/remote/FileTransferControllerInternal.h#L90) | `rateSamples` | `std::deque<RateSample> rateSamples;` | 保存 rate samples 相关配置或运行状态。 |
+| [L91](../src/apps/remote/FileTransferControllerInternal.h#L91) | `lastRatePublishedAt` | `std::chrono::steady_clock::time_point lastRatePublishedAt{};` | 保存 last rate published at 相关配置或运行状态。 |
+| [L92](../src/apps/remote/FileTransferControllerInternal.h#L92) | `replaceExisting` | `bool replaceExisting = false;` | 保存 replace existing 相关配置或运行状态。 |
+| [L93](../src/apps/remote/FileTransferControllerInternal.h#L93) | `interruptedByNetwork` | `bool interruptedByNetwork = false;` | 保存 interrupted by network 相关配置或运行状态。 |
+| [L94](../src/apps/remote/FileTransferControllerInternal.h#L94) | `sendBackpressured` | `bool sendBackpressured = false;` | 保存 send backpressured 相关配置或运行状态。 |
+| [L95](../src/apps/remote/FileTransferControllerInternal.h#L95) | `resyncAttempts` | `std::uint32_t resyncAttempts = 0;` | 保存 resync attempts 相关配置或运行状态。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L42](../src/apps/remote/FileTransferControllerInternal.h#L42) | `IsTerminal` | 定义 | `inline bool IsTerminal(FileTransferState state)` | 判断 is terminal 相关逻辑。 |
+| [L51](../src/apps/remote/FileTransferControllerInternal.h#L51) | `IsFileTransferBackpressure` | 定义 | `inline bool IsFileTransferBackpressure(const SessionCommandResult& result)` | 判断 is file transfer backpressure 相关逻辑。 |
+| [L57](../src/apps/remote/FileTransferControllerInternal.h#L57) | `Accepted` | 定义 | `inline FileTransferCommandResult Accepted(std::string transferId)` | 处理并回复 accepted 相关逻辑。 |
+| [L65](../src/apps/remote/FileTransferControllerInternal.h#L65) | `Rejected` | 定义 | `inline FileTransferCommandResult Rejected(std::string errorCode, std::string errorMessage)` | 处理并回复 rejected 相关逻辑。 |
 
 ## `src/apps/remote/FileTransferStorage.cpp`
 
@@ -753,179 +837,157 @@ direct/room 会话引擎、媒体路由、文件传输、远程粘贴与缓存�
 | [L51](../src/apps/remote/FileTransferStorage.h#L51) | `CloseDestination` | 声明 | `void CloseDestination(const std::filesystem::path& temporaryPath)` | 关闭并清理 close destination 相关逻辑。 |
 | [L52](../src/apps/remote/FileTransferStorage.h#L52) | `RemovePartial` | 声明 | `void RemovePartial(const std::filesystem::path& temporaryPath)` | 重置或移除 remove partial 相关逻辑。 |
 
-## `src/apps/remote/InProcessSessionEngine.Audio.inc`
+## `src/apps/remote/InProcessSessionEngine.Audio.cpp`
 
-[打开源码](../src/apps/remote/InProcessSessionEngine.Audio.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 audio 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.Audio.inc#L4) | `InProcessSessionEngine::SetLocalMicrophoneEnabled` | 定义 | `SessionCommandResult InProcessSessionEngine::SetLocalMicrophoneEnabled( bool enabled)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-
-## `src/apps/remote/InProcessSessionEngine.Camera.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.Camera.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 camera 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/InProcessSessionEngine.Audio.cpp) · **文件作用：** 实现 in process session engine audio 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.Camera.inc#L4) | `InProcessSessionEngine::SetLocalCameraEnabled` | 定义 | `SessionCommandResult InProcessSessionEngine::SetLocalCameraEnabled(bool enabled)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
+| [L20](../src/apps/remote/InProcessSessionEngine.Audio.cpp#L20) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L25](../src/apps/remote/InProcessSessionEngine.Audio.cpp#L25) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L32](../src/apps/remote/InProcessSessionEngine.Audio.cpp#L32) | `InProcessSessionEngine::SetLocalMicrophoneEnabled` | 定义 | `SessionCommandResult InProcessSessionEngine::SetLocalMicrophoneEnabled( bool enabled)` | 更新或应用 set local microphone enabled 相关逻辑。 |
+
+## `src/apps/remote/InProcessSessionEngine.Camera.cpp`
+
+[打开源码](../src/apps/remote/InProcessSessionEngine.Camera.cpp) · **文件作用：** 实现 in process session engine camera 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L16](../src/apps/remote/InProcessSessionEngine.Camera.cpp#L16) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L21](../src/apps/remote/InProcessSessionEngine.Camera.cpp#L21) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L28](../src/apps/remote/InProcessSessionEngine.Camera.cpp#L28) | `InProcessSessionEngine::SetLocalCameraEnabled` | 定义 | `SessionCommandResult InProcessSessionEngine::SetLocalCameraEnabled(bool enabled)` | 更新或应用 set local camera enabled 相关逻辑。 |
 
 ## `src/apps/remote/InProcessSessionEngine.cpp`
 
 [打开源码](../src/apps/remote/InProcessSessionEngine.cpp) · **文件作用：** 实现 in process session engine 相关函数与文件级辅助逻辑。
 
-### 类型
+### 函数
 
-| 行 | 类型 | 种类 | 作用 |
-|---:|---|---|---|
-| [L305](../src/apps/remote/InProcessSessionEngine.cpp#L305) | `IdleRoomVideoSource` | class | 定义 IdleRoomVideoSource 的 class 类型和相关状态。 |
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L8](../src/apps/remote/InProcessSessionEngine.cpp#L8) | `InProcessSessionEngine::ShouldBoostDesktopCaptureForInput` | 定义 | `bool InProcessSessionEngine::ShouldBoostDesktopCaptureForInput( const RemoteInputEvent& event)` | 判断 should boost desktop capture for input 相关逻辑。 |
+| [L26](../src/apps/remote/InProcessSessionEngine.cpp#L26) | `InProcessSessionEngine::PublishSnapshot` | 定义 | `void InProcessSessionEngine::PublishSnapshot()` | 发送或发布 publish snapshot 相关逻辑。 |
 
-### 成员与文件级变量
+## `src/apps/remote/InProcessSessionEngine.DirectBridge.cpp`
 
-| 行 | 变量 | 声明 | 作用 |
-|---:|---|---|---|
-| [L105](../src/apps/remote/InProcessSessionEngine.cpp#L105) | `kMaximumFileTransferBufferedBytes` | `constexpr std::uint64_t kMaximumFileTransferBufferedBytes = 8 * 1024 * 1024;` | 定义 maximum file transfer buffered bytes 的编译期常量或产品边界。 |
-| [L110](../src/apps/remote/InProcessSessionEngine.cpp#L110) | `kMaximumClipboardBufferedBytes` | `constexpr std::uint64_t kMaximumClipboardBufferedBytes = 512 * 1024;` | Clipboard paste shares the PeerConnection with the live desktop video. Keep its cancellable in-flight tail small: libwebrtc cannot retract bytes already accepted by an ordered r... |
+[打开源码](../src/apps/remote/InProcessSessionEngine.DirectBridge.cpp) · **文件作用：** 实现 in process session engine direct bridge 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L36](../src/apps/remote/InProcessSessionEngine.cpp#L36) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
-| [L41](../src/apps/remote/InProcessSessionEngine.cpp#L41) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
-| [L46](../src/apps/remote/InProcessSessionEngine.cpp#L46) | `GenerateRotatedVerificationCode` | 定义 | `std::string GenerateRotatedVerificationCode( const std::string& previous)` | 实现 generate rotated verification code 对应的业务或工具逻辑。 |
-| [L61](../src/apps/remote/InProcessSessionEngine.cpp#L61) | `NormalizeMediaDeviceId` | 定义 | `std::string NormalizeMediaDeviceId(const std::string& deviceId)` | 实现 normalize media device id 对应的业务或工具逻辑。 |
-| [L68](../src/apps/remote/InProcessSessionEngine.cpp#L68) | `ContainsMediaDevice` | 定义 | `bool ContainsMediaDevice( const std::vector<MediaDeviceDescriptor>& devices, const std::string& deviceId)` | 实现 contains media device 对应的业务或工具逻辑。 |
-| [L79](../src/apps/remote/InProcessSessionEngine.cpp#L79) | `IsRoomVideoSlot` | 定义 | `bool IsRoomVideoSlot(const std::string& slot)` | 判断 is room video slot 相关逻辑。 |
-| [L85](../src/apps/remote/InProcessSessionEngine.cpp#L85) | `ShouldBoostDesktopCaptureForInput` | 定义 | `bool ShouldBoostDesktopCaptureForInput(const RemoteInputEvent& event)` | 判断 should boost desktop capture for input 相关逻辑。 |
-| [L114](../src/apps/remote/InProcessSessionEngine.cpp#L114) | `IsClipboardWarmupPayload` | 定义 | `bool IsClipboardWarmupPayload(std::span<const std::uint8_t> payload)` | 判断 is clipboard warmup payload 相关逻辑。 |
-| [L121](../src/apps/remote/InProcessSessionEngine.cpp#L121) | `ResolveScreenPolicy` | 定义 | `ScreenStreamPolicyResult ResolveScreenPolicy( std::uint32_t sourceWidth, std::uint32_t sourceHeight, const ScreenStreamPreferenceRequest& request)` | 查询并返回 resolve screen policy 相关逻辑。 |
-| [L132](../src/apps/remote/InProcessSessionEngine.cpp#L132) | `EncoderPreferenceName` | 定义 | `std::string EncoderPreferenceName(VideoEncoderPreference preference)` | 编码 encoder preference name 相关逻辑。 |
-| [L149](../src/apps/remote/InProcessSessionEngine.cpp#L149) | `DecoderPreferenceName` | 定义 | `std::string DecoderPreferenceName(VideoDecoderPreference preference)` | 解码或解析 decoder preference name 相关逻辑。 |
-| [L162](../src/apps/remote/InProcessSessionEngine.cpp#L162) | `DesktopCaptureImplementationName` | 定义 | `std::string DesktopCaptureImplementationName( DesktopCaptureImplementation implementation)` | 实现 desktop capture implementation name 对应的业务或工具逻辑。 |
-| [L174](../src/apps/remote/InProcessSessionEngine.cpp#L174) | `DesktopCaptureBackendName` | 定义 | `std::string DesktopCaptureBackendName( WindowsDesktopCaptureSource::CaptureBackend backend)` | 实现 desktop capture backend name 对应的业务或工具逻辑。 |
-| [L188](../src/apps/remote/InProcessSessionEngine.cpp#L188) | `MaximumDesktopCaptureFrameRate` | 定义 | `std::uint32_t MaximumDesktopCaptureFrameRate( DesktopCaptureImplementation implementation, const WindowsDesktopCaptureSource* source = nullptr)` | 实现 maximum desktop capture frame rate 对应的业务或工具逻辑。 |
-| [L203](../src/apps/remote/InProcessSessionEngine.cpp#L203) | `DescribeEncoderRuntimeInstance` | 定义 | `std::string DescribeEncoderRuntimeInstance( const VideoEncoderInstanceRuntimeStatus& status)` | 实现 describe encoder runtime instance 对应的业务或工具逻辑。 |
-| [L307](../src/apps/remote/InProcessSessionEngine.cpp#L307) | `state` | 定义 | `SourceState state() const override { return kLive; }` | 实现 state 对应的业务或工具逻辑。 |
-| [L308](../src/apps/remote/InProcessSessionEngine.cpp#L308) | `remote` | 定义 | `bool remote() const override { return false; }` | 实现 remote 对应的业务或工具逻辑。 |
-| [L309](../src/apps/remote/InProcessSessionEngine.cpp#L309) | `is_screencast` | 定义 | `bool is_screencast() const override { return true; }` | 判断 is screencast 相关逻辑。 |
-| [L310](../src/apps/remote/InProcessSessionEngine.cpp#L310) | `needs_denoising` | 定义 | `std::optional<bool> needs_denoising() const override { return false; }` | 判断 needs denoising 相关逻辑。 |
-| [L337](../src/apps/remote/InProcessSessionEngine.cpp#L337) | `InProcessSessionEngine::OnRoomPairDataMessage` | 定义 | `void InProcessSessionEngine::OnRoomPairDataMessage( const std::string& pairId, const std::string& label, std::span<const std::uint8_t> payload, bool binary)` | 接收并处理 on room pair data message 相关逻辑。 |
+| [L15](../src/apps/remote/InProcessSessionEngine.DirectBridge.cpp#L15) | `InProcessSessionEngine::OnRoomPairRemoteTrackAdded` | 定义 | `void InProcessSessionEngine::OnRoomPairRemoteTrackAdded( const std::string& pairId, const RemoteTrackInfo& track)` | 接收并处理 on room pair remote track added 相关逻辑。 |
+| [L23](../src/apps/remote/InProcessSessionEngine.DirectBridge.cpp#L23) | `InProcessSessionEngine::SendDescription` | 定义 | `bool InProcessSessionEngine::SendDescription( const SessionDescription& description)` | 发送或发布 send description 相关逻辑。 |
+| [L47](../src/apps/remote/InProcessSessionEngine.DirectBridge.cpp#L47) | `InProcessSessionEngine::SendIceCandidate` | 定义 | `bool InProcessSessionEngine::SendIceCandidate( const IceCandidate& candidate)` | 发送或发布 send ice candidate 相关逻辑。 |
+| [L70](../src/apps/remote/InProcessSessionEngine.DirectBridge.cpp#L70) | `InProcessSessionEngine::RequestIceRestart` | 定义 | `bool InProcessSessionEngine::RequestIceRestart( std::uint64_t observedGeneration, std::uint64_t requestSequence)` | 发起请求或查询 request ice restart 相关逻辑。 |
+| [L90](../src/apps/remote/InProcessSessionEngine.DirectBridge.cpp#L90) | `InProcessSessionEngine::CancelIceRestart` | 定义 | `bool InProcessSessionEngine::CancelIceRestart( std::uint64_t observedGeneration, std::uint64_t requestSequence)` | 判断 cancel ice restart 相关逻辑。 |
+| [L110](../src/apps/remote/InProcessSessionEngine.DirectBridge.cpp#L110) | `InProcessSessionEngine::OnControllerSnapshot` | 定义 | `void InProcessSessionEngine::OnControllerSnapshot( const SessionControllerSnapshot& controllerSnapshot)` | 接收并处理 on controller snapshot 相关逻辑。 |
+| [L236](../src/apps/remote/InProcessSessionEngine.DirectBridge.cpp#L236) | `InProcessSessionEngine::OnDataChannelStateChanged` | 定义 | `void InProcessSessionEngine::OnDataChannelStateChanged( const DataChannelInfo& channel)` | 接收并处理 on data channel state changed 相关逻辑。 |
+| [L298](../src/apps/remote/InProcessSessionEngine.DirectBridge.cpp#L298) | `InProcessSessionEngine::OnDataMessage` | 定义 | `void InProcessSessionEngine::OnDataMessage( const std::string& label, std::span<const std::uint8_t> payload, bool binary)` | 接收并处理 on data message 相关逻辑。 |
+| [L424](../src/apps/remote/InProcessSessionEngine.DirectBridge.cpp#L424) | `InProcessSessionEngine::OnRemoteTrackAdded` | 定义 | `void InProcessSessionEngine::OnRemoteTrackAdded( const RemoteTrackInfo& track)` | 接收并处理 on remote track added 相关逻辑。 |
 
-## `src/apps/remote/InProcessSessionEngine.DirectBridge.inc`
+## `src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp`
 
-[打开源码](../src/apps/remote/InProcessSessionEngine.DirectBridge.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 direct bridge 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp) · **文件作用：** 实现 in process session engine direct callbacks 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.DirectBridge.inc#L4) | `InProcessSessionEngine::OnRoomPairRemoteTrackAdded` | 定义 | `void InProcessSessionEngine::OnRoomPairRemoteTrackAdded( const std::string& pairId, const RemoteTrackInfo& track)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L12](../src/apps/remote/InProcessSessionEngine.DirectBridge.inc#L12) | `InProcessSessionEngine::SendDescription` | 定义 | `bool InProcessSessionEngine::SendDescription( const SessionDescription& description)` | 发送或发布 send description 相关逻辑。 |
-| [L36](../src/apps/remote/InProcessSessionEngine.DirectBridge.inc#L36) | `InProcessSessionEngine::SendIceCandidate` | 定义 | `bool InProcessSessionEngine::SendIceCandidate( const IceCandidate& candidate)` | 发送或发布 send ice candidate 相关逻辑。 |
-| [L59](../src/apps/remote/InProcessSessionEngine.DirectBridge.inc#L59) | `InProcessSessionEngine::RequestIceRestart` | 定义 | `bool InProcessSessionEngine::RequestIceRestart( std::uint64_t observedGeneration, std::uint64_t requestSequence)` | 发起请求或查询 request ice restart 相关逻辑。 |
-| [L79](../src/apps/remote/InProcessSessionEngine.DirectBridge.inc#L79) | `InProcessSessionEngine::CancelIceRestart` | 定义 | `bool InProcessSessionEngine::CancelIceRestart( std::uint64_t observedGeneration, std::uint64_t requestSequence)` | 判断 cancel ice restart 相关逻辑。 |
-| [L99](../src/apps/remote/InProcessSessionEngine.DirectBridge.inc#L99) | `InProcessSessionEngine::OnControllerSnapshot` | 定义 | `void InProcessSessionEngine::OnControllerSnapshot( const SessionControllerSnapshot& controllerSnapshot)` | 接收并处理 on controller snapshot 相关逻辑。 |
-| [L222](../src/apps/remote/InProcessSessionEngine.DirectBridge.inc#L222) | `InProcessSessionEngine::OnDataChannelStateChanged` | 定义 | `void InProcessSessionEngine::OnDataChannelStateChanged( const DataChannelInfo& channel)` | 接收并处理 on data channel state changed 相关逻辑。 |
-| [L284](../src/apps/remote/InProcessSessionEngine.DirectBridge.inc#L284) | `InProcessSessionEngine::OnDataMessage` | 定义 | `void InProcessSessionEngine::OnDataMessage( const std::string& label, std::span<const std::uint8_t> payload, bool binary)` | 接收并处理 on data message 相关逻辑。 |
-| [L410](../src/apps/remote/InProcessSessionEngine.DirectBridge.inc#L410) | `InProcessSessionEngine::OnRemoteTrackAdded` | 定义 | `void InProcessSessionEngine::OnRemoteTrackAdded( const RemoteTrackInfo& track)` | 接收并处理 on remote track added 相关逻辑。 |
+| [L16](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L16) | `GenerateRotatedVerificationCode` | 定义 | `std::string GenerateRotatedVerificationCode( const std::string& previous)` | 实现 generate rotated verification code 对应的业务或工具逻辑。 |
+| [L33](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L33) | `InProcessSessionEngine::OnSignalingStateChanged` | 定义 | `void InProcessSessionEngine::OnSignalingStateChanged( SignalingConnectionState state)` | 接收并处理 on signaling state changed 相关逻辑。 |
+| [L115](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L115) | `InProcessSessionEngine::OnDeviceRegistered` | 定义 | `void InProcessSessionEngine::OnDeviceRegistered(const std::string& deviceId)` | 接收并处理 on device registered 相关逻辑。 |
+| [L195](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L195) | `InProcessSessionEngine::OnOwnedDevicesChanged` | 定义 | `void InProcessSessionEngine::OnOwnedDevicesChanged( const SignalingOwnedDevicesSnapshot& owned)` | 接收并处理 on owned devices changed 相关逻辑。 |
+| [L221](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L221) | `InProcessSessionEngine::OnIncomingSessionRequest` | 定义 | `void InProcessSessionEngine::OnIncomingSessionRequest( const IncomingSessionRequest& request)` | 接收并处理 on incoming session request 相关逻辑。 |
+| [L310](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L310) | `InProcessSessionEngine::OnSessionResponse` | 定义 | `void InProcessSessionEngine::OnSessionResponse( const SignalingSessionResponse& response)` | 接收并处理 on session response 相关逻辑。 |
+| [L334](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L334) | `InProcessSessionEngine::OnSessionPending` | 定义 | `void InProcessSessionEngine::OnSessionPending( const SignalingSessionPending& pending)` | 接收并处理 on session pending 相关逻辑。 |
+| [L372](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L372) | `InProcessSessionEngine::OnSessionReady` | 定义 | `void InProcessSessionEngine::OnSessionReady( const SignalingSessionReady& ready)` | 接收并处理 on session ready 相关逻辑。 |
+| [L452](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L452) | `InProcessSessionEngine::OnSessionSuspended` | 定义 | `void InProcessSessionEngine::OnSessionSuspended( const SignalingSessionSuspended& suspended)` | 接收并处理 on session suspended 相关逻辑。 |
+| [L471](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L471) | `InProcessSessionEngine::OnSessionResumed` | 定义 | `void InProcessSessionEngine::OnSessionResumed( const SignalingSessionResumed& resumed)` | 接收并处理 on session resumed 相关逻辑。 |
+| [L503](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L503) | `InProcessSessionEngine::OnSessionEnded` | 定义 | `void InProcessSessionEngine::OnSessionEnded( const SignalingSessionEnded& ended)` | 接收并处理 on session ended 相关逻辑。 |
+| [L548](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L548) | `InProcessSessionEngine::OnRemoteDescription` | 定义 | `void InProcessSessionEngine::OnRemoteDescription( const SignalingSessionDescription& description)` | 接收并处理 on remote description 相关逻辑。 |
+| [L589](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L589) | `InProcessSessionEngine::OnRemoteIceCandidate` | 定义 | `void InProcessSessionEngine::OnRemoteIceCandidate( const SignalingIceCandidate& candidate)` | 接收并处理 on remote ice candidate 相关逻辑。 |
+| [L628](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L628) | `InProcessSessionEngine::OnIceRestartRequested` | 定义 | `void InProcessSessionEngine::OnIceRestartRequested( const SignalingIceRestartRequest& request)` | 接收并处理 on ice restart requested 相关逻辑。 |
+| [L651](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L651) | `InProcessSessionEngine::OnIceRestartCancelled` | 定义 | `void InProcessSessionEngine::OnIceRestartCancelled( const SignalingIceRestartCancel& cancel)` | 接收并处理 on ice restart cancelled 相关逻辑。 |
+| [L674](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L674) | `InProcessSessionEngine::OnHeartbeatAcknowledged` | 定义 | `void InProcessSessionEngine::OnHeartbeatAcknowledged( std::uint32_t roundTripMs)` | 接收并处理 on heartbeat acknowledged 相关逻辑。 |
+| [L680](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L680) | `InProcessSessionEngine::OnSignalingError` | 定义 | `void InProcessSessionEngine::OnSignalingError( const std::string& code, const std::string& message)` | 接收并处理 on signaling error 相关逻辑。 |
+| [L741](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.cpp#L741) | `InProcessSessionEngine::OnAccountDeletionResult` | 定义 | `void InProcessSessionEngine::OnAccountDeletionResult( const SignalingAccountDeletionResult& result)` | 接收并处理 on account deletion result 相关逻辑。 |
 
-## `src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc`
+## `src/apps/remote/InProcessSessionEngine.DirectData.cpp`
 
-[打开源码](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 direct callbacks 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L4) | `InProcessSessionEngine::OnSignalingStateChanged` | 定义 | `void InProcessSessionEngine::OnSignalingStateChanged( SignalingConnectionState state)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L86](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L86) | `InProcessSessionEngine::OnDeviceRegistered` | 定义 | `void InProcessSessionEngine::OnDeviceRegistered(const std::string& deviceId)` | 接收并处理 on device registered 相关逻辑。 |
-| [L163](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L163) | `InProcessSessionEngine::OnOwnedDevicesChanged` | 定义 | `void InProcessSessionEngine::OnOwnedDevicesChanged( const SignalingOwnedDevicesSnapshot& owned)` | 接收并处理 on owned devices changed 相关逻辑。 |
-| [L189](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L189) | `InProcessSessionEngine::OnIncomingSessionRequest` | 定义 | `void InProcessSessionEngine::OnIncomingSessionRequest( const IncomingSessionRequest& request)` | 接收并处理 on incoming session request 相关逻辑。 |
-| [L278](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L278) | `InProcessSessionEngine::OnSessionResponse` | 定义 | `void InProcessSessionEngine::OnSessionResponse( const SignalingSessionResponse& response)` | 接收并处理 on session response 相关逻辑。 |
-| [L302](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L302) | `InProcessSessionEngine::OnSessionPending` | 定义 | `void InProcessSessionEngine::OnSessionPending( const SignalingSessionPending& pending)` | 接收并处理 on session pending 相关逻辑。 |
-| [L340](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L340) | `InProcessSessionEngine::OnSessionReady` | 定义 | `void InProcessSessionEngine::OnSessionReady( const SignalingSessionReady& ready)` | 接收并处理 on session ready 相关逻辑。 |
-| [L419](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L419) | `InProcessSessionEngine::OnSessionSuspended` | 定义 | `void InProcessSessionEngine::OnSessionSuspended( const SignalingSessionSuspended& suspended)` | 接收并处理 on session suspended 相关逻辑。 |
-| [L438](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L438) | `InProcessSessionEngine::OnSessionResumed` | 定义 | `void InProcessSessionEngine::OnSessionResumed( const SignalingSessionResumed& resumed)` | 接收并处理 on session resumed 相关逻辑。 |
-| [L469](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L469) | `InProcessSessionEngine::OnSessionEnded` | 定义 | `void InProcessSessionEngine::OnSessionEnded( const SignalingSessionEnded& ended)` | 接收并处理 on session ended 相关逻辑。 |
-| [L514](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L514) | `InProcessSessionEngine::OnRemoteDescription` | 定义 | `void InProcessSessionEngine::OnRemoteDescription( const SignalingSessionDescription& description)` | 接收并处理 on remote description 相关逻辑。 |
-| [L554](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L554) | `InProcessSessionEngine::OnRemoteIceCandidate` | 定义 | `void InProcessSessionEngine::OnRemoteIceCandidate( const SignalingIceCandidate& candidate)` | 接收并处理 on remote ice candidate 相关逻辑。 |
-| [L593](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L593) | `InProcessSessionEngine::OnIceRestartRequested` | 定义 | `void InProcessSessionEngine::OnIceRestartRequested( const SignalingIceRestartRequest& request)` | 接收并处理 on ice restart requested 相关逻辑。 |
-| [L616](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L616) | `InProcessSessionEngine::OnIceRestartCancelled` | 定义 | `void InProcessSessionEngine::OnIceRestartCancelled( const SignalingIceRestartCancel& cancel)` | 接收并处理 on ice restart cancelled 相关逻辑。 |
-| [L639](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L639) | `InProcessSessionEngine::OnHeartbeatAcknowledged` | 定义 | `void InProcessSessionEngine::OnHeartbeatAcknowledged( std::uint32_t roundTripMs)` | 接收并处理 on heartbeat acknowledged 相关逻辑。 |
-| [L645](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L645) | `InProcessSessionEngine::OnSignalingError` | 定义 | `void InProcessSessionEngine::OnSignalingError( const std::string& code, const std::string& message)` | 接收并处理 on signaling error 相关逻辑。 |
-| [L706](../src/apps/remote/InProcessSessionEngine.DirectCallbacks.inc#L706) | `InProcessSessionEngine::OnAccountDeletionResult` | 定义 | `void InProcessSessionEngine::OnAccountDeletionResult( const SignalingAccountDeletionResult& result)` | 接收并处理 on account deletion result 相关逻辑。 |
-
-## `src/apps/remote/InProcessSessionEngine.DirectData.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.DirectData.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 direct data 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/InProcessSessionEngine.DirectData.cpp) · **文件作用：** 实现 in process session engine direct data 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.DirectData.inc#L4) | `InProcessSessionEngine::SendRemoteInput` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRemoteInput( const RemoteInputEvent& event)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L16](../src/apps/remote/InProcessSessionEngine.DirectData.inc#L16) | `InProcessSessionEngine::SendRemoteFileMessage` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRemoteFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send remote file message 相关逻辑。 |
-| [L29](../src/apps/remote/InProcessSessionEngine.DirectData.inc#L29) | `InProcessSessionEngine::SendRemoteClipboardMessage` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRemoteClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message)` | 发送或发布 send remote clipboard message 相关逻辑。 |
-| [L45](../src/apps/remote/InProcessSessionEngine.DirectData.inc#L45) | `InProcessSessionEngine::SendDirectFileMessage` | 定义 | `SessionCommandResult InProcessSessionEngine::SendDirectFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send direct file message 相关逻辑。 |
-| [L117](../src/apps/remote/InProcessSessionEngine.DirectData.inc#L117) | `InProcessSessionEngine::SendDirectClipboardMessage` | 定义 | `SessionCommandResult InProcessSessionEngine::SendDirectClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message)` | 发送或发布 send direct clipboard message 相关逻辑。 |
-| [L198](../src/apps/remote/InProcessSessionEngine.DirectData.inc#L198) | `InProcessSessionEngine::DispatchDirectAuxiliaryData` | 定义 | `bool InProcessSessionEngine::DispatchDirectAuxiliaryData( const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch direct auxiliary data 相关逻辑。 |
+| [L17](../src/apps/remote/InProcessSessionEngine.DirectData.cpp#L17) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L22](../src/apps/remote/InProcessSessionEngine.DirectData.cpp#L22) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L29](../src/apps/remote/InProcessSessionEngine.DirectData.cpp#L29) | `InProcessSessionEngine::SendRemoteInput` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRemoteInput( const RemoteInputEvent& event)` | 发送或发布 send remote input 相关逻辑。 |
+| [L41](../src/apps/remote/InProcessSessionEngine.DirectData.cpp#L41) | `InProcessSessionEngine::SendRemoteFileMessage` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRemoteFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send remote file message 相关逻辑。 |
+| [L54](../src/apps/remote/InProcessSessionEngine.DirectData.cpp#L54) | `InProcessSessionEngine::SendRemoteClipboardMessage` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRemoteClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message)` | 发送或发布 send remote clipboard message 相关逻辑。 |
+| [L70](../src/apps/remote/InProcessSessionEngine.DirectData.cpp#L70) | `InProcessSessionEngine::SendDirectFileMessage` | 定义 | `SessionCommandResult InProcessSessionEngine::SendDirectFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send direct file message 相关逻辑。 |
+| [L142](../src/apps/remote/InProcessSessionEngine.DirectData.cpp#L142) | `InProcessSessionEngine::SendDirectClipboardMessage` | 定义 | `SessionCommandResult InProcessSessionEngine::SendDirectClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message)` | 发送或发布 send direct clipboard message 相关逻辑。 |
+| [L223](../src/apps/remote/InProcessSessionEngine.DirectData.cpp#L223) | `InProcessSessionEngine::DispatchDirectAuxiliaryData` | 定义 | `bool InProcessSessionEngine::DispatchDirectAuxiliaryData( const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch direct auxiliary data 相关逻辑。 |
 
-## `src/apps/remote/InProcessSessionEngine.DirectMedia.inc`
+## `src/apps/remote/InProcessSessionEngine.DirectMedia.cpp`
 
-[打开源码](../src/apps/remote/InProcessSessionEngine.DirectMedia.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 direct media 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.DirectMedia.inc#L4) | `InProcessSessionEngine::PrepareDirectMedia` | 定义 | `std::optional<OperationError> InProcessSessionEngine::PrepareDirectMedia( bool bindNegotiatedSlots)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L209](../src/apps/remote/InProcessSessionEngine.DirectMedia.inc#L209) | `InProcessSessionEngine::SetDirectRemoteVideoSink` | 定义 | `SessionCommandResult InProcessSessionEngine::SetDirectRemoteVideoSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set direct remote video sink 相关逻辑。 |
-| [L229](../src/apps/remote/InProcessSessionEngine.DirectMedia.inc#L229) | `InProcessSessionEngine::StopDirectDesktopCapture` | 定义 | `void InProcessSessionEngine::StopDirectDesktopCapture()` | 停止 stop direct desktop capture 相关逻辑。 |
-| [L259](../src/apps/remote/InProcessSessionEngine.DirectMedia.inc#L259) | `InProcessSessionEngine::StopDirectMicrophoneCapture` | 定义 | `void InProcessSessionEngine::StopDirectMicrophoneCapture()` | 停止 stop direct microphone capture 相关逻辑。 |
-| [L282](../src/apps/remote/InProcessSessionEngine.DirectMedia.inc#L282) | `InProcessSessionEngine::BroadcastDirectSharedDisplayLayout` | 定义 | `void InProcessSessionEngine::BroadcastDirectSharedDisplayLayout()` | 实现 broadcast direct shared display layout 对应的业务或工具逻辑。 |
-| [L310](../src/apps/remote/InProcessSessionEngine.DirectMedia.inc#L310) | `InProcessSessionEngine::RequestDirectSharedDisplayLayout` | 定义 | `void InProcessSessionEngine::RequestDirectSharedDisplayLayout()` | 发起请求或查询 request direct shared display layout 相关逻辑。 |
-| [L341](../src/apps/remote/InProcessSessionEngine.DirectMedia.inc#L341) | `InProcessSessionEngine::SendDirectInput` | 定义 | `SessionCommandResult InProcessSessionEngine::SendDirectInput( const RemoteInputEvent& event)` | 发送或发布 send direct input 相关逻辑。 |
-
-## `src/apps/remote/InProcessSessionEngine.DirectScreen.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.DirectScreen.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 direct screen 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/InProcessSessionEngine.DirectMedia.cpp) · **文件作用：** 实现 in process session engine direct media 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.DirectScreen.inc#L4) | `InProcessSessionEngine::SetDirectScreenStreamPreference` | 定义 | `SessionCommandResult InProcessSessionEngine::SetDirectScreenStreamPreference( const ScreenStreamPreferenceRequest& preference)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L72](../src/apps/remote/InProcessSessionEngine.DirectScreen.inc#L72) | `InProcessSessionEngine::RequestDirectSharedDisplaySwitch` | 定义 | `SessionCommandResult InProcessSessionEngine::RequestDirectSharedDisplaySwitch( const std::string& stableDisplayKey)` | 发起请求或查询 request direct shared display switch 相关逻辑。 |
-| [L140](../src/apps/remote/InProcessSessionEngine.DirectScreen.inc#L140) | `InProcessSessionEngine::BroadcastDirectSharedDisplayCatalog` | 定义 | `void InProcessSessionEngine::BroadcastDirectSharedDisplayCatalog()` | 实现 broadcast direct shared display catalog 对应的业务或工具逻辑。 |
-| [L170](../src/apps/remote/InProcessSessionEngine.DirectScreen.inc#L170) | `InProcessSessionEngine::SwitchLocalDirectDisplay` | 定义 | `SessionCommandResult InProcessSessionEngine::SwitchLocalDirectDisplay( const std::string& stableDisplayKey)` | 实现 switch local direct display 对应的业务或工具逻辑。 |
-| [L321](../src/apps/remote/InProcessSessionEngine.DirectScreen.inc#L321) | `InProcessSessionEngine::DispatchDirectScreenData` | 定义 | `bool InProcessSessionEngine::DispatchDirectScreenData( const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch direct screen data 相关逻辑。 |
+| [L19](../src/apps/remote/InProcessSessionEngine.DirectMedia.cpp#L19) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L24](../src/apps/remote/InProcessSessionEngine.DirectMedia.cpp#L24) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L31](../src/apps/remote/InProcessSessionEngine.DirectMedia.cpp#L31) | `InProcessSessionEngine::PrepareDirectMedia` | 定义 | `std::optional<OperationError> InProcessSessionEngine::PrepareDirectMedia( bool bindNegotiatedSlots)` | 实现 prepare direct media 对应的业务或工具逻辑。 |
+| [L233](../src/apps/remote/InProcessSessionEngine.DirectMedia.cpp#L233) | `InProcessSessionEngine::StopDirectDesktopCapture` | 定义 | `void InProcessSessionEngine::StopDirectDesktopCapture()` | 停止 stop direct desktop capture 相关逻辑。 |
+| [L263](../src/apps/remote/InProcessSessionEngine.DirectMedia.cpp#L263) | `InProcessSessionEngine::StopDirectMicrophoneCapture` | 定义 | `void InProcessSessionEngine::StopDirectMicrophoneCapture()` | 停止 stop direct microphone capture 相关逻辑。 |
+| [L286](../src/apps/remote/InProcessSessionEngine.DirectMedia.cpp#L286) | `InProcessSessionEngine::BroadcastDirectSharedDisplayLayout` | 定义 | `void InProcessSessionEngine::BroadcastDirectSharedDisplayLayout()` | 实现 broadcast direct shared display layout 对应的业务或工具逻辑。 |
+| [L314](../src/apps/remote/InProcessSessionEngine.DirectMedia.cpp#L314) | `InProcessSessionEngine::RequestDirectSharedDisplayLayout` | 定义 | `void InProcessSessionEngine::RequestDirectSharedDisplayLayout()` | 发起请求或查询 request direct shared display layout 相关逻辑。 |
+| [L345](../src/apps/remote/InProcessSessionEngine.DirectMedia.cpp#L345) | `InProcessSessionEngine::SendDirectInput` | 定义 | `SessionCommandResult InProcessSessionEngine::SendDirectInput( const RemoteInputEvent& event)` | 发送或发布 send direct input 相关逻辑。 |
 
-## `src/apps/remote/InProcessSessionEngine.DirectSession.inc`
+## `src/apps/remote/InProcessSessionEngine.DirectScreen.cpp`
 
-[打开源码](../src/apps/remote/InProcessSessionEngine.DirectSession.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 direct session 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/InProcessSessionEngine.DirectScreen.cpp) · **文件作用：** 实现 in process session engine direct screen 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L22](../src/apps/remote/InProcessSessionEngine.DirectScreen.cpp#L22) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L27](../src/apps/remote/InProcessSessionEngine.DirectScreen.cpp#L27) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L34](../src/apps/remote/InProcessSessionEngine.DirectScreen.cpp#L34) | `InProcessSessionEngine::SetDirectScreenStreamPreference` | 定义 | `SessionCommandResult InProcessSessionEngine::SetDirectScreenStreamPreference( const ScreenStreamPreferenceRequest& preference)` | 更新或应用 set direct screen stream preference 相关逻辑。 |
+| [L102](../src/apps/remote/InProcessSessionEngine.DirectScreen.cpp#L102) | `InProcessSessionEngine::RequestDirectSharedDisplaySwitch` | 定义 | `SessionCommandResult InProcessSessionEngine::RequestDirectSharedDisplaySwitch( const std::string& stableDisplayKey)` | 发起请求或查询 request direct shared display switch 相关逻辑。 |
+| [L170](../src/apps/remote/InProcessSessionEngine.DirectScreen.cpp#L170) | `InProcessSessionEngine::BroadcastDirectSharedDisplayCatalog` | 定义 | `void InProcessSessionEngine::BroadcastDirectSharedDisplayCatalog()` | 实现 broadcast direct shared display catalog 对应的业务或工具逻辑。 |
+| [L200](../src/apps/remote/InProcessSessionEngine.DirectScreen.cpp#L200) | `InProcessSessionEngine::SwitchLocalDirectDisplay` | 定义 | `SessionCommandResult InProcessSessionEngine::SwitchLocalDirectDisplay( const std::string& stableDisplayKey)` | 实现 switch local direct display 对应的业务或工具逻辑。 |
+| [L351](../src/apps/remote/InProcessSessionEngine.DirectScreen.cpp#L351) | `InProcessSessionEngine::DispatchDirectScreenData` | 定义 | `bool InProcessSessionEngine::DispatchDirectScreenData( const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch direct screen data 相关逻辑。 |
+
+## `src/apps/remote/InProcessSessionEngine.DirectSession.cpp`
+
+[打开源码](../src/apps/remote/InProcessSessionEngine.DirectSession.cpp) · **文件作用：** 实现 in process session engine direct session 相关函数与文件级辅助逻辑。
 
 ### 类型
 
 | 行 | 类型 | 种类 | 作用 |
 |---:|---|---|---|
-| [L208](../src/apps/remote/InProcessSessionEngine.DirectSession.inc#L208) | `EndAction` | enum class | 定义 EndAction 的 enum class 类型和相关状态。 |
+| [L163](../src/apps/remote/InProcessSessionEngine.DirectSession.cpp#L163) | `EndAction` | enum class | 定义 EndAction 的 enum class 类型和相关状态。 |
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.DirectSession.inc#L4) | `InProcessSessionEngine::ConnectDevice` | 定义 | `SessionCommandResult InProcessSessionEngine::ConnectDevice( const std::string& deviceId, SessionPurpose purpose)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L12](../src/apps/remote/InProcessSessionEngine.DirectSession.inc#L12) | `InProcessSessionEngine::ConnectDirectDevice` | 定义 | `SessionCommandResult InProcessSessionEngine::ConnectDirectDevice( const DirectSessionConnectRequest& request)` | 建立连接 connect direct device 相关逻辑。 |
-| [L114](../src/apps/remote/InProcessSessionEngine.DirectSession.inc#L114) | `InProcessSessionEngine::ConnectOwnedDevice` | 定义 | `SessionCommandResult InProcessSessionEngine::ConnectOwnedDevice( const std::string& deviceId, SessionPurpose purpose)` | 建立连接 connect owned device 相关逻辑。 |
-| [L122](../src/apps/remote/InProcessSessionEngine.DirectSession.inc#L122) | `InProcessSessionEngine::ConnectAssistedDevice` | 定义 | `SessionCommandResult InProcessSessionEngine::ConnectAssistedDevice( const std::string& deviceId, const std::string& verificationCode)` | 建立连接 connect assisted device 相关逻辑。 |
-| [L133](../src/apps/remote/InProcessSessionEngine.DirectSession.inc#L133) | `InProcessSessionEngine::RefreshOwnedDevices` | 定义 | `SessionCommandResult InProcessSessionEngine::RefreshOwnedDevices()` | 刷新 refresh owned devices 相关逻辑。 |
-| [L143](../src/apps/remote/InProcessSessionEngine.DirectSession.inc#L143) | `InProcessSessionEngine::AcceptIncomingSession` | 定义 | `SessionCommandResult InProcessSessionEngine::AcceptIncomingSession( const std::string& sessionId)` | 处理并回复 accept incoming session 相关逻辑。 |
-| [L175](../src/apps/remote/InProcessSessionEngine.DirectSession.inc#L175) | `InProcessSessionEngine::RejectIncomingSession` | 定义 | `SessionCommandResult InProcessSessionEngine::RejectIncomingSession( const std::string& sessionId)` | 处理并回复 reject incoming session 相关逻辑。 |
-| [L206](../src/apps/remote/InProcessSessionEngine.DirectSession.inc#L206) | `InProcessSessionEngine::Disconnect` | 定义 | `SessionCommandResult InProcessSessionEngine::Disconnect()` | 断开连接 disconnect 相关逻辑。 |
+| [L11](../src/apps/remote/InProcessSessionEngine.DirectSession.cpp#L11) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L16](../src/apps/remote/InProcessSessionEngine.DirectSession.cpp#L16) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L23](../src/apps/remote/InProcessSessionEngine.DirectSession.cpp#L23) | `InProcessSessionEngine::ConnectDirectDevice` | 定义 | `SessionCommandResult InProcessSessionEngine::ConnectDirectDevice( const DirectSessionConnectRequest& request)` | 建立连接 connect direct device 相关逻辑。 |
+| [L88](../src/apps/remote/InProcessSessionEngine.DirectSession.cpp#L88) | `InProcessSessionEngine::RefreshOwnedDevices` | 定义 | `SessionCommandResult InProcessSessionEngine::RefreshOwnedDevices()` | 刷新 refresh owned devices 相关逻辑。 |
+| [L98](../src/apps/remote/InProcessSessionEngine.DirectSession.cpp#L98) | `InProcessSessionEngine::AcceptIncomingSession` | 定义 | `SessionCommandResult InProcessSessionEngine::AcceptIncomingSession( const std::string& sessionId)` | 处理并回复 accept incoming session 相关逻辑。 |
+| [L129](../src/apps/remote/InProcessSessionEngine.DirectSession.cpp#L129) | `InProcessSessionEngine::RejectIncomingSession` | 定义 | `SessionCommandResult InProcessSessionEngine::RejectIncomingSession( const std::string& sessionId)` | 处理并回复 reject incoming session 相关逻辑。 |
+| [L161](../src/apps/remote/InProcessSessionEngine.DirectSession.cpp#L161) | `InProcessSessionEngine::Disconnect` | 定义 | `SessionCommandResult InProcessSessionEngine::Disconnect()` | 断开连接 disconnect 相关逻辑。 |
 
 ## `src/apps/remote/InProcessSessionEngine.h`
 
@@ -935,546 +997,547 @@ direct/room 会话引擎、媒体路由、文件传输、远程粘贴与缓存�
 
 | 行 | 类型 | 种类 | 作用 |
 |---:|---|---|---|
-| [L33](../src/apps/remote/InProcessSessionEngine.h#L33) | `WebRtcRuntime` | class | 定义 WebRtcRuntime 的 class 类型和相关状态。 |
-| [L34](../src/apps/remote/InProcessSessionEngine.h#L34) | `LibWebRtcSession` | class | 定义 LibWebRtcSession 的 class 类型和相关状态。 |
+| [L31](../src/apps/remote/InProcessSessionEngine.h#L31) | `WebRtcRuntime` | class | 定义 WebRtcRuntime 的 class 类型和相关状态。 |
+| [L32](../src/apps/remote/InProcessSessionEngine.h#L32) | `LibWebRtcSession` | class | 定义 LibWebRtcSession 的 class 类型和相关状态。 |
+| [L33](../src/apps/remote/InProcessSessionEngine.h#L33) | `WindowsCursorMonitor` | class | 定义 WindowsCursorMonitor 的 class 类型和相关状态。 |
+| [L34](../src/apps/remote/InProcessSessionEngine.h#L34) | `WindowsCursorObservation` | struct | 定义 WindowsCursorObservation 的 struct 类型和相关状态。 |
 | [L35](../src/apps/remote/InProcessSessionEngine.h#L35) | `RoomMemberActionEnvelope` | struct | 定义 RoomMemberActionEnvelope 的 struct 类型和相关状态。 |
 | [L38](../src/apps/remote/InProcessSessionEngine.h#L38) | `InProcessSessionEngineTestAccess` | class | 定义 InProcessSessionEngineTestAccess 的 class 类型和相关状态。 |
-| [L43](../src/apps/remote/InProcessSessionEngine.h#L43) | `InProcessSessionEngineOptions` | struct | 定义 InProcessSessionEngineOptions 的 struct 类型和相关状态。 |
-| [L78](../src/apps/remote/InProcessSessionEngine.h#L78) | `InProcessSessionEngine` | class | 定义 InProcessSessionEngine 的 class 类型和相关状态。 |
-| [L412](../src/apps/remote/InProcessSessionEngine.h#L412) | `RoomPairBridge` | class | 定义 RoomPairBridge 的 class 类型和相关状态。 |
-| [L413](../src/apps/remote/InProcessSessionEngine.h#L413) | `RoomPairRuntime` | struct | 定义 RoomPairRuntime 的 struct 类型和相关状态。 |
+| [L43](../src/apps/remote/InProcessSessionEngine.h#L43) | `InProcessSessionMediaState` | struct | 定义 InProcessSessionMediaState 的 struct 类型和相关状态。 |
+| [L44](../src/apps/remote/InProcessSessionEngine.h#L44) | `SessionStatsPoller` | class | 定义 SessionStatsPoller 的 class 类型和相关状态。 |
+| [L45](../src/apps/remote/InProcessSessionEngine.h#L45) | `InProcessSessionMediaAdapter` | class | 定义 InProcessSessionMediaAdapter 的 class 类型和相关状态。 |
+| [L47](../src/apps/remote/InProcessSessionEngine.h#L47) | `InProcessSessionEngineOptions` | struct | 定义 InProcessSessionEngineOptions 的 struct 类型和相关状态。 |
+| [L87](../src/apps/remote/InProcessSessionEngine.h#L87) | `InProcessSessionEngine` | class | 定义 InProcessSessionEngine 的 class 类型和相关状态。 |
+| [L393](../src/apps/remote/InProcessSessionEngine.h#L393) | `RoomPairBridge` | class | 定义 RoomPairBridge 的 class 类型和相关状态。 |
+| [L394](../src/apps/remote/InProcessSessionEngine.h#L394) | `RoomPairRuntime` | struct | 定义 RoomPairRuntime 的 struct 类型和相关状态。 |
 
 ### 成员与文件级变量
 
 | 行 | 变量 | 声明 | 作用 |
 |---:|---|---|---|
-| [L33](../src/apps/remote/InProcessSessionEngine.h#L33) | `WebRtcRuntime` | `class WebRtcRuntime;` | 保存 web rtc runtime 相关配置或运行状态。 |
-| [L34](../src/apps/remote/InProcessSessionEngine.h#L34) | `LibWebRtcSession` | `class LibWebRtcSession;` | 保存 lib web rtc session 相关配置或运行状态。 |
+| [L31](../src/apps/remote/InProcessSessionEngine.h#L31) | `WebRtcRuntime` | `class WebRtcRuntime;` | 保存 web rtc runtime 相关配置或运行状态。 |
+| [L32](../src/apps/remote/InProcessSessionEngine.h#L32) | `LibWebRtcSession` | `class LibWebRtcSession;` | 保存 lib web rtc session 相关配置或运行状态。 |
+| [L33](../src/apps/remote/InProcessSessionEngine.h#L33) | `WindowsCursorMonitor` | `class WindowsCursorMonitor;` | 保存 windows cursor monitor 相关配置或运行状态。 |
+| [L34](../src/apps/remote/InProcessSessionEngine.h#L34) | `WindowsCursorObservation` | `struct WindowsCursorObservation;` | 保存 windows cursor observation 相关配置或运行状态。 |
 | [L35](../src/apps/remote/InProcessSessionEngine.h#L35) | `RoomMemberActionEnvelope` | `struct RoomMemberActionEnvelope;` | 保存 room member action envelope 相关配置或运行状态。 |
 | [L38](../src/apps/remote/InProcessSessionEngine.h#L38) | `InProcessSessionEngineTestAccess` | `class InProcessSessionEngineTestAccess;` | 保存 in process session engine test access 相关配置或运行状态。 |
-| [L44](../src/apps/remote/InProcessSessionEngine.h#L44) | `includeLoopbackAdapter` | `bool includeLoopbackAdapter = false;` | 保存 include loopback adapter 相关配置或运行状态。 |
-| [L45](../src/apps/remote/InProcessSessionEngine.h#L45) | `enableRealDesktopCapture` | `bool enableRealDesktopCapture = true;` | 保存 enable real desktop capture 相关配置或运行状态。 |
-| [L46](../src/apps/remote/InProcessSessionEngine.h#L46) | `enableRealCameraCapture` | `bool enableRealCameraCapture = true;` | 保存 enable real camera capture 相关配置或运行状态。 |
-| [L48](../src/apps/remote/InProcessSessionEngine.h#L48) | `kNativeDxgi` | `DesktopCaptureImplementation::kNativeDxgi;` | 定义 native dxgi 的编译期常量或产品边界。 |
-| [L50](../src/apps/remote/InProcessSessionEngine.h#L50) | `kAutomatic` | `VideoEncoderPreference::kAutomatic;` | 定义 automatic 的编译期常量或产品边界。 |
-| [L51](../src/apps/remote/InProcessSessionEngine.h#L51) | `ffmpegX264Preset` | `FfmpegX264Preset ffmpegX264Preset = FfmpegX264Preset::kMedium;` | 保存 ffmpeg x264 preset 相关配置或运行状态。 |
-| [L53](../src/apps/remote/InProcessSessionEngine.h#L53) | `kAutomatic` | `FfmpegHardwareBackend::kAutomatic;` | 定义 automatic 的编译期常量或产品边界。 |
-| [L54](../src/apps/remote/InProcessSessionEngine.h#L54) | `preferredAutomaticEncoderId` | `std::string preferredAutomaticEncoderId;` | 保存身份或作用域标识：preferred automatic encoder id。 |
-| [L56](../src/apps/remote/InProcessSessionEngine.h#L56) | `kAutomatic` | `VideoDecoderPreference::kAutomatic;` | 定义 automatic 的编译期常量或产品边界。 |
-| [L57](../src/apps/remote/InProcessSessionEngine.h#L57) | `preferredHardwareDecoderName` | `std::string preferredHardwareDecoderName;` | 保存路径、地址或显示名称：preferred hardware decoder name。 |
-| [L58](../src/apps/remote/InProcessSessionEngine.h#L58) | `hardwareFingerprint` | `std::string hardwareFingerprint;` | 保存 hardware fingerprint 相关配置或运行状态。 |
-| [L59](../src/apps/remote/InProcessSessionEngine.h#L59) | `operatingSystemDescription` | `std::string operatingSystemDescription;` | 保存 operating system description 相关配置或运行状态。 |
-| [L60](../src/apps/remote/InProcessSessionEngine.h#L60) | `nativeArchitecture` | `std::string nativeArchitecture;` | 保存 native architecture 相关配置或运行状态。 |
-| [L61](../src/apps/remote/InProcessSessionEngine.h#L61) | `remoteSession` | `bool remoteSession = false;` | 保存 remote session 相关配置或运行状态。 |
-| [L62](../src/apps/remote/InProcessSessionEngine.h#L62) | `graphicsAdapterDescriptions` | `std::vector<std::string> graphicsAdapterDescriptions;` | 保存 graphics adapter descriptions 相关配置或运行状态。 |
-| [L63](../src/apps/remote/InProcessSessionEngine.h#L63) | `graphicsEnumerationError` | `std::string graphicsEnumerationError;` | 保存最近错误或失败原因：graphics enumeration error。 |
-| [L65](../src/apps/remote/InProcessSessionEngine.h#L65) | `encoderCapabilityCache` | `encoderCapabilityCache;` | 保存 encoder capability cache 相关配置或运行状态。 |
-| [L67](../src/apps/remote/InProcessSessionEngine.h#L67) | `kSystemDefaultMediaDeviceId` | `kSystemDefaultMediaDeviceId;` | 定义 system default media device id 的编译期常量或产品边界。 |
-| [L69](../src/apps/remote/InProcessSessionEngine.h#L69) | `kSystemDefaultMediaDeviceId` | `kSystemDefaultMediaDeviceId;` | 定义 system default media device id 的编译期常量或产品边界。 |
-| [L71](../src/apps/remote/InProcessSessionEngine.h#L71) | `kSystemDefaultMediaDeviceId` | `kSystemDefaultMediaDeviceId;` | 定义 system default media device id 的编译期常量或产品边界。 |
-| [L72](../src/apps/remote/InProcessSessionEngine.h#L72) | `iceMinPort` | `int iceMinPort = kDefaultIceMinPort;` | 保存 ice min port 相关配置或运行状态。 |
-| [L73](../src/apps/remote/InProcessSessionEngine.h#L73) | `iceMaxPort` | `int iceMaxPort = kDefaultIceMaxPort;` | 保存 ice max port 相关配置或运行状态。 |
-| [L74](../src/apps/remote/InProcessSessionEngine.h#L74) | `negotiationTimeout` | `std::chrono::milliseconds negotiationTimeout{15000};` | 保存定时、截止或超时状态：negotiation timeout。 |
-| [L75](../src/apps/remote/InProcessSessionEngine.h#L75) | `reconnectTimeout` | `std::chrono::milliseconds reconnectTimeout{60000};` | 保存定时、截止或超时状态：reconnect timeout。 |
-| [L412](../src/apps/remote/InProcessSessionEngine.h#L412) | `RoomPairBridge` | `class RoomPairBridge;` | 保存 room pair bridge 相关配置或运行状态。 |
-| [L413](../src/apps/remote/InProcessSessionEngine.h#L413) | `RoomPairRuntime` | `struct RoomPairRuntime;` | 保存 room pair runtime 相关配置或运行状态。 |
-| [L432](../src/apps/remote/InProcessSessionEngine.h#L432) | `runtime_` | `std::unique_ptr<WebRtcRuntime> runtime_;` | 保存 runtime 相关配置或运行状态。 |
-| [L433](../src/apps/remote/InProcessSessionEngine.h#L433) | `signaling_` | `std::unique_ptr<ISignalingClient> signaling_;` | 保存 signaling 相关配置或运行状态。 |
-| [L434](../src/apps/remote/InProcessSessionEngine.h#L434) | `signalingConfig_` | `SignalingClientConfig signalingConfig_;` | 保存 signaling config 相关配置或运行状态。 |
-| [L435](../src/apps/remote/InProcessSessionEngine.h#L435) | `options_` | `InProcessSessionEngineOptions options_;` | 保存 options 相关配置或运行状态。 |
-| [L436](../src/apps/remote/InProcessSessionEngine.h#L436) | `webRtcSession_` | `std::unique_ptr<LibWebRtcSession> webRtcSession_;` | 保存 web rtc session 相关配置或运行状态。 |
-| [L437](../src/apps/remote/InProcessSessionEngine.h#L437) | `sessionController_` | `std::unique_ptr<SessionControllerBase> sessionController_;` | 保存 session controller 相关配置或运行状态。 |
-| [L439](../src/apps/remote/InProcessSessionEngine.h#L439) | `roomPairs_` | `roomPairs_;` | 保存 room pairs 相关配置或运行状态。 |
-| [L440](../src/apps/remote/InProcessSessionEngine.h#L440) | `retiredRoomPairThreads_` | `std::vector<std::jthread> retiredRoomPairThreads_;` | 保存 retired room pair threads 相关配置或运行状态。 |
-| [L443](../src/apps/remote/InProcessSessionEngine.h#L443) | `retiredDesktopStopThreads_` | `std::vector<std::jthread> retiredDesktopStopThreads_;` | Device drivers may block while stopping a capture module. Keep those joins outside the Qt UI path, but retain ownership until engine stop. |
-| [L444](../src/apps/remote/InProcessSessionEngine.h#L444) | `retiredCameraStopThreads_` | `std::vector<std::jthread> retiredCameraStopThreads_;` | 保存 retired camera stop threads 相关配置或运行状态。 |
-| [L445](../src/apps/remote/InProcessSessionEngine.h#L445) | `mediaDeviceOperationThreads_` | `std::vector<std::jthread> mediaDeviceOperationThreads_;` | 保存 media device operation threads 相关配置或运行状态。 |
-| [L446](../src/apps/remote/InProcessSessionEngine.h#L446) | `clipboardWarmupThreads_` | `std::vector<std::jthread> clipboardWarmupThreads_;` | 保存 clipboard warmup threads 相关配置或运行状态。 |
-| [L447](../src/apps/remote/InProcessSessionEngine.h#L447) | `statsPollingThread_` | `std::jthread statsPollingThread_;` | 拥有后台执行线程或工作器：stats polling thread。 |
-| [L448](../src/apps/remote/InProcessSessionEngine.h#L448) | `statsPollingCondition_` | `std::condition_variable_any statsPollingCondition_;` | 保存 stats polling condition 相关配置或运行状态。 |
-| [L449](../src/apps/remote/InProcessSessionEngine.h#L449) | `statsPollingWaitMutex_` | `std::mutex statsPollingWaitMutex_;` | 保护跨线程共享状态：stats polling wait mutex。 |
-| [L453](../src/apps/remote/InProcessSessionEngine.h#L453) | `localRoomVideoTracks_` | `localRoomVideoTracks_;` | 保存 local room video tracks 相关配置或运行状态。 |
-| [L457](../src/apps/remote/InProcessSessionEngine.h#L457) | `idleRoomVideoTracks_` | `idleRoomVideoTracks_;` | 保存 idle room video tracks 相关配置或运行状态。 |
-| [L459](../src/apps/remote/InProcessSessionEngine.h#L459) | `localDesktopCaptureSource_` | `localDesktopCaptureSource_;` | 保存 local desktop capture source 相关配置或运行状态。 |
-| [L461](../src/apps/remote/InProcessSessionEngine.h#L461) | `localCameraCaptureSource_` | `localCameraCaptureSource_;` | 保存 local camera capture source 相关配置或运行状态。 |
-| [L463](../src/apps/remote/InProcessSessionEngine.h#L463) | `localCameraPreviewSink_` | `localCameraPreviewSink_ = nullptr;` | 保存回调或观察者入口：local camera preview sink。 |
-| [L465](../src/apps/remote/InProcessSessionEngine.h#L465) | `localCameraPreviewTrack_` | `localCameraPreviewTrack_;` | 保存 local camera preview track 相关配置或运行状态。 |
-| [L467](../src/apps/remote/InProcessSessionEngine.h#L467) | `localMicrophoneAudioSource_` | `localMicrophoneAudioSource_;` | 保存 local microphone audio source 相关配置或运行状态。 |
-| [L469](../src/apps/remote/InProcessSessionEngine.h#L469) | `localMicrophoneAudioTrack_` | `localMicrophoneAudioTrack_;` | 保存 local microphone audio track 相关配置或运行状态。 |
-| [L470](../src/apps/remote/InProcessSessionEngine.h#L470) | `pendingRemoteDescription_` | `std::optional<SessionDescription> pendingRemoteDescription_;` | 保存 pending remote description 相关配置或运行状态。 |
-| [L471](../src/apps/remote/InProcessSessionEngine.h#L471) | `pendingRemoteCandidates_` | `std::vector<IceCandidate> pendingRemoteCandidates_;` | 保存 pending remote candidates 相关配置或运行状态。 |
-| [L472](../src/apps/remote/InProcessSessionEngine.h#L472) | `mutex_` | `mutable std::mutex mutex_;` | 保护跨线程共享状态：mutex。 |
-| [L473](../src/apps/remote/InProcessSessionEngine.h#L473) | `observer_` | `ISessionEngineObserver* observer_ = nullptr;` | 保存回调或观察者入口：observer。 |
-| [L475](../src/apps/remote/InProcessSessionEngine.h#L475) | `accountDeletionResultCallback_` | `accountDeletionResultCallback_;` | 保存回调或观察者入口：account deletion result callback。 |
-| [L476](../src/apps/remote/InProcessSessionEngine.h#L476) | `snapshot_` | `SessionEngineSnapshot snapshot_;` | 保存可跨层读取的状态快照：snapshot。 |
-| [L477](../src/apps/remote/InProcessSessionEngine.h#L477) | `capabilities_` | `SessionEngineCapabilities capabilities_;` | 保存 capabilities 相关配置或运行状态。 |
-| [L478](../src/apps/remote/InProcessSessionEngine.h#L478) | `localIsOfferer_` | `bool localIsOfferer_ = false;` | 保存 local is offerer 相关配置或运行状态。 |
-| [L479](../src/apps/remote/InProcessSessionEngine.h#L479) | `offerNegotiationStarted_` | `bool offerNegotiationStarted_ = false;` | 保存 offer negotiation started 相关配置或运行状态。 |
-| [L480](../src/apps/remote/InProcessSessionEngine.h#L480) | `directSession_` | `DirectSessionRuntimeState directSession_;` | 保存 direct session 相关配置或运行状态。 |
-| [L481](../src/apps/remote/InProcessSessionEngine.h#L481) | `roomAudioDevicesApplied_` | `bool roomAudioDevicesApplied_ = false;` | 保存 room audio devices applied 相关配置或运行状态。 |
-| [L482](../src/apps/remote/InProcessSessionEngine.h#L482) | `sessionCloseRequested_` | `bool sessionCloseRequested_ = false;` | 保存 session close requested 相关配置或运行状态。 |
-| [L483](../src/apps/remote/InProcessSessionEngine.h#L483) | `sessionEndSignalSent_` | `bool sessionEndSignalSent_ = false;` | 保存 session end signal sent 相关配置或运行状态。 |
-| [L484](../src/apps/remote/InProcessSessionEngine.h#L484) | `cancelWhenSessionIdKnown_` | `bool cancelWhenSessionIdKnown_ = false;` | 保存 cancel when session id known 相关配置或运行状态。 |
-| [L485](../src/apps/remote/InProcessSessionEngine.h#L485) | `serverSessionActive_` | `bool serverSessionActive_ = false;` | 保存能力或开关状态：server session active。 |
-| [L486](../src/apps/remote/InProcessSessionEngine.h#L486) | `signalingRecoveryPending_` | `bool signalingRecoveryPending_ = false;` | 保存待处理队列或请求：signaling recovery pending。 |
-| [L487](../src/apps/remote/InProcessSessionEngine.h#L487) | `peerSignalingSuspended_` | `bool peerSignalingSuspended_ = false;` | 保存 peer signaling suspended 相关配置或运行状态。 |
-| [L488](../src/apps/remote/InProcessSessionEngine.h#L488) | `sessionRecoveryToken_` | `std::string sessionRecoveryToken_;` | 保存 session recovery token 相关配置或运行状态。 |
-| [L489](../src/apps/remote/InProcessSessionEngine.h#L489) | `roomRecoveryToken_` | `std::string roomRecoveryToken_;` | 保存 room recovery token 相关配置或运行状态。 |
-| [L490](../src/apps/remote/InProcessSessionEngine.h#L490) | `roomScreenShareGrantId_` | `std::string roomScreenShareGrantId_;` | 保存身份或作用域标识：room screen share grant id。 |
-| [L491](../src/apps/remote/InProcessSessionEngine.h#L491) | `roomControlGrantId_` | `std::string roomControlGrantId_;` | 保存身份或作用域标识：room control grant id。 |
-| [L492](../src/apps/remote/InProcessSessionEngine.h#L492) | `roomControlGrantScreenSharerDeviceId_` | `std::string roomControlGrantScreenSharerDeviceId_;` | 保存身份或作用域标识：room control grant screen sharer device id。 |
-| [L493](../src/apps/remote/InProcessSessionEngine.h#L493) | `roomControlGrantControllerDeviceId_` | `std::string roomControlGrantControllerDeviceId_;` | 保存身份或作用域标识：room control grant controller device id。 |
-| [L494](../src/apps/remote/InProcessSessionEngine.h#L494) | `remoteInputSink_` | `IRemoteInputSink* remoteInputSink_ = nullptr;` | 保存回调或观察者入口：remote input sink。 |
-| [L495](../src/apps/remote/InProcessSessionEngine.h#L495) | `remoteFileTransferSink_` | `IFileTransferSink* remoteFileTransferSink_ = nullptr;` | 保存回调或观察者入口：remote file transfer sink。 |
-| [L496](../src/apps/remote/InProcessSessionEngine.h#L496) | `remoteClipboardSink_` | `IClipboardSink* remoteClipboardSink_ = nullptr;` | 保存回调或观察者入口：remote clipboard sink。 |
-| [L497](../src/apps/remote/InProcessSessionEngine.h#L497) | `remoteCursorCallback_` | `RemoteCursorCallback remoteCursorCallback_;` | 保存回调或观察者入口：remote cursor callback。 |
-| [L498](../src/apps/remote/InProcessSessionEngine.h#L498) | `cursorMonitor_` | `WindowsCursorMonitor cursorMonitor_;` | 保存 cursor monitor 相关配置或运行状态。 |
-| [L499](../src/apps/remote/InProcessSessionEngine.h#L499) | `latestLocalCursorPosition_` | `std::optional<RemoteCursorPosition> latestLocalCursorPosition_;` | 保存 latest local cursor position 相关配置或运行状态。 |
-| [L500](../src/apps/remote/InProcessSessionEngine.h#L500) | `latestLocalCursorShape_` | `std::optional<RemoteCursorShape> latestLocalCursorShape_;` | 保存 latest local cursor shape 相关配置或运行状态。 |
-| [L501](../src/apps/remote/InProcessSessionEngine.h#L501) | `nextCursorSequence_` | `std::uint64_t nextCursorSequence_ = 0;` | 保存单调序号，用于排序或去重：next cursor sequence。 |
-| [L502](../src/apps/remote/InProcessSessionEngine.h#L502) | `cursorPositionsPublished_` | `std::uint64_t cursorPositionsPublished_ = 0;` | 保存 cursor positions published 相关配置或运行状态。 |
-| [L503](../src/apps/remote/InProcessSessionEngine.h#L503) | `cursorShapesPublished_` | `std::uint64_t cursorShapesPublished_ = 0;` | 保存 cursor shapes published 相关配置或运行状态。 |
-| [L504](../src/apps/remote/InProcessSessionEngine.h#L504) | `cursorPositionsReceived_` | `std::uint64_t cursorPositionsReceived_ = 0;` | 保存 cursor positions received 相关配置或运行状态。 |
-| [L505](../src/apps/remote/InProcessSessionEngine.h#L505) | `cursorShapesReceived_` | `std::uint64_t cursorShapesReceived_ = 0;` | 保存 cursor shapes received 相关配置或运行状态。 |
-| [L508](../src/apps/remote/InProcessSessionEngine.h#L508) | `nextRoomInputSequence_` | `std::uint64_t nextRoomInputSequence_ = 0;` | One sequence spans both input DataChannels so late reliable button transitions cannot overwrite newer fast pointer state. |
-| [L509](../src/apps/remote/InProcessSessionEngine.h#L509) | `nextRoomScreenControlSequence_` | `std::uint64_t nextRoomScreenControlSequence_ = 0;` | 保存单调序号，用于排序或去重：next room screen control sequence。 |
-| [L510](../src/apps/remote/InProcessSessionEngine.h#L510) | `localScreenFrameRate_` | `std::uint32_t localScreenFrameRate_ = kDefaultScreenFrameRate;` | 保存计数、尺寸或速率指标：local screen frame rate。 |
-| [L511](../src/apps/remote/InProcessSessionEngine.h#L511) | `localScreenShareGeneration_` | `std::uint64_t localScreenShareGeneration_ = 0;` | 标记当前世代，用于拒绝过期异步结果：local screen share generation。 |
-| [L512](../src/apps/remote/InProcessSessionEngine.h#L512) | `localCameraTrackGeneration_` | `std::uint64_t localCameraTrackGeneration_ = 0;` | 标记当前世代，用于拒绝过期异步结果：local camera track generation。 |
-| [L514](../src/apps/remote/InProcessSessionEngine.h#L514) | `roomScreenStreamPreferences_` | `roomScreenStreamPreferences_;` | 保存 room screen stream preferences 相关配置或运行状态。 |
-| [L515](../src/apps/remote/InProcessSessionEngine.h#L515) | `roomRecoveryPending_` | `bool roomRecoveryPending_ = false;` | 保存待处理队列或请求：room recovery pending。 |
-| [L516](../src/apps/remote/InProcessSessionEngine.h#L516) | `roomLeaveRequested_` | `bool roomLeaveRequested_ = false;` | 保存 room leave requested 相关配置或运行状态。 |
-| [L517](../src/apps/remote/InProcessSessionEngine.h#L517) | `deferredRoomLeaveId_` | `std::string deferredRoomLeaveId_;` | 保存身份或作用域标识：deferred room leave id。 |
+| [L43](../src/apps/remote/InProcessSessionEngine.h#L43) | `InProcessSessionMediaState` | `struct InProcessSessionMediaState;` | 保存状态机当前状态：in process session media state。 |
+| [L44](../src/apps/remote/InProcessSessionEngine.h#L44) | `SessionStatsPoller` | `class SessionStatsPoller;` | 保存 session stats poller 相关配置或运行状态。 |
+| [L45](../src/apps/remote/InProcessSessionEngine.h#L45) | `InProcessSessionMediaAdapter` | `class InProcessSessionMediaAdapter;` | 保存 in process session media adapter 相关配置或运行状态。 |
+| [L52](../src/apps/remote/InProcessSessionEngine.h#L52) | `ownerThreadDispatcher` | `ownerThreadDispatcher;` | 保存 owner thread dispatcher 相关配置或运行状态。 |
+| [L53](../src/apps/remote/InProcessSessionEngine.h#L53) | `includeLoopbackAdapter` | `bool includeLoopbackAdapter = false;` | 保存 include loopback adapter 相关配置或运行状态。 |
+| [L54](../src/apps/remote/InProcessSessionEngine.h#L54) | `enableRealDesktopCapture` | `bool enableRealDesktopCapture = true;` | 保存 enable real desktop capture 相关配置或运行状态。 |
+| [L55](../src/apps/remote/InProcessSessionEngine.h#L55) | `enableRealCameraCapture` | `bool enableRealCameraCapture = true;` | 保存 enable real camera capture 相关配置或运行状态。 |
+| [L57](../src/apps/remote/InProcessSessionEngine.h#L57) | `kNativeDxgi` | `DesktopCaptureImplementation::kNativeDxgi;` | 定义 native dxgi 的编译期常量或产品边界。 |
+| [L59](../src/apps/remote/InProcessSessionEngine.h#L59) | `kAutomatic` | `VideoEncoderPreference::kAutomatic;` | 定义 automatic 的编译期常量或产品边界。 |
+| [L60](../src/apps/remote/InProcessSessionEngine.h#L60) | `ffmpegX264Preset` | `FfmpegX264Preset ffmpegX264Preset = FfmpegX264Preset::kMedium;` | 保存 ffmpeg x264 preset 相关配置或运行状态。 |
+| [L62](../src/apps/remote/InProcessSessionEngine.h#L62) | `kAutomatic` | `FfmpegHardwareBackend::kAutomatic;` | 定义 automatic 的编译期常量或产品边界。 |
+| [L63](../src/apps/remote/InProcessSessionEngine.h#L63) | `preferredAutomaticEncoderId` | `std::string preferredAutomaticEncoderId;` | 保存身份或作用域标识：preferred automatic encoder id。 |
+| [L65](../src/apps/remote/InProcessSessionEngine.h#L65) | `kAutomatic` | `VideoDecoderPreference::kAutomatic;` | 定义 automatic 的编译期常量或产品边界。 |
+| [L66](../src/apps/remote/InProcessSessionEngine.h#L66) | `preferredHardwareDecoderName` | `std::string preferredHardwareDecoderName;` | 保存路径、地址或显示名称：preferred hardware decoder name。 |
+| [L67](../src/apps/remote/InProcessSessionEngine.h#L67) | `hardwareFingerprint` | `std::string hardwareFingerprint;` | 保存 hardware fingerprint 相关配置或运行状态。 |
+| [L68](../src/apps/remote/InProcessSessionEngine.h#L68) | `operatingSystemDescription` | `std::string operatingSystemDescription;` | 保存 operating system description 相关配置或运行状态。 |
+| [L69](../src/apps/remote/InProcessSessionEngine.h#L69) | `nativeArchitecture` | `std::string nativeArchitecture;` | 保存 native architecture 相关配置或运行状态。 |
+| [L70](../src/apps/remote/InProcessSessionEngine.h#L70) | `remoteSession` | `bool remoteSession = false;` | 保存 remote session 相关配置或运行状态。 |
+| [L71](../src/apps/remote/InProcessSessionEngine.h#L71) | `graphicsAdapterDescriptions` | `std::vector<std::string> graphicsAdapterDescriptions;` | 保存 graphics adapter descriptions 相关配置或运行状态。 |
+| [L72](../src/apps/remote/InProcessSessionEngine.h#L72) | `graphicsEnumerationError` | `std::string graphicsEnumerationError;` | 保存最近错误或失败原因：graphics enumeration error。 |
+| [L74](../src/apps/remote/InProcessSessionEngine.h#L74) | `encoderCapabilityCache` | `encoderCapabilityCache;` | 保存 encoder capability cache 相关配置或运行状态。 |
+| [L76](../src/apps/remote/InProcessSessionEngine.h#L76) | `kSystemDefaultMediaDeviceId` | `kSystemDefaultMediaDeviceId;` | 定义 system default media device id 的编译期常量或产品边界。 |
+| [L78](../src/apps/remote/InProcessSessionEngine.h#L78) | `kSystemDefaultMediaDeviceId` | `kSystemDefaultMediaDeviceId;` | 定义 system default media device id 的编译期常量或产品边界。 |
+| [L80](../src/apps/remote/InProcessSessionEngine.h#L80) | `kSystemDefaultMediaDeviceId` | `kSystemDefaultMediaDeviceId;` | 定义 system default media device id 的编译期常量或产品边界。 |
+| [L81](../src/apps/remote/InProcessSessionEngine.h#L81) | `iceMinPort` | `int iceMinPort = kDefaultIceMinPort;` | 保存 ice min port 相关配置或运行状态。 |
+| [L82](../src/apps/remote/InProcessSessionEngine.h#L82) | `iceMaxPort` | `int iceMaxPort = kDefaultIceMaxPort;` | 保存 ice max port 相关配置或运行状态。 |
+| [L83](../src/apps/remote/InProcessSessionEngine.h#L83) | `negotiationTimeout` | `std::chrono::milliseconds negotiationTimeout{15000};` | 保存定时、截止或超时状态：negotiation timeout。 |
+| [L84](../src/apps/remote/InProcessSessionEngine.h#L84) | `reconnectTimeout` | `std::chrono::milliseconds reconnectTimeout{60000};` | 保存定时、截止或超时状态：reconnect timeout。 |
+| [L393](../src/apps/remote/InProcessSessionEngine.h#L393) | `RoomPairBridge` | `class RoomPairBridge;` | 保存 room pair bridge 相关配置或运行状态。 |
+| [L394](../src/apps/remote/InProcessSessionEngine.h#L394) | `RoomPairRuntime` | `struct RoomPairRuntime;` | 保存 room pair runtime 相关配置或运行状态。 |
+| [L413](../src/apps/remote/InProcessSessionEngine.h#L413) | `runtime_` | `std::unique_ptr<WebRtcRuntime> runtime_;` | 保存 runtime 相关配置或运行状态。 |
+| [L414](../src/apps/remote/InProcessSessionEngine.h#L414) | `signaling_` | `std::unique_ptr<ISignalingClient> signaling_;` | 保存 signaling 相关配置或运行状态。 |
+| [L415](../src/apps/remote/InProcessSessionEngine.h#L415) | `signalingConfig_` | `SignalingClientConfig signalingConfig_;` | 保存 signaling config 相关配置或运行状态。 |
+| [L416](../src/apps/remote/InProcessSessionEngine.h#L416) | `options_` | `InProcessSessionEngineOptions options_;` | 保存 options 相关配置或运行状态。 |
+| [L417](../src/apps/remote/InProcessSessionEngine.h#L417) | `webRtcSession_` | `std::unique_ptr<LibWebRtcSession> webRtcSession_;` | 保存 web rtc session 相关配置或运行状态。 |
+| [L418](../src/apps/remote/InProcessSessionEngine.h#L418) | `sessionController_` | `std::unique_ptr<SessionControllerBase> sessionController_;` | 保存 session controller 相关配置或运行状态。 |
+| [L420](../src/apps/remote/InProcessSessionEngine.h#L420) | `roomPairs_` | `roomPairs_;` | 保存 room pairs 相关配置或运行状态。 |
+| [L421](../src/apps/remote/InProcessSessionEngine.h#L421) | `retiredRoomPairThreads_` | `std::vector<std::jthread> retiredRoomPairThreads_;` | 保存 retired room pair threads 相关配置或运行状态。 |
+| [L424](../src/apps/remote/InProcessSessionEngine.h#L424) | `retiredDesktopStopThreads_` | `std::vector<std::jthread> retiredDesktopStopThreads_;` | Device drivers may block while stopping a capture module. Keep those joins outside the Qt UI path, but retain ownership until engine stop. |
+| [L425](../src/apps/remote/InProcessSessionEngine.h#L425) | `retiredCameraStopThreads_` | `std::vector<std::jthread> retiredCameraStopThreads_;` | 保存 retired camera stop threads 相关配置或运行状态。 |
+| [L426](../src/apps/remote/InProcessSessionEngine.h#L426) | `mediaDeviceOperationThreads_` | `std::vector<std::jthread> mediaDeviceOperationThreads_;` | 保存 media device operation threads 相关配置或运行状态。 |
+| [L427](../src/apps/remote/InProcessSessionEngine.h#L427) | `clipboardWarmupThreads_` | `std::vector<std::jthread> clipboardWarmupThreads_;` | 保存 clipboard warmup threads 相关配置或运行状态。 |
+| [L428](../src/apps/remote/InProcessSessionEngine.h#L428) | `startupThreadMutex_` | `std::mutex startupThreadMutex_;` | 保护跨线程共享状态：startup thread mutex。 |
+| [L429](../src/apps/remote/InProcessSessionEngine.h#L429) | `startupThread_` | `std::jthread startupThread_;` | 拥有后台执行线程或工作器：startup thread。 |
+| [L432](../src/apps/remote/InProcessSessionEngine.h#L432) | `statsPoller_` | `std::unique_ptr<SessionStatsPoller> statsPoller_;` | 保存 stats poller 相关配置或运行状态。 |
+| [L433](../src/apps/remote/InProcessSessionEngine.h#L433) | `mediaState_` | `std::unique_ptr<InProcessSessionMediaState> mediaState_;` | 保存状态机当前状态：media state。 |
+| [L434](../src/apps/remote/InProcessSessionEngine.h#L434) | `mediaAccess_` | `std::unique_ptr<InProcessSessionMediaAdapter> mediaAccess_;` | 保存 media access 相关配置或运行状态。 |
+| [L435](../src/apps/remote/InProcessSessionEngine.h#L435) | `cursorMonitor_` | `std::unique_ptr<WindowsCursorMonitor> cursorMonitor_;` | 保存 cursor monitor 相关配置或运行状态。 |
+| [L436](../src/apps/remote/InProcessSessionEngine.h#L436) | `mutex_` | `mutable std::mutex mutex_;` | 保护跨线程共享状态：mutex。 |
+| [L437](../src/apps/remote/InProcessSessionEngine.h#L437) | `observer_` | `ISessionEngineObserver* observer_ = nullptr;` | 保存回调或观察者入口：observer。 |
+| [L439](../src/apps/remote/InProcessSessionEngine.h#L439) | `accountDeletionResultCallback_` | `accountDeletionResultCallback_;` | 保存回调或观察者入口：account deletion result callback。 |
+| [L440](../src/apps/remote/InProcessSessionEngine.h#L440) | `snapshot_` | `SessionEngineSnapshot snapshot_;` | 保存可跨层读取的状态快照：snapshot。 |
+| [L441](../src/apps/remote/InProcessSessionEngine.h#L441) | `capabilities_` | `SessionEngineCapabilities capabilities_;` | 保存 capabilities 相关配置或运行状态。 |
+| [L442](../src/apps/remote/InProcessSessionEngine.h#L442) | `directSession_` | `DirectSessionCoordinator directSession_;` | 保存 direct session 相关配置或运行状态。 |
+| [L443](../src/apps/remote/InProcessSessionEngine.h#L443) | `roomSession_` | `RoomSessionCoordinator roomSession_;` | 保存 room session 相关配置或运行状态。 |
+| [L444](../src/apps/remote/InProcessSessionEngine.h#L444) | `localMedia_` | `LocalMediaCoordinator localMedia_;` | 保存 local media 相关配置或运行状态。 |
+| [L445](../src/apps/remote/InProcessSessionEngine.h#L445) | `screenShare_` | `ScreenShareCoordinator screenShare_;` | 保存 screen share 相关配置或运行状态。 |
+| [L446](../src/apps/remote/InProcessSessionEngine.h#L446) | `remoteInputSink_` | `IRemoteInputSink* remoteInputSink_ = nullptr;` | 保存回调或观察者入口：remote input sink。 |
+| [L447](../src/apps/remote/InProcessSessionEngine.h#L447) | `remoteFileTransferSink_` | `IFileTransferSink* remoteFileTransferSink_ = nullptr;` | 保存回调或观察者入口：remote file transfer sink。 |
+| [L448](../src/apps/remote/InProcessSessionEngine.h#L448) | `remoteClipboardSink_` | `IClipboardSink* remoteClipboardSink_ = nullptr;` | 保存回调或观察者入口：remote clipboard sink。 |
+| [L449](../src/apps/remote/InProcessSessionEngine.h#L449) | `remoteCursorCallback_` | `RemoteCursorCallback remoteCursorCallback_;` | 保存回调或观察者入口：remote cursor callback。 |
+| [L450](../src/apps/remote/InProcessSessionEngine.h#L450) | `latestLocalCursorPosition_` | `std::optional<RemoteCursorPosition> latestLocalCursorPosition_;` | 保存 latest local cursor position 相关配置或运行状态。 |
+| [L451](../src/apps/remote/InProcessSessionEngine.h#L451) | `latestLocalCursorShape_` | `std::optional<RemoteCursorShape> latestLocalCursorShape_;` | 保存 latest local cursor shape 相关配置或运行状态。 |
+| [L452](../src/apps/remote/InProcessSessionEngine.h#L452) | `nextCursorSequence_` | `std::uint64_t nextCursorSequence_ = 0;` | 保存单调序号，用于排序或去重：next cursor sequence。 |
+| [L453](../src/apps/remote/InProcessSessionEngine.h#L453) | `cursorPositionsPublished_` | `std::uint64_t cursorPositionsPublished_ = 0;` | 保存 cursor positions published 相关配置或运行状态。 |
+| [L454](../src/apps/remote/InProcessSessionEngine.h#L454) | `cursorShapesPublished_` | `std::uint64_t cursorShapesPublished_ = 0;` | 保存 cursor shapes published 相关配置或运行状态。 |
+| [L455](../src/apps/remote/InProcessSessionEngine.h#L455) | `cursorPositionsReceived_` | `std::uint64_t cursorPositionsReceived_ = 0;` | 保存 cursor positions received 相关配置或运行状态。 |
+| [L456](../src/apps/remote/InProcessSessionEngine.h#L456) | `cursorShapesReceived_` | `std::uint64_t cursorShapesReceived_ = 0;` | 保存 cursor shapes received 相关配置或运行状态。 |
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L83](../src/apps/remote/InProcessSessionEngine.h#L83) | `InProcessSessionEngine` | 声明 | `InProcessSessionEngine()` | 实现 in process session engine 对应的业务或工具逻辑。 |
-| [L87](../src/apps/remote/InProcessSessionEngine.h#L87) | `~InProcessSessionEngine` | 声明 | `~InProcessSessionEngine() override` | 停止相关活动并释放 InProcessSessionEngine 实例拥有的资源。 |
-| [L89](../src/apps/remote/InProcessSessionEngine.h#L89) | `InProcessSessionEngine` | 声明 | `InProcessSessionEngine(const InProcessSessionEngine&) = delete` | 实现 in process session engine 对应的业务或工具逻辑。 |
-| [L92](../src/apps/remote/InProcessSessionEngine.h#L92) | `SetObserver` | 声明 | `void SetObserver(ISessionEngineObserver* observer) override` | 更新或应用 set observer 相关逻辑。 |
-| [L93](../src/apps/remote/InProcessSessionEngine.h#L93) | `Start` | 声明 | `SessionCommandResult Start() override` | 启动 start 相关逻辑。 |
-| [L97](../src/apps/remote/InProcessSessionEngine.h#L97) | `BeginStart` | 声明 | `SessionCommandResult BeginStart()` | Staged startup keeps the Qt-owned signaling transport on its owner thread while allowing expensive WebRTC/media initialization to run on a worker. Start() remains the synchronou... |
-| [L98](../src/apps/remote/InProcessSessionEngine.h#L98) | `InitializeRuntimeForStart` | 声明 | `SessionCommandResult InitializeRuntimeForStart()` | 创建或初始化 initialize runtime for start 相关逻辑。 |
-| [L99](../src/apps/remote/InProcessSessionEngine.h#L99) | `CompleteStart` | 声明 | `SessionCommandResult CompleteStart( const SessionCommandResult& runtimeResult)` | 实现 complete start 对应的业务或工具逻辑。 |
-| [L101](../src/apps/remote/InProcessSessionEngine.h#L101) | `Stop` | 声明 | `void Stop() override` | 停止 stop 相关逻辑。 |
-| [L105](../src/apps/remote/InProcessSessionEngine.h#L105) | `UpdateSignalingAccessToken` | 声明 | `SessionCommandResult UpdateSignalingAccessToken( std::string accessToken)` | Updates only the signaling credential retained for future authentication/reconnect. Active PeerConnections and DataChannels are intentionally left untouched. |
-| [L107](../src/apps/remote/InProcessSessionEngine.h#L107) | `RequestAccountDeletion` | 声明 | `SessionCommandResult RequestAccountDeletion()` | 发起请求或查询 request account deletion 相关逻辑。 |
-| [L108](../src/apps/remote/InProcessSessionEngine.h#L108) | `SetAccountDeletionResultCallback` | 声明 | `void SetAccountDeletionResultCallback( std::function<void(const SignalingAccountDeletionResult&)> callback)` | 更新或应用 set account deletion result callback 相关逻辑。 |
-| [L111](../src/apps/remote/InProcessSessionEngine.h#L111) | `Snapshot` | 声明 | `SessionEngineSnapshot Snapshot() const override` | 查询并返回 snapshot 相关逻辑。 |
-| [L112](../src/apps/remote/InProcessSessionEngine.h#L112) | `Capabilities` | 声明 | `SessionEngineCapabilities Capabilities() const override` | 查询并返回 capabilities 相关逻辑。 |
-| [L113](../src/apps/remote/InProcessSessionEngine.h#L113) | `Diagnostics` | 声明 | `SessionDiagnosticsSnapshot Diagnostics() const override` | 查询并返回 diagnostics 相关逻辑。 |
-| [L115](../src/apps/remote/InProcessSessionEngine.h#L115) | `ConnectDirectDevice` | 声明 | `SessionCommandResult ConnectDirectDevice( const DirectSessionConnectRequest& request) override` | 建立连接 connect direct device 相关逻辑。 |
-| [L117](../src/apps/remote/InProcessSessionEngine.h#L117) | `ConnectDevice` | 声明 | `SessionCommandResult ConnectDevice( const std::string& deviceId, SessionPurpose purpose) override` | 建立连接 connect device 相关逻辑。 |
-| [L120](../src/apps/remote/InProcessSessionEngine.h#L120) | `ConnectOwnedDevice` | 声明 | `SessionCommandResult ConnectOwnedDevice( const std::string& deviceId, SessionPurpose purpose) override` | 建立连接 connect owned device 相关逻辑。 |
-| [L123](../src/apps/remote/InProcessSessionEngine.h#L123) | `ConnectAssistedDevice` | 声明 | `SessionCommandResult ConnectAssistedDevice( const std::string& deviceId, const std::string& verificationCode) override` | 建立连接 connect assisted device 相关逻辑。 |
-| [L126](../src/apps/remote/InProcessSessionEngine.h#L126) | `RefreshOwnedDevices` | 声明 | `SessionCommandResult RefreshOwnedDevices() override` | 刷新 refresh owned devices 相关逻辑。 |
-| [L127](../src/apps/remote/InProcessSessionEngine.h#L127) | `AcceptIncomingSession` | 声明 | `SessionCommandResult AcceptIncomingSession( const std::string& sessionId) override` | 处理并回复 accept incoming session 相关逻辑。 |
-| [L129](../src/apps/remote/InProcessSessionEngine.h#L129) | `RejectIncomingSession` | 声明 | `SessionCommandResult RejectIncomingSession( const std::string& sessionId) override` | 处理并回复 reject incoming session 相关逻辑。 |
-| [L131](../src/apps/remote/InProcessSessionEngine.h#L131) | `Disconnect` | 声明 | `SessionCommandResult Disconnect() override` | 断开连接 disconnect 相关逻辑。 |
-| [L132](../src/apps/remote/InProcessSessionEngine.h#L132) | `CreateRoom` | 声明 | `SessionCommandResult CreateRoom(std::uint32_t capacity) override` | 创建或初始化 create room 相关逻辑。 |
-| [L133](../src/apps/remote/InProcessSessionEngine.h#L133) | `JoinRoom` | 声明 | `SessionCommandResult JoinRoom(const std::string& roomId) override` | 实现 join room 对应的业务或工具逻辑。 |
-| [L134](../src/apps/remote/InProcessSessionEngine.h#L134) | `QueryRoomAvailability` | 声明 | `SessionCommandResult QueryRoomAvailability( const std::vector<std::string>& roomIds) override` | 发起请求或查询 query room availability 相关逻辑。 |
-| [L136](../src/apps/remote/InProcessSessionEngine.h#L136) | `RespondToRoomJoin` | 声明 | `SessionCommandResult RespondToRoomJoin( const std::string& requestId, bool accepted) override` | 处理并回复 respond to room join 相关逻辑。 |
-| [L139](../src/apps/remote/InProcessSessionEngine.h#L139) | `SetRoomCapacity` | 声明 | `SessionCommandResult SetRoomCapacity( std::uint32_t capacity) override` | 更新或应用 set room capacity 相关逻辑。 |
-| [L141](../src/apps/remote/InProcessSessionEngine.h#L141) | `LeaveRoom` | 声明 | `SessionCommandResult LeaveRoom() override` | 实现 leave room 对应的业务或工具逻辑。 |
-| [L144](../src/apps/remote/InProcessSessionEngine.h#L144) | `ExitRoomAfterRecoveryFailure` | 声明 | `SessionCommandResult ExitRoomAfterRecoveryFailure()` | Used after an unrecoverable P2P failure. Local media/session state is torn down immediately; a server leave is sent now or after WSS returns. |
-| [L145](../src/apps/remote/InProcessSessionEngine.h#L145) | `RefreshLocalDisplays` | 声明 | `SessionCommandResult RefreshLocalDisplays() override` | 刷新 refresh local displays 相关逻辑。 |
-| [L146](../src/apps/remote/InProcessSessionEngine.h#L146) | `SelectRoomScreenShareDisplay` | 声明 | `SessionCommandResult SelectRoomScreenShareDisplay( const std::string& stableDisplayKey) override` | 查询并返回 select room screen share display 相关逻辑。 |
-| [L148](../src/apps/remote/InProcessSessionEngine.h#L148) | `StartRoomScreenShare` | 声明 | `SessionCommandResult StartRoomScreenShare() override` | 启动 start room screen share 相关逻辑。 |
-| [L149](../src/apps/remote/InProcessSessionEngine.h#L149) | `StopRoomScreenShare` | 声明 | `SessionCommandResult StopRoomScreenShare() override` | 停止 stop room screen share 相关逻辑。 |
-| [L150](../src/apps/remote/InProcessSessionEngine.h#L150) | `RespondToRoomScreenShareSwitch` | 声明 | `SessionCommandResult RespondToRoomScreenShareSwitch( const std::string& requestId, bool accepted) override` | 处理并回复 respond to room screen share switch 相关逻辑。 |
-| [L153](../src/apps/remote/InProcessSessionEngine.h#L153) | `CancelRoomScreenShareSwitch` | 声明 | `SessionCommandResult CancelRoomScreenShareSwitch() override` | 判断 cancel room screen share switch 相关逻辑。 |
-| [L154](../src/apps/remote/InProcessSessionEngine.h#L154) | `RequestRoomControl` | 声明 | `SessionCommandResult RequestRoomControl() override` | 发起请求或查询 request room control 相关逻辑。 |
-| [L155](../src/apps/remote/InProcessSessionEngine.h#L155) | `RespondToRoomControl` | 声明 | `SessionCommandResult RespondToRoomControl( const std::string& requestId, bool accepted) override` | 处理并回复 respond to room control 相关逻辑。 |
-| [L158](../src/apps/remote/InProcessSessionEngine.h#L158) | `ReleaseRoomControl` | 声明 | `SessionCommandResult ReleaseRoomControl() override` | 释放或取消 release room control 相关逻辑。 |
-| [L159](../src/apps/remote/InProcessSessionEngine.h#L159) | `RequestRoomMemberScreenShare` | 声明 | `SessionCommandResult RequestRoomMemberScreenShare( const std::string& peerDeviceId) override` | 发起请求或查询 request room member screen share 相关逻辑。 |
-| [L161](../src/apps/remote/InProcessSessionEngine.h#L161) | `RespondToRoomMemberScreenShare` | 声明 | `SessionCommandResult RespondToRoomMemberScreenShare( const std::string& requesterDeviceId, std::uint64_t sequence, bool accepted) override` | 处理并回复 respond to room member screen share 相关逻辑。 |
-| [L165](../src/apps/remote/InProcessSessionEngine.h#L165) | `RequestRoomMemberMicrophoneMute` | 声明 | `SessionCommandResult RequestRoomMemberMicrophoneMute( const std::string& peerDeviceId) override` | 发起请求或查询 request room member microphone mute 相关逻辑。 |
-| [L167](../src/apps/remote/InProcessSessionEngine.h#L167) | `RequestRemoteRoomScreenShareStop` | 声明 | `SessionCommandResult RequestRemoteRoomScreenShareStop( const std::string& peerDeviceId, std::uint64_t screenShareEpoch) override` | 发起请求或查询 request remote room screen share stop 相关逻辑。 |
-| [L170](../src/apps/remote/InProcessSessionEngine.h#L170) | `SendRoomInput` | 声明 | `SessionCommandResult SendRoomInput( const RemoteInputEvent& event) override` | 发送或发布 send room input 相关逻辑。 |
-| [L172](../src/apps/remote/InProcessSessionEngine.h#L172) | `SendDirectInput` | 声明 | `SessionCommandResult SendDirectInput( const RemoteInputEvent& event)` | 发送或发布 send direct input 相关逻辑。 |
-| [L174](../src/apps/remote/InProcessSessionEngine.h#L174) | `SendRemoteInput` | 声明 | `SessionCommandResult SendRemoteInput( const RemoteInputEvent& event)` | 发送或发布 send remote input 相关逻辑。 |
-| [L176](../src/apps/remote/InProcessSessionEngine.h#L176) | `SetRoomScreenFrameRate` | 声明 | `SessionCommandResult SetRoomScreenFrameRate( const std::string& pairId, std::uint32_t framesPerSecond) override` | 更新或应用 set room screen frame rate 相关逻辑。 |
-| [L179](../src/apps/remote/InProcessSessionEngine.h#L179) | `SetRoomScreenStreamPreference` | 声明 | `SessionCommandResult SetRoomScreenStreamPreference( const std::string& pairId, const ScreenStreamPreferenceRequest& preference) override` | 更新或应用 set room screen stream preference 相关逻辑。 |
-| [L182](../src/apps/remote/InProcessSessionEngine.h#L182) | `RequestRemoteSharedDisplaySwitch` | 声明 | `SessionCommandResult RequestRemoteSharedDisplaySwitch( const std::string& pairId, const std::string& stableDisplayKey) override` | 发起请求或查询 request remote shared display switch 相关逻辑。 |
-| [L185](../src/apps/remote/InProcessSessionEngine.h#L185) | `SendRoomFileMessage` | 声明 | `SessionCommandResult SendRoomFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message) override` | 发送或发布 send room file message 相关逻辑。 |
-| [L188](../src/apps/remote/InProcessSessionEngine.h#L188) | `SendRoomClipboardMessage` | 声明 | `SessionCommandResult SendRoomClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message) override` | 发送或发布 send room clipboard message 相关逻辑。 |
-| [L192](../src/apps/remote/InProcessSessionEngine.h#L192) | `SendRemoteFileMessage` | 声明 | `SessionCommandResult SendRemoteFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send remote file message 相关逻辑。 |
-| [L195](../src/apps/remote/InProcessSessionEngine.h#L195) | `SendRemoteClipboardMessage` | 声明 | `SessionCommandResult SendRemoteClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message)` | 发送或发布 send remote clipboard message 相关逻辑。 |
-| [L199](../src/apps/remote/InProcessSessionEngine.h#L199) | `SetDirectScreenStreamPreference` | 声明 | `SessionCommandResult SetDirectScreenStreamPreference( const ScreenStreamPreferenceRequest& preference)` | 更新或应用 set direct screen stream preference 相关逻辑。 |
-| [L201](../src/apps/remote/InProcessSessionEngine.h#L201) | `RequestDirectSharedDisplaySwitch` | 声明 | `SessionCommandResult RequestDirectSharedDisplaySwitch( const std::string& stableDisplayKey)` | 发起请求或查询 request direct shared display switch 相关逻辑。 |
-| [L203](../src/apps/remote/InProcessSessionEngine.h#L203) | `SetLocalCameraEnabled` | 声明 | `SessionCommandResult SetLocalCameraEnabled(bool enabled) override` | 更新或应用 set local camera enabled 相关逻辑。 |
-| [L204](../src/apps/remote/InProcessSessionEngine.h#L204) | `SetLocalMicrophoneEnabled` | 声明 | `SessionCommandResult SetLocalMicrophoneEnabled(bool enabled) override` | 更新或应用 set local microphone enabled 相关逻辑。 |
-| [L205](../src/apps/remote/InProcessSessionEngine.h#L205) | `SetRemoteAudioPlaybackMuted` | 声明 | `SessionCommandResult SetRemoteAudioPlaybackMuted(bool muted)` | 更新或应用 set remote audio playback muted 相关逻辑。 |
-| [L206](../src/apps/remote/InProcessSessionEngine.h#L206) | `SetRoomAudioPlaybackMuted` | 声明 | `SessionCommandResult SetRoomAudioPlaybackMuted(bool muted) override` | 更新或应用 set room audio playback muted 相关逻辑。 |
-| [L207](../src/apps/remote/InProcessSessionEngine.h#L207) | `RefreshLocalMediaDevices` | 声明 | `SessionCommandResult RefreshLocalMediaDevices() override` | 刷新 refresh local media devices 相关逻辑。 |
-| [L208](../src/apps/remote/InProcessSessionEngine.h#L208) | `SelectLocalCameraDevice` | 声明 | `SessionCommandResult SelectLocalCameraDevice( const std::string& deviceId) override` | 查询并返回 select local camera device 相关逻辑。 |
-| [L210](../src/apps/remote/InProcessSessionEngine.h#L210) | `SelectLocalMicrophoneDevice` | 声明 | `SessionCommandResult SelectLocalMicrophoneDevice( const std::string& deviceId) override` | 查询并返回 select local microphone device 相关逻辑。 |
-| [L212](../src/apps/remote/InProcessSessionEngine.h#L212) | `SelectLocalSpeakerDevice` | 声明 | `SessionCommandResult SelectLocalSpeakerDevice( const std::string& deviceId) override` | 查询并返回 select local speaker device 相关逻辑。 |
-| [L218](../src/apps/remote/InProcessSessionEngine.h#L218) | `SetRoomVideoSource` | 声明 | `SessionCommandResult SetRoomVideoSource( const std::string& slot, webrtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source, const std::string& trackId, std::optional<std::string> expectedRoomId = std::nullopt, ...` | Media adapters use these concrete-engine hooks. UI code continues to depend only on ISessionEngine; desktop/camera capture sources and Qt render sinks remain outside the control... |
-| [L225](../src/apps/remote/InProcessSessionEngine.h#L225) | `ClearRoomVideoSource` | 声明 | `SessionCommandResult ClearRoomVideoSource( const std::string& slot)` | 重置或移除 clear room video source 相关逻辑。 |
-| [L227](../src/apps/remote/InProcessSessionEngine.h#L227) | `SetRoomVideoSlotSendingActive` | 声明 | `SessionCommandResult SetRoomVideoSlotSendingActive( const std::string& slot, bool active)` | 更新或应用 set room video slot sending active 相关逻辑。 |
-| [L230](../src/apps/remote/InProcessSessionEngine.h#L230) | `SetRoomRemoteVideoSink` | 声明 | `SessionCommandResult SetRoomRemoteVideoSink( const std::string& pairId, const std::string& slot, webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set room remote video sink 相关逻辑。 |
-| [L234](../src/apps/remote/InProcessSessionEngine.h#L234) | `SetDirectRemoteVideoSink` | 声明 | `SessionCommandResult SetDirectRemoteVideoSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set direct remote video sink 相关逻辑。 |
-| [L236](../src/apps/remote/InProcessSessionEngine.h#L236) | `NotifyRoomScreenFirstFramePresented` | 声明 | `SessionCommandResult NotifyRoomScreenFirstFramePresented( const std::string& pairId, std::uint64_t screenShareGeneration, std::uint32_t startupElapsedMs)` | 通知或报告 notify room screen first frame presented 相关逻辑。 |
-| [L240](../src/apps/remote/InProcessSessionEngine.h#L240) | `SetLocalCameraPreviewSink` | 声明 | `void SetLocalCameraPreviewSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set local camera preview sink 相关逻辑。 |
-| [L242](../src/apps/remote/InProcessSessionEngine.h#L242) | `SetRemoteInputSink` | 声明 | `void SetRemoteInputSink(IRemoteInputSink* sink)` | 更新或应用 set remote input sink 相关逻辑。 |
-| [L243](../src/apps/remote/InProcessSessionEngine.h#L243) | `SetRemoteFileTransferSink` | 声明 | `void SetRemoteFileTransferSink(IFileTransferSink* sink)` | 更新或应用 set remote file transfer sink 相关逻辑。 |
-| [L244](../src/apps/remote/InProcessSessionEngine.h#L244) | `SetRemoteClipboardSink` | 声明 | `void SetRemoteClipboardSink(IClipboardSink* sink)` | 更新或应用 set remote clipboard sink 相关逻辑。 |
-| [L248](../src/apps/remote/InProcessSessionEngine.h#L248) | `SetRemoteCursorCallback` | 声明 | `void SetRemoteCursorCallback(RemoteCursorCallback callback)` | 更新或应用 set remote cursor callback 相关逻辑。 |
-| [L249](../src/apps/remote/InProcessSessionEngine.h#L249) | `SetPreferredHardwareDecoderName` | 声明 | `void SetPreferredHardwareDecoderName(std::string name)` | 更新或应用 set preferred hardware decoder name 相关逻辑。 |
-| [L250](../src/apps/remote/InProcessSessionEngine.h#L250) | `ApplyVideoPipelinePreferences` | 声明 | `SessionCommandResult ApplyVideoPipelinePreferences( DesktopCaptureImplementation desktopCaptureImplementation, VideoEncoderPreference videoEncoderPreference, FfmpegX264Preset quality, FfmpegHardwareBackend ffmpegHardw...` | 更新或应用 apply video pipeline preferences 相关逻辑。 |
-| [L261](../src/apps/remote/InProcessSessionEngine.h#L261) | `OnSignalingStateChanged` | 声明 | `void OnSignalingStateChanged(SignalingConnectionState state) override` | 接收并处理 on signaling state changed 相关逻辑。 |
-| [L262](../src/apps/remote/InProcessSessionEngine.h#L262) | `OnDeviceRegistered` | 声明 | `void OnDeviceRegistered(const std::string& deviceId) override` | 接收并处理 on device registered 相关逻辑。 |
-| [L263](../src/apps/remote/InProcessSessionEngine.h#L263) | `OnIncomingSessionRequest` | 声明 | `void OnIncomingSessionRequest( const IncomingSessionRequest& request) override` | 接收并处理 on incoming session request 相关逻辑。 |
-| [L265](../src/apps/remote/InProcessSessionEngine.h#L265) | `OnSessionResponse` | 声明 | `void OnSessionResponse( const SignalingSessionResponse& response) override` | 接收并处理 on session response 相关逻辑。 |
-| [L267](../src/apps/remote/InProcessSessionEngine.h#L267) | `OnSessionPending` | 声明 | `void OnSessionPending( const SignalingSessionPending& pending) override` | 接收并处理 on session pending 相关逻辑。 |
-| [L269](../src/apps/remote/InProcessSessionEngine.h#L269) | `OnSessionReady` | 声明 | `void OnSessionReady(const SignalingSessionReady& ready) override` | 接收并处理 on session ready 相关逻辑。 |
-| [L270](../src/apps/remote/InProcessSessionEngine.h#L270) | `OnSessionSuspended` | 声明 | `void OnSessionSuspended( const SignalingSessionSuspended& suspended) override` | 接收并处理 on session suspended 相关逻辑。 |
-| [L272](../src/apps/remote/InProcessSessionEngine.h#L272) | `OnSessionResumed` | 声明 | `void OnSessionResumed( const SignalingSessionResumed& resumed) override` | 接收并处理 on session resumed 相关逻辑。 |
-| [L274](../src/apps/remote/InProcessSessionEngine.h#L274) | `OnSessionEnded` | 声明 | `void OnSessionEnded(const SignalingSessionEnded& ended) override` | 接收并处理 on session ended 相关逻辑。 |
-| [L275](../src/apps/remote/InProcessSessionEngine.h#L275) | `OnRemoteDescription` | 声明 | `void OnRemoteDescription( const SignalingSessionDescription& description) override` | 接收并处理 on remote description 相关逻辑。 |
-| [L277](../src/apps/remote/InProcessSessionEngine.h#L277) | `OnRemoteIceCandidate` | 声明 | `void OnRemoteIceCandidate( const SignalingIceCandidate& candidate) override` | 接收并处理 on remote ice candidate 相关逻辑。 |
-| [L279](../src/apps/remote/InProcessSessionEngine.h#L279) | `OnIceRestartRequested` | 声明 | `void OnIceRestartRequested( const SignalingIceRestartRequest& request) override` | 接收并处理 on ice restart requested 相关逻辑。 |
-| [L281](../src/apps/remote/InProcessSessionEngine.h#L281) | `OnIceRestartCancelled` | 声明 | `void OnIceRestartCancelled( const SignalingIceRestartCancel& cancel) override` | 接收并处理 on ice restart cancelled 相关逻辑。 |
-| [L283](../src/apps/remote/InProcessSessionEngine.h#L283) | `OnHeartbeatAcknowledged` | 声明 | `void OnHeartbeatAcknowledged(std::uint32_t roundTripMs) override` | 接收并处理 on heartbeat acknowledged 相关逻辑。 |
-| [L284](../src/apps/remote/InProcessSessionEngine.h#L284) | `OnSignalingError` | 声明 | `void OnSignalingError(const std::string& code, const std::string& message) override` | 接收并处理 on signaling error 相关逻辑。 |
-| [L286](../src/apps/remote/InProcessSessionEngine.h#L286) | `OnAccountDeletionResult` | 声明 | `void OnAccountDeletionResult( const SignalingAccountDeletionResult& result) override` | 接收并处理 on account deletion result 相关逻辑。 |
-| [L288](../src/apps/remote/InProcessSessionEngine.h#L288) | `OnOwnedDevicesChanged` | 声明 | `void OnOwnedDevicesChanged( const SignalingOwnedDevicesSnapshot& snapshot) override` | 接收并处理 on owned devices changed 相关逻辑。 |
-| [L290](../src/apps/remote/InProcessSessionEngine.h#L290) | `OnRoomReady` | 声明 | `void OnRoomReady(const SignalingRoomReady& ready) override` | 接收并处理 on room ready 相关逻辑。 |
-| [L291](../src/apps/remote/InProcessSessionEngine.h#L291) | `OnRoomState` | 声明 | `void OnRoomState(const RoomSnapshot& room) override` | 接收并处理 on room state 相关逻辑。 |
-| [L292](../src/apps/remote/InProcessSessionEngine.h#L292) | `OnRoomJoinPending` | 声明 | `void OnRoomJoinPending( const SignalingRoomJoinPending& pending) override` | 接收并处理 on room join pending 相关逻辑。 |
-| [L294](../src/apps/remote/InProcessSessionEngine.h#L294) | `OnRoomJoinRequested` | 声明 | `void OnRoomJoinRequested(const RoomJoinRequest& request) override` | 接收并处理 on room join requested 相关逻辑。 |
-| [L295](../src/apps/remote/InProcessSessionEngine.h#L295) | `OnRoomJoinResult` | 声明 | `void OnRoomJoinResult( const SignalingRoomJoinResult& result) override` | 接收并处理 on room join result 相关逻辑。 |
-| [L297](../src/apps/remote/InProcessSessionEngine.h#L297) | `OnRoomAvailabilityResult` | 声明 | `void OnRoomAvailabilityResult( const SignalingRoomAvailabilityResult& result) override` | 接收并处理 on room availability result 相关逻辑。 |
-| [L299](../src/apps/remote/InProcessSessionEngine.h#L299) | `OnRoomClosed` | 声明 | `void OnRoomClosed(const SignalingRoomClosed& closed) override` | 接收并处理 on room closed 相关逻辑。 |
-| [L300](../src/apps/remote/InProcessSessionEngine.h#L300) | `OnRoomPairReady` | 声明 | `void OnRoomPairReady(const SignalingRoomPairReady& ready) override` | 接收并处理 on room pair ready 相关逻辑。 |
-| [L301](../src/apps/remote/InProcessSessionEngine.h#L301) | `OnRoomPairClosed` | 声明 | `void OnRoomPairClosed(const SignalingRoomPairClosed& closed) override` | 接收并处理 on room pair closed 相关逻辑。 |
-| [L302](../src/apps/remote/InProcessSessionEngine.h#L302) | `OnRoomScreenShareGranted` | 声明 | `void OnRoomScreenShareGranted( const SignalingRoomScreenShareGranted& granted) override` | 接收并处理 on room screen share granted 相关逻辑。 |
-| [L304](../src/apps/remote/InProcessSessionEngine.h#L304) | `OnRoomScreenShareSwitchPending` | 声明 | `void OnRoomScreenShareSwitchPending( const SignalingRoomScreenShareSwitchPending& pending) override` | 接收并处理 on room screen share switch pending 相关逻辑。 |
-| [L306](../src/apps/remote/InProcessSessionEngine.h#L306) | `OnRoomScreenShareSwitchRequested` | 声明 | `void OnRoomScreenShareSwitchRequested( const RoomScreenShareSwitchRequest& request) override` | 接收并处理 on room screen share switch requested 相关逻辑。 |
-| [L308](../src/apps/remote/InProcessSessionEngine.h#L308) | `OnRoomScreenShareSwitchResult` | 声明 | `void OnRoomScreenShareSwitchResult( const SignalingRoomScreenShareSwitchResult& result) override` | 接收并处理 on room screen share switch result 相关逻辑。 |
-| [L310](../src/apps/remote/InProcessSessionEngine.h#L310) | `OnRoomControlRequested` | 声明 | `void OnRoomControlRequested( const RoomControlRequest& request) override` | 接收并处理 on room control requested 相关逻辑。 |
-| [L312](../src/apps/remote/InProcessSessionEngine.h#L312) | `OnRoomControlResult` | 声明 | `void OnRoomControlResult( const SignalingRoomControlResult& result) override` | 接收并处理 on room control result 相关逻辑。 |
-| [L314](../src/apps/remote/InProcessSessionEngine.h#L314) | `OnRoomControlGranted` | 声明 | `void OnRoomControlGranted( const SignalingRoomControlGranted& granted) override` | 接收并处理 on room control granted 相关逻辑。 |
-| [L316](../src/apps/remote/InProcessSessionEngine.h#L316) | `OnRoomControlRevoked` | 声明 | `void OnRoomControlRevoked( const SignalingRoomControlRevoked& revoked) override` | 接收并处理 on room control revoked 相关逻辑。 |
-| [L319](../src/apps/remote/InProcessSessionEngine.h#L319) | `SendDescription` | 声明 | `bool SendDescription( const SessionDescription& description) override` | 发送或发布 send description 相关逻辑。 |
-| [L321](../src/apps/remote/InProcessSessionEngine.h#L321) | `SendIceCandidate` | 声明 | `bool SendIceCandidate(const IceCandidate& candidate) override` | 发送或发布 send ice candidate 相关逻辑。 |
-| [L322](../src/apps/remote/InProcessSessionEngine.h#L322) | `RequestIceRestart` | 声明 | `bool RequestIceRestart(std::uint64_t observedGeneration, std::uint64_t requestSequence) override` | 发起请求或查询 request ice restart 相关逻辑。 |
-| [L324](../src/apps/remote/InProcessSessionEngine.h#L324) | `CancelIceRestart` | 声明 | `bool CancelIceRestart(std::uint64_t observedGeneration, std::uint64_t requestSequence) override` | 判断 cancel ice restart 相关逻辑。 |
-| [L326](../src/apps/remote/InProcessSessionEngine.h#L326) | `OnControllerSnapshot` | 声明 | `void OnControllerSnapshot( const SessionControllerSnapshot& snapshot) override` | 接收并处理 on controller snapshot 相关逻辑。 |
-| [L328](../src/apps/remote/InProcessSessionEngine.h#L328) | `OnDataChannelStateChanged` | 声明 | `void OnDataChannelStateChanged( const DataChannelInfo& channel) override` | 接收并处理 on data channel state changed 相关逻辑。 |
-| [L330](../src/apps/remote/InProcessSessionEngine.h#L330) | `OnDataMessage` | 声明 | `void OnDataMessage(const std::string& label, std::span<const std::uint8_t> payload, bool binary) override` | 接收并处理 on data message 相关逻辑。 |
-| [L333](../src/apps/remote/InProcessSessionEngine.h#L333) | `OnRemoteTrackAdded` | 声明 | `void OnRemoteTrackAdded(const RemoteTrackInfo& track) override` | 接收并处理 on remote track added 相关逻辑。 |
-| [L335](../src/apps/remote/InProcessSessionEngine.h#L335) | `RequireReady` | 声明 | `SessionCommandResult RequireReady(const char* operation) const` | 实现 require ready 对应的业务或工具逻辑。 |
-| [L336](../src/apps/remote/InProcessSessionEngine.h#L336) | `SignalingIsOnline` | 声明 | `bool SignalingIsOnline() const` | 实现 signaling is online 对应的业务或工具逻辑。 |
-| [L337](../src/apps/remote/InProcessSessionEngine.h#L337) | `DisposeClosedSession` | 声明 | `void DisposeClosedSession()` | 关闭并清理 dispose closed session 相关逻辑。 |
-| [L338](../src/apps/remote/InProcessSessionEngine.h#L338) | `ResetSessionStateLocked` | 声明 | `void ResetSessionStateLocked()` | 重置或移除 reset session state locked 相关逻辑。 |
-| [L339](../src/apps/remote/InProcessSessionEngine.h#L339) | `ResetRoomStateLocked` | 声明 | `void ResetRoomStateLocked()` | 重置或移除 reset room state locked 相关逻辑。 |
-| [L340](../src/apps/remote/InProcessSessionEngine.h#L340) | `StopLocalDesktopCapture` | 声明 | `void StopLocalDesktopCapture()` | 停止 stop local desktop capture 相关逻辑。 |
-| [L341](../src/apps/remote/InProcessSessionEngine.h#L341) | `StopDirectDesktopCapture` | 声明 | `void StopDirectDesktopCapture()` | 停止 stop direct desktop capture 相关逻辑。 |
-| [L342](../src/apps/remote/InProcessSessionEngine.h#L342) | `StartRemoteCursorPublishing` | 声明 | `void StartRemoteCursorPublishing( const DisplayDescriptor& display, std::uint64_t layoutVersion)` | 启动 start remote cursor publishing 相关逻辑。 |
-| [L345](../src/apps/remote/InProcessSessionEngine.h#L345) | `StopRemoteCursorPublishing` | 声明 | `void StopRemoteCursorPublishing()` | 停止 stop remote cursor publishing 相关逻辑。 |
-| [L346](../src/apps/remote/InProcessSessionEngine.h#L346) | `OnLocalCursorObservation` | 声明 | `void OnLocalCursorObservation(WindowsCursorObservation observation)` | 接收并处理 on local cursor observation 相关逻辑。 |
-| [L347](../src/apps/remote/InProcessSessionEngine.h#L347) | `RepublishRemoteCursor` | 声明 | `void RepublishRemoteCursor()` | 实现 republish remote cursor 对应的业务或工具逻辑。 |
-| [L348](../src/apps/remote/InProcessSessionEngine.h#L348) | `DispatchRemoteCursorData` | 声明 | `bool DispatchRemoteCursorData( const std::string& pairId, const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch remote cursor data 相关逻辑。 |
-| [L352](../src/apps/remote/InProcessSessionEngine.h#L352) | `BroadcastDirectSharedDisplayLayout` | 声明 | `void BroadcastDirectSharedDisplayLayout()` | 实现 broadcast direct shared display layout 对应的业务或工具逻辑。 |
-| [L353](../src/apps/remote/InProcessSessionEngine.h#L353) | `RequestDirectSharedDisplayLayout` | 声明 | `void RequestDirectSharedDisplayLayout()` | 发起请求或查询 request direct shared display layout 相关逻辑。 |
-| [L354](../src/apps/remote/InProcessSessionEngine.h#L354) | `SendDirectFileMessage` | 声明 | `SessionCommandResult SendDirectFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send direct file message 相关逻辑。 |
-| [L357](../src/apps/remote/InProcessSessionEngine.h#L357) | `SendDirectClipboardMessage` | 声明 | `SessionCommandResult SendDirectClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message)` | 发送或发布 send direct clipboard message 相关逻辑。 |
-| [L361](../src/apps/remote/InProcessSessionEngine.h#L361) | `DispatchDirectAuxiliaryData` | 声明 | `bool DispatchDirectAuxiliaryData( const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch direct auxiliary data 相关逻辑。 |
-| [L364](../src/apps/remote/InProcessSessionEngine.h#L364) | `DispatchDirectScreenData` | 声明 | `bool DispatchDirectScreenData( const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch direct screen data 相关逻辑。 |
-| [L367](../src/apps/remote/InProcessSessionEngine.h#L367) | `SwitchLocalDirectDisplay` | 声明 | `SessionCommandResult SwitchLocalDirectDisplay( const std::string& stableDisplayKey)` | 实现 switch local direct display 对应的业务或工具逻辑。 |
-| [L369](../src/apps/remote/InProcessSessionEngine.h#L369) | `BroadcastDirectSharedDisplayCatalog` | 声明 | `void BroadcastDirectSharedDisplayCatalog()` | 实现 broadcast direct shared display catalog 对应的业务或工具逻辑。 |
-| [L370](../src/apps/remote/InProcessSessionEngine.h#L370) | `BroadcastSharedDisplayLayout` | 声明 | `void BroadcastSharedDisplayLayout()` | 实现 broadcast shared display layout 对应的业务或工具逻辑。 |
-| [L371](../src/apps/remote/InProcessSessionEngine.h#L371) | `SendRoomPairDescription` | 声明 | `bool SendRoomPairDescription( const std::string& pairId, const SessionDescription& description)` | 发送或发布 send room pair description 相关逻辑。 |
-| [L374](../src/apps/remote/InProcessSessionEngine.h#L374) | `SendRoomPairIceCandidate` | 声明 | `bool SendRoomPairIceCandidate( const std::string& pairId, const IceCandidate& candidate)` | 发送或发布 send room pair ice candidate 相关逻辑。 |
-| [L377](../src/apps/remote/InProcessSessionEngine.h#L377) | `SendRoomPairIceRestartRequest` | 声明 | `bool SendRoomPairIceRestartRequest( const std::string& pairId, std::uint64_t observedGeneration, std::uint64_t requestSequence)` | 发送或发布 send room pair ice restart request 相关逻辑。 |
-| [L381](../src/apps/remote/InProcessSessionEngine.h#L381) | `SendRoomPairIceRestartCancel` | 声明 | `bool SendRoomPairIceRestartCancel( const std::string& pairId, std::uint64_t observedGeneration, std::uint64_t requestSequence)` | 发送或发布 send room pair ice restart cancel 相关逻辑。 |
-| [L385](../src/apps/remote/InProcessSessionEngine.h#L385) | `OnRoomPairControllerSnapshot` | 声明 | `void OnRoomPairControllerSnapshot( const std::string& pairId, const SessionControllerSnapshot& snapshot)` | 接收并处理 on room pair controller snapshot 相关逻辑。 |
-| [L388](../src/apps/remote/InProcessSessionEngine.h#L388) | `OnRoomPairDataChannelStateChanged` | 声明 | `void OnRoomPairDataChannelStateChanged( const std::string& pairId, const DataChannelInfo& channel)` | 接收并处理 on room pair data channel state changed 相关逻辑。 |
-| [L391](../src/apps/remote/InProcessSessionEngine.h#L391) | `OnRoomPairDataMessage` | 声明 | `void OnRoomPairDataMessage( const std::string& pairId, const std::string& label, std::span<const std::uint8_t> payload, bool binary)` | 接收并处理 on room pair data message 相关逻辑。 |
-| [L396](../src/apps/remote/InProcessSessionEngine.h#L396) | `OnRoomPairRemoteTrackAdded` | 声明 | `void OnRoomPairRemoteTrackAdded( const std::string& pairId, const RemoteTrackInfo& track)` | 接收并处理 on room pair remote track added 相关逻辑。 |
-| [L399](../src/apps/remote/InProcessSessionEngine.h#L399) | `PrepareRoomPairAnswer` | 声明 | `std::optional<OperationError> PrepareRoomPairAnswer( const std::string& pairId)` | 实现 prepare room pair answer 对应的业务或工具逻辑。 |
-| [L401](../src/apps/remote/InProcessSessionEngine.h#L401) | `PrepareRoomPairMedia` | 声明 | `std::optional<OperationError> PrepareRoomPairMedia( const std::string& pairId, bool bindNegotiatedSlots, bool preparationAlreadyClaimed = false)` | 实现 prepare room pair media 对应的业务或工具逻辑。 |
-| [L405](../src/apps/remote/InProcessSessionEngine.h#L405) | `PrepareDirectMedia` | 声明 | `std::optional<OperationError> PrepareDirectMedia( bool bindNegotiatedSlots)` | 实现 prepare direct media 对应的业务或工具逻辑。 |
-| [L407](../src/apps/remote/InProcessSessionEngine.h#L407) | `StopDirectMicrophoneCapture` | 声明 | `void StopDirectMicrophoneCapture()` | 停止 stop direct microphone capture 相关逻辑。 |
-| [L408](../src/apps/remote/InProcessSessionEngine.h#L408) | `PublishSnapshot` | 声明 | `void PublishSnapshot()` | 发送或发布 publish snapshot 相关逻辑。 |
-| [L409](../src/apps/remote/InProcessSessionEngine.h#L409) | `StartStatsPolling` | 声明 | `void StartStatsPolling()` | 启动 start stats polling 相关逻辑。 |
-| [L410](../src/apps/remote/InProcessSessionEngine.h#L410) | `StopStatsPolling` | 声明 | `void StopStatsPolling()` | 停止 stop stats polling 相关逻辑。 |
-| [L414](../src/apps/remote/InProcessSessionEngine.h#L414) | `RetireRoomPair` | 声明 | `void RetireRoomPair(std::shared_ptr<RoomPairRuntime> pair)` | 实现 retire room pair 对应的业务或工具逻辑。 |
-| [L415](../src/apps/remote/InProcessSessionEngine.h#L415) | `ApplyLocalScreenFrameRate` | 声明 | `SessionCommandResult ApplyLocalScreenFrameRate( std::uint32_t framesPerSecond)` | 更新或应用 apply local screen frame rate 相关逻辑。 |
-| [L417](../src/apps/remote/InProcessSessionEngine.h#L417) | `SwitchLocalSharedDisplay` | 声明 | `SessionCommandResult SwitchLocalSharedDisplay( const std::string& stableDisplayKey)` | 实现 switch local shared display 对应的业务或工具逻辑。 |
-| [L419](../src/apps/remote/InProcessSessionEngine.h#L419) | `BroadcastSharedDisplayCatalog` | 声明 | `void BroadcastSharedDisplayCatalog()` | 实现 broadcast shared display catalog 对应的业务或工具逻辑。 |
-| [L420](../src/apps/remote/InProcessSessionEngine.h#L420) | `StartClipboardWarmup` | 声明 | `void StartClipboardWarmup( const std::shared_ptr<RoomPairRuntime>& pair)` | 启动 start clipboard warmup 相关逻辑。 |
-| [L422](../src/apps/remote/InProcessSessionEngine.h#L422) | `SendRoomMemberAction` | 声明 | `SessionCommandResult SendRoomMemberAction( const std::string& peerDeviceId, RoomMemberAction action, std::uint64_t screenShareEpoch = 0)` | 发送或发布 send room member action 相关逻辑。 |
-| [L426](../src/apps/remote/InProcessSessionEngine.h#L426) | `SendRoomMemberActionResponse` | 声明 | `SendResult SendRoomMemberActionResponse( const std::shared_ptr<RoomPairRuntime>& pair, const RoomMemberActionEnvelope& request, bool accepted, const std::string& error)` | 发送或发布 send room member action response 相关逻辑。 |
+| [L92](../src/apps/remote/InProcessSessionEngine.h#L92) | `InProcessSessionEngine` | 声明 | `InProcessSessionEngine()` | 实现 in process session engine 对应的业务或工具逻辑。 |
+| [L96](../src/apps/remote/InProcessSessionEngine.h#L96) | `~InProcessSessionEngine` | 声明 | `~InProcessSessionEngine() override` | 停止相关活动并释放 InProcessSessionEngine 实例拥有的资源。 |
+| [L98](../src/apps/remote/InProcessSessionEngine.h#L98) | `MediaAccess` | 声明 | `ISessionMediaAccess* MediaAccess() noexcept` | 实现 media access 对应的业务或工具逻辑。 |
+| [L100](../src/apps/remote/InProcessSessionEngine.h#L100) | `InProcessSessionEngine` | 声明 | `InProcessSessionEngine(const InProcessSessionEngine&) = delete` | 实现 in process session engine 对应的业务或工具逻辑。 |
+| [L103](../src/apps/remote/InProcessSessionEngine.h#L103) | `SetObserver` | 声明 | `void SetObserver(ISessionEngineObserver* observer) override` | 更新或应用 set observer 相关逻辑。 |
+| [L104](../src/apps/remote/InProcessSessionEngine.h#L104) | `Start` | 声明 | `SessionCommandResult Start() override` | 启动 start 相关逻辑。 |
+| [L105](../src/apps/remote/InProcessSessionEngine.h#L105) | `Stop` | 声明 | `void Stop() override` | 停止 stop 相关逻辑。 |
+| [L109](../src/apps/remote/InProcessSessionEngine.h#L109) | `UpdateSignalingAccessToken` | 声明 | `SessionCommandResult UpdateSignalingAccessToken( std::string accessToken)` | Updates only the signaling credential retained for future authentication/reconnect. Active PeerConnections and DataChannels are intentionally left untouched. |
+| [L111](../src/apps/remote/InProcessSessionEngine.h#L111) | `RequestAccountDeletion` | 声明 | `SessionCommandResult RequestAccountDeletion()` | 发起请求或查询 request account deletion 相关逻辑。 |
+| [L112](../src/apps/remote/InProcessSessionEngine.h#L112) | `SetAccountDeletionResultCallback` | 声明 | `void SetAccountDeletionResultCallback( std::function<void(const SignalingAccountDeletionResult&)> callback)` | 更新或应用 set account deletion result callback 相关逻辑。 |
+| [L115](../src/apps/remote/InProcessSessionEngine.h#L115) | `Snapshot` | 声明 | `SessionEngineSnapshot Snapshot() const override` | 查询并返回 snapshot 相关逻辑。 |
+| [L116](../src/apps/remote/InProcessSessionEngine.h#L116) | `Capabilities` | 声明 | `SessionEngineCapabilities Capabilities() const override` | 查询并返回 capabilities 相关逻辑。 |
+| [L117](../src/apps/remote/InProcessSessionEngine.h#L117) | `Diagnostics` | 声明 | `SessionDiagnosticsSnapshot Diagnostics() const override` | 查询并返回 diagnostics 相关逻辑。 |
+| [L119](../src/apps/remote/InProcessSessionEngine.h#L119) | `ConnectDirectDevice` | 声明 | `SessionCommandResult ConnectDirectDevice( const DirectSessionConnectRequest& request) override` | 建立连接 connect direct device 相关逻辑。 |
+| [L121](../src/apps/remote/InProcessSessionEngine.h#L121) | `RefreshOwnedDevices` | 声明 | `SessionCommandResult RefreshOwnedDevices() override` | 刷新 refresh owned devices 相关逻辑。 |
+| [L122](../src/apps/remote/InProcessSessionEngine.h#L122) | `AcceptIncomingSession` | 声明 | `SessionCommandResult AcceptIncomingSession( const std::string& sessionId) override` | 处理并回复 accept incoming session 相关逻辑。 |
+| [L124](../src/apps/remote/InProcessSessionEngine.h#L124) | `RejectIncomingSession` | 声明 | `SessionCommandResult RejectIncomingSession( const std::string& sessionId) override` | 处理并回复 reject incoming session 相关逻辑。 |
+| [L126](../src/apps/remote/InProcessSessionEngine.h#L126) | `Disconnect` | 声明 | `SessionCommandResult Disconnect() override` | 断开连接 disconnect 相关逻辑。 |
+| [L127](../src/apps/remote/InProcessSessionEngine.h#L127) | `CreateRoom` | 声明 | `SessionCommandResult CreateRoom(std::uint32_t capacity) override` | 创建或初始化 create room 相关逻辑。 |
+| [L128](../src/apps/remote/InProcessSessionEngine.h#L128) | `JoinRoom` | 声明 | `SessionCommandResult JoinRoom(const std::string& roomId) override` | 实现 join room 对应的业务或工具逻辑。 |
+| [L129](../src/apps/remote/InProcessSessionEngine.h#L129) | `QueryRoomAvailability` | 声明 | `SessionCommandResult QueryRoomAvailability( const std::vector<std::string>& roomIds) override` | 发起请求或查询 query room availability 相关逻辑。 |
+| [L131](../src/apps/remote/InProcessSessionEngine.h#L131) | `RespondToRoomJoin` | 声明 | `SessionCommandResult RespondToRoomJoin( const std::string& requestId, bool accepted) override` | 处理并回复 respond to room join 相关逻辑。 |
+| [L134](../src/apps/remote/InProcessSessionEngine.h#L134) | `SetRoomCapacity` | 声明 | `SessionCommandResult SetRoomCapacity( std::uint32_t capacity) override` | 更新或应用 set room capacity 相关逻辑。 |
+| [L136](../src/apps/remote/InProcessSessionEngine.h#L136) | `LeaveRoom` | 声明 | `SessionCommandResult LeaveRoom() override` | 实现 leave room 对应的业务或工具逻辑。 |
+| [L139](../src/apps/remote/InProcessSessionEngine.h#L139) | `ExitRoomAfterRecoveryFailure` | 声明 | `SessionCommandResult ExitRoomAfterRecoveryFailure() override` | Used after an unrecoverable P2P failure. Local media/session state is torn down immediately; a server leave is sent now or after WSS returns. |
+| [L140](../src/apps/remote/InProcessSessionEngine.h#L140) | `RefreshLocalDisplays` | 声明 | `SessionCommandResult RefreshLocalDisplays() override` | 刷新 refresh local displays 相关逻辑。 |
+| [L141](../src/apps/remote/InProcessSessionEngine.h#L141) | `SelectRoomScreenShareDisplay` | 声明 | `SessionCommandResult SelectRoomScreenShareDisplay( const std::string& stableDisplayKey) override` | 查询并返回 select room screen share display 相关逻辑。 |
+| [L143](../src/apps/remote/InProcessSessionEngine.h#L143) | `StartRoomScreenShare` | 声明 | `SessionCommandResult StartRoomScreenShare() override` | 启动 start room screen share 相关逻辑。 |
+| [L144](../src/apps/remote/InProcessSessionEngine.h#L144) | `StopRoomScreenShare` | 声明 | `SessionCommandResult StopRoomScreenShare() override` | 停止 stop room screen share 相关逻辑。 |
+| [L145](../src/apps/remote/InProcessSessionEngine.h#L145) | `RespondToRoomScreenShareSwitch` | 声明 | `SessionCommandResult RespondToRoomScreenShareSwitch( const std::string& requestId, bool accepted) override` | 处理并回复 respond to room screen share switch 相关逻辑。 |
+| [L148](../src/apps/remote/InProcessSessionEngine.h#L148) | `CancelRoomScreenShareSwitch` | 声明 | `SessionCommandResult CancelRoomScreenShareSwitch() override` | 判断 cancel room screen share switch 相关逻辑。 |
+| [L149](../src/apps/remote/InProcessSessionEngine.h#L149) | `RequestRoomControl` | 声明 | `SessionCommandResult RequestRoomControl() override` | 发起请求或查询 request room control 相关逻辑。 |
+| [L150](../src/apps/remote/InProcessSessionEngine.h#L150) | `RespondToRoomControl` | 声明 | `SessionCommandResult RespondToRoomControl( const std::string& requestId, bool accepted) override` | 处理并回复 respond to room control 相关逻辑。 |
+| [L153](../src/apps/remote/InProcessSessionEngine.h#L153) | `ReleaseRoomControl` | 声明 | `SessionCommandResult ReleaseRoomControl() override` | 释放或取消 release room control 相关逻辑。 |
+| [L154](../src/apps/remote/InProcessSessionEngine.h#L154) | `RequestRoomMemberScreenShare` | 声明 | `SessionCommandResult RequestRoomMemberScreenShare( const std::string& peerDeviceId) override` | 发起请求或查询 request room member screen share 相关逻辑。 |
+| [L156](../src/apps/remote/InProcessSessionEngine.h#L156) | `RespondToRoomMemberScreenShare` | 声明 | `SessionCommandResult RespondToRoomMemberScreenShare( const std::string& requesterDeviceId, std::uint64_t sequence, bool accepted) override` | 处理并回复 respond to room member screen share 相关逻辑。 |
+| [L160](../src/apps/remote/InProcessSessionEngine.h#L160) | `RequestRoomMemberMicrophoneMute` | 声明 | `SessionCommandResult RequestRoomMemberMicrophoneMute( const std::string& peerDeviceId) override` | 发起请求或查询 request room member microphone mute 相关逻辑。 |
+| [L162](../src/apps/remote/InProcessSessionEngine.h#L162) | `RequestRemoteRoomScreenShareStop` | 声明 | `SessionCommandResult RequestRemoteRoomScreenShareStop( const std::string& peerDeviceId, std::uint64_t screenShareEpoch) override` | 发起请求或查询 request remote room screen share stop 相关逻辑。 |
+| [L165](../src/apps/remote/InProcessSessionEngine.h#L165) | `SendRoomInput` | 声明 | `SessionCommandResult SendRoomInput( const RemoteInputEvent& event) override` | 发送或发布 send room input 相关逻辑。 |
+| [L167](../src/apps/remote/InProcessSessionEngine.h#L167) | `SetRoomScreenFrameRate` | 声明 | `SessionCommandResult SetRoomScreenFrameRate( const std::string& pairId, std::uint32_t framesPerSecond) override` | 更新或应用 set room screen frame rate 相关逻辑。 |
+| [L170](../src/apps/remote/InProcessSessionEngine.h#L170) | `SetRoomScreenStreamPreference` | 声明 | `SessionCommandResult SetRoomScreenStreamPreference( const std::string& pairId, const ScreenStreamPreferenceRequest& preference) override` | 更新或应用 set room screen stream preference 相关逻辑。 |
+| [L173](../src/apps/remote/InProcessSessionEngine.h#L173) | `RequestRemoteSharedDisplaySwitch` | 声明 | `SessionCommandResult RequestRemoteSharedDisplaySwitch( const std::string& pairId, const std::string& stableDisplayKey) override` | 发起请求或查询 request remote shared display switch 相关逻辑。 |
+| [L176](../src/apps/remote/InProcessSessionEngine.h#L176) | `SendRoomFileMessage` | 声明 | `SessionCommandResult SendRoomFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message) override` | 发送或发布 send room file message 相关逻辑。 |
+| [L179](../src/apps/remote/InProcessSessionEngine.h#L179) | `SendRoomClipboardMessage` | 声明 | `SessionCommandResult SendRoomClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message) override` | 发送或发布 send room clipboard message 相关逻辑。 |
+| [L183](../src/apps/remote/InProcessSessionEngine.h#L183) | `SetLocalCameraEnabled` | 声明 | `SessionCommandResult SetLocalCameraEnabled(bool enabled) override` | 更新或应用 set local camera enabled 相关逻辑。 |
+| [L184](../src/apps/remote/InProcessSessionEngine.h#L184) | `SetLocalMicrophoneEnabled` | 声明 | `SessionCommandResult SetLocalMicrophoneEnabled(bool enabled) override` | 更新或应用 set local microphone enabled 相关逻辑。 |
+| [L185](../src/apps/remote/InProcessSessionEngine.h#L185) | `SetRoomAudioPlaybackMuted` | 声明 | `SessionCommandResult SetRoomAudioPlaybackMuted(bool muted) override` | 更新或应用 set room audio playback muted 相关逻辑。 |
+| [L186](../src/apps/remote/InProcessSessionEngine.h#L186) | `RefreshLocalMediaDevices` | 声明 | `SessionCommandResult RefreshLocalMediaDevices() override` | 刷新 refresh local media devices 相关逻辑。 |
+| [L187](../src/apps/remote/InProcessSessionEngine.h#L187) | `SelectLocalCameraDevice` | 声明 | `SessionCommandResult SelectLocalCameraDevice( const std::string& deviceId) override` | 查询并返回 select local camera device 相关逻辑。 |
+| [L189](../src/apps/remote/InProcessSessionEngine.h#L189) | `SelectLocalMicrophoneDevice` | 声明 | `SessionCommandResult SelectLocalMicrophoneDevice( const std::string& deviceId) override` | 查询并返回 select local microphone device 相关逻辑。 |
+| [L191](../src/apps/remote/InProcessSessionEngine.h#L191) | `SelectLocalSpeakerDevice` | 声明 | `SessionCommandResult SelectLocalSpeakerDevice( const std::string& deviceId) override` | 查询并返回 select local speaker device 相关逻辑。 |
+| [L198](../src/apps/remote/InProcessSessionEngine.h#L198) | `SendDirectInput` | 声明 | `SessionCommandResult SendDirectInput(const RemoteInputEvent& event)` | 发送或发布 send direct input 相关逻辑。 |
+| [L199](../src/apps/remote/InProcessSessionEngine.h#L199) | `SendRemoteInput` | 声明 | `SessionCommandResult SendRemoteInput(const RemoteInputEvent& event)` | 发送或发布 send remote input 相关逻辑。 |
+| [L200](../src/apps/remote/InProcessSessionEngine.h#L200) | `SendRemoteFileMessage` | 声明 | `SessionCommandResult SendRemoteFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send remote file message 相关逻辑。 |
+| [L203](../src/apps/remote/InProcessSessionEngine.h#L203) | `SendRemoteClipboardMessage` | 声明 | `SessionCommandResult SendRemoteClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message)` | 发送或发布 send remote clipboard message 相关逻辑。 |
+| [L207](../src/apps/remote/InProcessSessionEngine.h#L207) | `SetDirectScreenStreamPreference` | 声明 | `SessionCommandResult SetDirectScreenStreamPreference( const ScreenStreamPreferenceRequest& preference)` | 更新或应用 set direct screen stream preference 相关逻辑。 |
+| [L209](../src/apps/remote/InProcessSessionEngine.h#L209) | `RequestDirectSharedDisplaySwitch` | 声明 | `SessionCommandResult RequestDirectSharedDisplaySwitch( const std::string& stableDisplayKey)` | 发起请求或查询 request direct shared display switch 相关逻辑。 |
+| [L211](../src/apps/remote/InProcessSessionEngine.h#L211) | `SetRemoteAudioPlaybackMuted` | 声明 | `SessionCommandResult SetRemoteAudioPlaybackMuted(bool muted)` | 更新或应用 set remote audio playback muted 相关逻辑。 |
+| [L216](../src/apps/remote/InProcessSessionEngine.h#L216) | `BeginStart` | 声明 | `SessionCommandResult BeginStart()` | 启动 begin start 相关逻辑。 |
+| [L217](../src/apps/remote/InProcessSessionEngine.h#L217) | `InitializeRuntimeForStart` | 声明 | `SessionCommandResult InitializeRuntimeForStart()` | 创建或初始化 initialize runtime for start 相关逻辑。 |
+| [L218](../src/apps/remote/InProcessSessionEngine.h#L218) | `CompleteStart` | 声明 | `SessionCommandResult CompleteStart( const SessionCommandResult& runtimeResult)` | 实现 complete start 对应的业务或工具逻辑。 |
+| [L220](../src/apps/remote/InProcessSessionEngine.h#L220) | `CompleteStartOnOwnerThread` | 声明 | `void CompleteStartOnOwnerThread( std::uint64_t startupGeneration, const SessionCommandResult& runtimeResult)` | 实现 complete start on owner thread 对应的业务或工具逻辑。 |
+| [L223](../src/apps/remote/InProcessSessionEngine.h#L223) | `MarkStartupDispatchFailed` | 声明 | `void MarkStartupDispatchFailed(std::uint64_t startupGeneration)` | 实现 mark startup dispatch failed 对应的业务或工具逻辑。 |
+| [L225](../src/apps/remote/InProcessSessionEngine.h#L225) | `OnSignalingStateChanged` | 声明 | `void OnSignalingStateChanged(SignalingConnectionState state) override` | 接收并处理 on signaling state changed 相关逻辑。 |
+| [L226](../src/apps/remote/InProcessSessionEngine.h#L226) | `OnDeviceRegistered` | 声明 | `void OnDeviceRegistered(const std::string& deviceId) override` | 接收并处理 on device registered 相关逻辑。 |
+| [L227](../src/apps/remote/InProcessSessionEngine.h#L227) | `OnIncomingSessionRequest` | 声明 | `void OnIncomingSessionRequest( const IncomingSessionRequest& request) override` | 接收并处理 on incoming session request 相关逻辑。 |
+| [L229](../src/apps/remote/InProcessSessionEngine.h#L229) | `OnSessionResponse` | 声明 | `void OnSessionResponse( const SignalingSessionResponse& response) override` | 接收并处理 on session response 相关逻辑。 |
+| [L231](../src/apps/remote/InProcessSessionEngine.h#L231) | `OnSessionPending` | 声明 | `void OnSessionPending( const SignalingSessionPending& pending) override` | 接收并处理 on session pending 相关逻辑。 |
+| [L233](../src/apps/remote/InProcessSessionEngine.h#L233) | `OnSessionReady` | 声明 | `void OnSessionReady(const SignalingSessionReady& ready) override` | 接收并处理 on session ready 相关逻辑。 |
+| [L234](../src/apps/remote/InProcessSessionEngine.h#L234) | `OnSessionSuspended` | 声明 | `void OnSessionSuspended( const SignalingSessionSuspended& suspended) override` | 接收并处理 on session suspended 相关逻辑。 |
+| [L236](../src/apps/remote/InProcessSessionEngine.h#L236) | `OnSessionResumed` | 声明 | `void OnSessionResumed( const SignalingSessionResumed& resumed) override` | 接收并处理 on session resumed 相关逻辑。 |
+| [L238](../src/apps/remote/InProcessSessionEngine.h#L238) | `OnSessionEnded` | 声明 | `void OnSessionEnded(const SignalingSessionEnded& ended) override` | 接收并处理 on session ended 相关逻辑。 |
+| [L239](../src/apps/remote/InProcessSessionEngine.h#L239) | `OnRemoteDescription` | 声明 | `void OnRemoteDescription( const SignalingSessionDescription& description) override` | 接收并处理 on remote description 相关逻辑。 |
+| [L241](../src/apps/remote/InProcessSessionEngine.h#L241) | `OnRemoteIceCandidate` | 声明 | `void OnRemoteIceCandidate( const SignalingIceCandidate& candidate) override` | 接收并处理 on remote ice candidate 相关逻辑。 |
+| [L243](../src/apps/remote/InProcessSessionEngine.h#L243) | `OnIceRestartRequested` | 声明 | `void OnIceRestartRequested( const SignalingIceRestartRequest& request) override` | 接收并处理 on ice restart requested 相关逻辑。 |
+| [L245](../src/apps/remote/InProcessSessionEngine.h#L245) | `OnIceRestartCancelled` | 声明 | `void OnIceRestartCancelled( const SignalingIceRestartCancel& cancel) override` | 接收并处理 on ice restart cancelled 相关逻辑。 |
+| [L247](../src/apps/remote/InProcessSessionEngine.h#L247) | `OnHeartbeatAcknowledged` | 声明 | `void OnHeartbeatAcknowledged(std::uint32_t roundTripMs) override` | 接收并处理 on heartbeat acknowledged 相关逻辑。 |
+| [L248](../src/apps/remote/InProcessSessionEngine.h#L248) | `OnSignalingError` | 声明 | `void OnSignalingError(const std::string& code, const std::string& message) override` | 接收并处理 on signaling error 相关逻辑。 |
+| [L250](../src/apps/remote/InProcessSessionEngine.h#L250) | `OnAccountDeletionResult` | 声明 | `void OnAccountDeletionResult( const SignalingAccountDeletionResult& result) override` | 接收并处理 on account deletion result 相关逻辑。 |
+| [L252](../src/apps/remote/InProcessSessionEngine.h#L252) | `OnOwnedDevicesChanged` | 声明 | `void OnOwnedDevicesChanged( const SignalingOwnedDevicesSnapshot& snapshot) override` | 接收并处理 on owned devices changed 相关逻辑。 |
+| [L254](../src/apps/remote/InProcessSessionEngine.h#L254) | `OnRoomReady` | 声明 | `void OnRoomReady(const SignalingRoomReady& ready) override` | 接收并处理 on room ready 相关逻辑。 |
+| [L255](../src/apps/remote/InProcessSessionEngine.h#L255) | `OnRoomState` | 声明 | `void OnRoomState(const RoomSnapshot& room) override` | 接收并处理 on room state 相关逻辑。 |
+| [L256](../src/apps/remote/InProcessSessionEngine.h#L256) | `OnRoomJoinPending` | 声明 | `void OnRoomJoinPending( const SignalingRoomJoinPending& pending) override` | 接收并处理 on room join pending 相关逻辑。 |
+| [L258](../src/apps/remote/InProcessSessionEngine.h#L258) | `OnRoomJoinRequested` | 声明 | `void OnRoomJoinRequested(const RoomJoinRequest& request) override` | 接收并处理 on room join requested 相关逻辑。 |
+| [L259](../src/apps/remote/InProcessSessionEngine.h#L259) | `OnRoomJoinResult` | 声明 | `void OnRoomJoinResult( const SignalingRoomJoinResult& result) override` | 接收并处理 on room join result 相关逻辑。 |
+| [L261](../src/apps/remote/InProcessSessionEngine.h#L261) | `OnRoomAvailabilityResult` | 声明 | `void OnRoomAvailabilityResult( const SignalingRoomAvailabilityResult& result) override` | 接收并处理 on room availability result 相关逻辑。 |
+| [L263](../src/apps/remote/InProcessSessionEngine.h#L263) | `OnRoomClosed` | 声明 | `void OnRoomClosed(const SignalingRoomClosed& closed) override` | 接收并处理 on room closed 相关逻辑。 |
+| [L264](../src/apps/remote/InProcessSessionEngine.h#L264) | `OnRoomPairReady` | 声明 | `void OnRoomPairReady(const SignalingRoomPairReady& ready) override` | 接收并处理 on room pair ready 相关逻辑。 |
+| [L265](../src/apps/remote/InProcessSessionEngine.h#L265) | `OnRoomPairClosed` | 声明 | `void OnRoomPairClosed(const SignalingRoomPairClosed& closed) override` | 接收并处理 on room pair closed 相关逻辑。 |
+| [L266](../src/apps/remote/InProcessSessionEngine.h#L266) | `OnRoomScreenShareGranted` | 声明 | `void OnRoomScreenShareGranted( const SignalingRoomScreenShareGranted& granted) override` | 接收并处理 on room screen share granted 相关逻辑。 |
+| [L268](../src/apps/remote/InProcessSessionEngine.h#L268) | `OnRoomScreenShareSwitchPending` | 声明 | `void OnRoomScreenShareSwitchPending( const SignalingRoomScreenShareSwitchPending& pending) override` | 接收并处理 on room screen share switch pending 相关逻辑。 |
+| [L270](../src/apps/remote/InProcessSessionEngine.h#L270) | `OnRoomScreenShareSwitchRequested` | 声明 | `void OnRoomScreenShareSwitchRequested( const RoomScreenShareSwitchRequest& request) override` | 接收并处理 on room screen share switch requested 相关逻辑。 |
+| [L272](../src/apps/remote/InProcessSessionEngine.h#L272) | `OnRoomScreenShareSwitchResult` | 声明 | `void OnRoomScreenShareSwitchResult( const SignalingRoomScreenShareSwitchResult& result) override` | 接收并处理 on room screen share switch result 相关逻辑。 |
+| [L274](../src/apps/remote/InProcessSessionEngine.h#L274) | `OnRoomControlRequested` | 声明 | `void OnRoomControlRequested( const RoomControlRequest& request) override` | 接收并处理 on room control requested 相关逻辑。 |
+| [L276](../src/apps/remote/InProcessSessionEngine.h#L276) | `OnRoomControlResult` | 声明 | `void OnRoomControlResult( const SignalingRoomControlResult& result) override` | 接收并处理 on room control result 相关逻辑。 |
+| [L278](../src/apps/remote/InProcessSessionEngine.h#L278) | `OnRoomControlGranted` | 声明 | `void OnRoomControlGranted( const SignalingRoomControlGranted& granted) override` | 接收并处理 on room control granted 相关逻辑。 |
+| [L280](../src/apps/remote/InProcessSessionEngine.h#L280) | `OnRoomControlRevoked` | 声明 | `void OnRoomControlRevoked( const SignalingRoomControlRevoked& revoked) override` | 接收并处理 on room control revoked 相关逻辑。 |
+| [L283](../src/apps/remote/InProcessSessionEngine.h#L283) | `SendDescription` | 声明 | `bool SendDescription( const SessionDescription& description) override` | 发送或发布 send description 相关逻辑。 |
+| [L285](../src/apps/remote/InProcessSessionEngine.h#L285) | `SendIceCandidate` | 声明 | `bool SendIceCandidate(const IceCandidate& candidate) override` | 发送或发布 send ice candidate 相关逻辑。 |
+| [L286](../src/apps/remote/InProcessSessionEngine.h#L286) | `RequestIceRestart` | 声明 | `bool RequestIceRestart(std::uint64_t observedGeneration, std::uint64_t requestSequence) override` | 发起请求或查询 request ice restart 相关逻辑。 |
+| [L288](../src/apps/remote/InProcessSessionEngine.h#L288) | `CancelIceRestart` | 声明 | `bool CancelIceRestart(std::uint64_t observedGeneration, std::uint64_t requestSequence) override` | 判断 cancel ice restart 相关逻辑。 |
+| [L290](../src/apps/remote/InProcessSessionEngine.h#L290) | `OnControllerSnapshot` | 声明 | `void OnControllerSnapshot( const SessionControllerSnapshot& snapshot) override` | 接收并处理 on controller snapshot 相关逻辑。 |
+| [L292](../src/apps/remote/InProcessSessionEngine.h#L292) | `OnDataChannelStateChanged` | 声明 | `void OnDataChannelStateChanged( const DataChannelInfo& channel) override` | 接收并处理 on data channel state changed 相关逻辑。 |
+| [L294](../src/apps/remote/InProcessSessionEngine.h#L294) | `OnDataMessage` | 声明 | `void OnDataMessage(const std::string& label, std::span<const std::uint8_t> payload, bool binary) override` | 接收并处理 on data message 相关逻辑。 |
+| [L297](../src/apps/remote/InProcessSessionEngine.h#L297) | `OnRemoteTrackAdded` | 声明 | `void OnRemoteTrackAdded(const RemoteTrackInfo& track) override` | 接收并处理 on remote track added 相关逻辑。 |
+| [L299](../src/apps/remote/InProcessSessionEngine.h#L299) | `RequireReady` | 声明 | `SessionCommandResult RequireReady(const char* operation) const` | 实现 require ready 对应的业务或工具逻辑。 |
+| [L300](../src/apps/remote/InProcessSessionEngine.h#L300) | `SignalingIsOnline` | 声明 | `bool SignalingIsOnline() const` | 实现 signaling is online 对应的业务或工具逻辑。 |
+| [L301](../src/apps/remote/InProcessSessionEngine.h#L301) | `DisposeClosedSession` | 声明 | `void DisposeClosedSession()` | 关闭并清理 dispose closed session 相关逻辑。 |
+| [L302](../src/apps/remote/InProcessSessionEngine.h#L302) | `ResetSessionStateLocked` | 声明 | `void ResetSessionStateLocked()` | 重置或移除 reset session state locked 相关逻辑。 |
+| [L303](../src/apps/remote/InProcessSessionEngine.h#L303) | `ResetRoomStateLocked` | 声明 | `void ResetRoomStateLocked()` | 重置或移除 reset room state locked 相关逻辑。 |
+| [L304](../src/apps/remote/InProcessSessionEngine.h#L304) | `ShouldBoostDesktopCaptureForInput` | 声明 | `static bool ShouldBoostDesktopCaptureForInput( const RemoteInputEvent& event)` | 判断 should boost desktop capture for input 相关逻辑。 |
+| [L306](../src/apps/remote/InProcessSessionEngine.h#L306) | `StopLocalDesktopCapture` | 声明 | `void StopLocalDesktopCapture()` | 停止 stop local desktop capture 相关逻辑。 |
+| [L307](../src/apps/remote/InProcessSessionEngine.h#L307) | `StopDirectDesktopCapture` | 声明 | `void StopDirectDesktopCapture()` | 停止 stop direct desktop capture 相关逻辑。 |
+| [L308](../src/apps/remote/InProcessSessionEngine.h#L308) | `StartRemoteCursorPublishing` | 声明 | `void StartRemoteCursorPublishing( const DisplayDescriptor& display, std::uint64_t layoutVersion)` | 启动 start remote cursor publishing 相关逻辑。 |
+| [L311](../src/apps/remote/InProcessSessionEngine.h#L311) | `StopRemoteCursorPublishing` | 声明 | `void StopRemoteCursorPublishing()` | 停止 stop remote cursor publishing 相关逻辑。 |
+| [L312](../src/apps/remote/InProcessSessionEngine.h#L312) | `OnLocalCursorObservation` | 声明 | `void OnLocalCursorObservation(WindowsCursorObservation observation)` | 接收并处理 on local cursor observation 相关逻辑。 |
+| [L313](../src/apps/remote/InProcessSessionEngine.h#L313) | `RepublishRemoteCursor` | 声明 | `void RepublishRemoteCursor()` | 实现 republish remote cursor 对应的业务或工具逻辑。 |
+| [L314](../src/apps/remote/InProcessSessionEngine.h#L314) | `DispatchRemoteCursorData` | 声明 | `bool DispatchRemoteCursorData( const std::string& pairId, const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch remote cursor data 相关逻辑。 |
+| [L318](../src/apps/remote/InProcessSessionEngine.h#L318) | `BroadcastDirectSharedDisplayLayout` | 声明 | `void BroadcastDirectSharedDisplayLayout()` | 实现 broadcast direct shared display layout 对应的业务或工具逻辑。 |
+| [L319](../src/apps/remote/InProcessSessionEngine.h#L319) | `RequestDirectSharedDisplayLayout` | 声明 | `void RequestDirectSharedDisplayLayout()` | 发起请求或查询 request direct shared display layout 相关逻辑。 |
+| [L320](../src/apps/remote/InProcessSessionEngine.h#L320) | `SendDirectFileMessage` | 声明 | `SessionCommandResult SendDirectFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send direct file message 相关逻辑。 |
+| [L323](../src/apps/remote/InProcessSessionEngine.h#L323) | `SendDirectClipboardMessage` | 声明 | `SessionCommandResult SendDirectClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message)` | 发送或发布 send direct clipboard message 相关逻辑。 |
+| [L327](../src/apps/remote/InProcessSessionEngine.h#L327) | `DispatchDirectAuxiliaryData` | 声明 | `bool DispatchDirectAuxiliaryData( const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch direct auxiliary data 相关逻辑。 |
+| [L330](../src/apps/remote/InProcessSessionEngine.h#L330) | `DispatchDirectScreenData` | 声明 | `bool DispatchDirectScreenData( const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch direct screen data 相关逻辑。 |
+| [L333](../src/apps/remote/InProcessSessionEngine.h#L333) | `SwitchLocalDirectDisplay` | 声明 | `SessionCommandResult SwitchLocalDirectDisplay( const std::string& stableDisplayKey)` | 实现 switch local direct display 对应的业务或工具逻辑。 |
+| [L335](../src/apps/remote/InProcessSessionEngine.h#L335) | `BroadcastDirectSharedDisplayCatalog` | 声明 | `void BroadcastDirectSharedDisplayCatalog()` | 实现 broadcast direct shared display catalog 对应的业务或工具逻辑。 |
+| [L336](../src/apps/remote/InProcessSessionEngine.h#L336) | `BroadcastSharedDisplayLayout` | 声明 | `void BroadcastSharedDisplayLayout()` | 实现 broadcast shared display layout 对应的业务或工具逻辑。 |
+| [L337](../src/apps/remote/InProcessSessionEngine.h#L337) | `SendRoomPairDescription` | 声明 | `bool SendRoomPairDescription( const std::string& pairId, const SessionDescription& description)` | 发送或发布 send room pair description 相关逻辑。 |
+| [L340](../src/apps/remote/InProcessSessionEngine.h#L340) | `SendRoomPairIceCandidate` | 声明 | `bool SendRoomPairIceCandidate( const std::string& pairId, const IceCandidate& candidate)` | 发送或发布 send room pair ice candidate 相关逻辑。 |
+| [L343](../src/apps/remote/InProcessSessionEngine.h#L343) | `SendRoomPairIceRestartRequest` | 声明 | `bool SendRoomPairIceRestartRequest( const std::string& pairId, std::uint64_t observedGeneration, std::uint64_t requestSequence)` | 发送或发布 send room pair ice restart request 相关逻辑。 |
+| [L347](../src/apps/remote/InProcessSessionEngine.h#L347) | `SendRoomPairIceRestartCancel` | 声明 | `bool SendRoomPairIceRestartCancel( const std::string& pairId, std::uint64_t observedGeneration, std::uint64_t requestSequence)` | 发送或发布 send room pair ice restart cancel 相关逻辑。 |
+| [L351](../src/apps/remote/InProcessSessionEngine.h#L351) | `OnRoomPairControllerSnapshot` | 声明 | `void OnRoomPairControllerSnapshot( const std::string& pairId, const SessionControllerSnapshot& snapshot)` | 接收并处理 on room pair controller snapshot 相关逻辑。 |
+| [L354](../src/apps/remote/InProcessSessionEngine.h#L354) | `OnRoomPairDataChannelStateChanged` | 声明 | `void OnRoomPairDataChannelStateChanged( const std::string& pairId, const DataChannelInfo& channel)` | 接收并处理 on room pair data channel state changed 相关逻辑。 |
+| [L357](../src/apps/remote/InProcessSessionEngine.h#L357) | `OnRoomPairDataMessage` | 声明 | `void OnRoomPairDataMessage( const std::string& pairId, const std::string& label, std::span<const std::uint8_t> payload, bool binary)` | 接收并处理 on room pair data message 相关逻辑。 |
+| [L362](../src/apps/remote/InProcessSessionEngine.h#L362) | `DispatchRoomPairTransferData` | 声明 | `bool DispatchRoomPairTransferData( const std::string& pairId, const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch room pair transfer data 相关逻辑。 |
+| [L366](../src/apps/remote/InProcessSessionEngine.h#L366) | `DispatchRoomPairReliableData` | 声明 | `void DispatchRoomPairReliableData( const std::string& pairId, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch room pair reliable data 相关逻辑。 |
+| [L369](../src/apps/remote/InProcessSessionEngine.h#L369) | `DispatchRoomPairScreenData` | 声明 | `bool DispatchRoomPairScreenData( const std::string& pairId, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch room pair screen data 相关逻辑。 |
+| [L372](../src/apps/remote/InProcessSessionEngine.h#L372) | `DispatchRoomPairInputData` | 声明 | `void DispatchRoomPairInputData( const std::string& pairId, std::span<const std::uint8_t> payload, bool fastChannel)` | 接收并处理 dispatch room pair input data 相关逻辑。 |
+| [L376](../src/apps/remote/InProcessSessionEngine.h#L376) | `OnRoomPairRemoteTrackAdded` | 声明 | `void OnRoomPairRemoteTrackAdded( const std::string& pairId, const RemoteTrackInfo& track)` | 接收并处理 on room pair remote track added 相关逻辑。 |
+| [L379](../src/apps/remote/InProcessSessionEngine.h#L379) | `PrepareRoomPairAnswer` | 声明 | `std::optional<OperationError> PrepareRoomPairAnswer( const std::string& pairId)` | 实现 prepare room pair answer 对应的业务或工具逻辑。 |
+| [L381](../src/apps/remote/InProcessSessionEngine.h#L381) | `PrepareRoomPairMedia` | 声明 | `std::optional<OperationError> PrepareRoomPairMedia( const std::string& pairId, bool bindNegotiatedSlots, bool preparationAlreadyClaimed = false)` | 实现 prepare room pair media 对应的业务或工具逻辑。 |
+| [L385](../src/apps/remote/InProcessSessionEngine.h#L385) | `PrepareDirectMedia` | 声明 | `std::optional<OperationError> PrepareDirectMedia( bool bindNegotiatedSlots)` | 实现 prepare direct media 对应的业务或工具逻辑。 |
+| [L387](../src/apps/remote/InProcessSessionEngine.h#L387) | `StopDirectMicrophoneCapture` | 声明 | `void StopDirectMicrophoneCapture()` | 停止 stop direct microphone capture 相关逻辑。 |
+| [L388](../src/apps/remote/InProcessSessionEngine.h#L388) | `PublishSnapshot` | 声明 | `void PublishSnapshot()` | 发送或发布 publish snapshot 相关逻辑。 |
+| [L389](../src/apps/remote/InProcessSessionEngine.h#L389) | `StartStatsPolling` | 声明 | `void StartStatsPolling()` | 启动 start stats polling 相关逻辑。 |
+| [L390](../src/apps/remote/InProcessSessionEngine.h#L390) | `StopStatsPolling` | 声明 | `void StopStatsPolling()` | 停止 stop stats polling 相关逻辑。 |
+| [L391](../src/apps/remote/InProcessSessionEngine.h#L391) | `PollStatsOnce` | 声明 | `void PollStatsOnce()` | 执行后台循环或调度 poll stats once 相关逻辑。 |
+| [L395](../src/apps/remote/InProcessSessionEngine.h#L395) | `RetireRoomPair` | 声明 | `void RetireRoomPair(std::shared_ptr<RoomPairRuntime> pair)` | 实现 retire room pair 对应的业务或工具逻辑。 |
+| [L396](../src/apps/remote/InProcessSessionEngine.h#L396) | `ApplyLocalScreenFrameRate` | 声明 | `SessionCommandResult ApplyLocalScreenFrameRate( std::uint32_t framesPerSecond)` | 更新或应用 apply local screen frame rate 相关逻辑。 |
+| [L398](../src/apps/remote/InProcessSessionEngine.h#L398) | `SwitchLocalSharedDisplay` | 声明 | `SessionCommandResult SwitchLocalSharedDisplay( const std::string& stableDisplayKey)` | 实现 switch local shared display 对应的业务或工具逻辑。 |
+| [L400](../src/apps/remote/InProcessSessionEngine.h#L400) | `BroadcastSharedDisplayCatalog` | 声明 | `void BroadcastSharedDisplayCatalog()` | 实现 broadcast shared display catalog 对应的业务或工具逻辑。 |
+| [L401](../src/apps/remote/InProcessSessionEngine.h#L401) | `StartClipboardWarmup` | 声明 | `void StartClipboardWarmup( const std::shared_ptr<RoomPairRuntime>& pair)` | 启动 start clipboard warmup 相关逻辑。 |
+| [L403](../src/apps/remote/InProcessSessionEngine.h#L403) | `SendRoomMemberAction` | 声明 | `SessionCommandResult SendRoomMemberAction( const std::string& peerDeviceId, RoomMemberAction action, std::uint64_t screenShareEpoch = 0)` | 发送或发布 send room member action 相关逻辑。 |
+| [L407](../src/apps/remote/InProcessSessionEngine.h#L407) | `SendRoomMemberActionResponse` | 声明 | `SendResult SendRoomMemberActionResponse( const std::shared_ptr<RoomPairRuntime>& pair, const RoomMemberActionEnvelope& request, bool accepted, const std::string& error)` | 发送或发布 send room member action response 相关逻辑。 |
 
-## `src/apps/remote/InProcessSessionEngine.LeaseCallbacks.inc`
+## `src/apps/remote/InProcessSessionEngine.LeaseCallbacks.cpp`
 
-[打开源码](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 lease callbacks 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.cpp) · **文件作用：** 实现 in process session engine lease callbacks 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.inc#L4) | `InProcessSessionEngine::OnRoomScreenShareGranted` | 定义 | `void InProcessSessionEngine::OnRoomScreenShareGranted( const SignalingRoomScreenShareGranted& granted)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L251](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.inc#L251) | `InProcessSessionEngine::OnRoomScreenShareSwitchPending` | 定义 | `void InProcessSessionEngine::OnRoomScreenShareSwitchPending( const SignalingRoomScreenShareSwitchPending& pending)` | 接收并处理 on room screen share switch pending 相关逻辑。 |
-| [L272](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.inc#L272) | `InProcessSessionEngine::OnRoomScreenShareSwitchRequested` | 定义 | `void InProcessSessionEngine::OnRoomScreenShareSwitchRequested( const RoomScreenShareSwitchRequest& request)` | 接收并处理 on room screen share switch requested 相关逻辑。 |
-| [L301](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.inc#L301) | `InProcessSessionEngine::OnRoomScreenShareSwitchResult` | 定义 | `void InProcessSessionEngine::OnRoomScreenShareSwitchResult( const SignalingRoomScreenShareSwitchResult& result)` | 接收并处理 on room screen share switch result 相关逻辑。 |
-| [L345](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.inc#L345) | `InProcessSessionEngine::OnRoomControlRequested` | 定义 | `void InProcessSessionEngine::OnRoomControlRequested( const RoomControlRequest& request)` | 接收并处理 on room control requested 相关逻辑。 |
-| [L371](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.inc#L371) | `InProcessSessionEngine::OnRoomControlResult` | 定义 | `void InProcessSessionEngine::OnRoomControlResult( const SignalingRoomControlResult& result)` | 接收并处理 on room control result 相关逻辑。 |
-| [L405](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.inc#L405) | `InProcessSessionEngine::OnRoomControlGranted` | 定义 | `void InProcessSessionEngine::OnRoomControlGranted( const SignalingRoomControlGranted& granted)` | 接收并处理 on room control granted 相关逻辑。 |
-| [L449](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.inc#L449) | `InProcessSessionEngine::OnRoomControlRevoked` | 定义 | `void InProcessSessionEngine::OnRoomControlRevoked( const SignalingRoomControlRevoked& revoked)` | 接收并处理 on room control revoked 相关逻辑。 |
+| [L19](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.cpp#L19) | `InProcessSessionEngine::OnRoomScreenShareGranted` | 定义 | `void InProcessSessionEngine::OnRoomScreenShareGranted( const SignalingRoomScreenShareGranted& granted)` | 接收并处理 on room screen share granted 相关逻辑。 |
+| [L264](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.cpp#L264) | `InProcessSessionEngine::OnRoomScreenShareSwitchPending` | 定义 | `void InProcessSessionEngine::OnRoomScreenShareSwitchPending( const SignalingRoomScreenShareSwitchPending& pending)` | 接收并处理 on room screen share switch pending 相关逻辑。 |
+| [L285](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.cpp#L285) | `InProcessSessionEngine::OnRoomScreenShareSwitchRequested` | 定义 | `void InProcessSessionEngine::OnRoomScreenShareSwitchRequested( const RoomScreenShareSwitchRequest& request)` | 接收并处理 on room screen share switch requested 相关逻辑。 |
+| [L314](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.cpp#L314) | `InProcessSessionEngine::OnRoomScreenShareSwitchResult` | 定义 | `void InProcessSessionEngine::OnRoomScreenShareSwitchResult( const SignalingRoomScreenShareSwitchResult& result)` | 接收并处理 on room screen share switch result 相关逻辑。 |
+| [L358](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.cpp#L358) | `InProcessSessionEngine::OnRoomControlRequested` | 定义 | `void InProcessSessionEngine::OnRoomControlRequested( const RoomControlRequest& request)` | 接收并处理 on room control requested 相关逻辑。 |
+| [L384](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.cpp#L384) | `InProcessSessionEngine::OnRoomControlResult` | 定义 | `void InProcessSessionEngine::OnRoomControlResult( const SignalingRoomControlResult& result)` | 接收并处理 on room control result 相关逻辑。 |
+| [L418](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.cpp#L418) | `InProcessSessionEngine::OnRoomControlGranted` | 定义 | `void InProcessSessionEngine::OnRoomControlGranted( const SignalingRoomControlGranted& granted)` | 接收并处理 on room control granted 相关逻辑。 |
+| [L462](../src/apps/remote/InProcessSessionEngine.LeaseCallbacks.cpp#L462) | `InProcessSessionEngine::OnRoomControlRevoked` | 定义 | `void InProcessSessionEngine::OnRoomControlRevoked( const SignalingRoomControlRevoked& revoked)` | 接收并处理 on room control revoked 相关逻辑。 |
 
-## `src/apps/remote/InProcessSessionEngine.Lifecycle.inc`
+## `src/apps/remote/InProcessSessionEngine.Lifecycle.cpp`
 
-[打开源码](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 lifecycle 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp) · **文件作用：** 实现 in process session engine lifecycle 相关函数与文件级辅助逻辑。
 
-### 函数
+### 类型
 
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L4) | `InProcessSessionEngine::InProcessSessionEngine` | 定义 | `InProcessSessionEngine::InProcessSessionEngine() : InProcessSessionEngine(nullptr, {})` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L19](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L19) | `NormalizeMediaDeviceId` | 定义 | `NormalizeMediaDeviceId( options.preferredMicrophoneDeviceId), NormalizeMediaDeviceId( options.preferredSpeakerDeviceId), options.ffmpegX264Preset, options.ffmpegHardwareBackend, options.preferredAutomaticEncoderId)) ,...` | 实现 normalize media device id 对应的业务或工具逻辑。 |
-| [L34](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L34) | `InProcessSessionEngine::~InProcessSessionEngine` | 定义 | `InProcessSessionEngine::~InProcessSessionEngine()` | 停止相关活动并释放 InProcessSessionEngine 实例拥有的资源。 |
-| [L39](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L39) | `InProcessSessionEngine::UpdateSignalingAccessToken` | 定义 | `SessionCommandResult InProcessSessionEngine::UpdateSignalingAccessToken( std::string accessToken)` | 更新或应用 update signaling access token 相关逻辑。 |
-| [L54](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L54) | `InProcessSessionEngine::RequestAccountDeletion` | 定义 | `SessionCommandResult InProcessSessionEngine::RequestAccountDeletion()` | 发起请求或查询 request account deletion 相关逻辑。 |
-| [L66](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L66) | `InProcessSessionEngine::SetAccountDeletionResultCallback` | 定义 | `void InProcessSessionEngine::SetAccountDeletionResultCallback( std::function<void(const SignalingAccountDeletionResult&)> callback)` | 更新或应用 set account deletion result callback 相关逻辑。 |
-| [L73](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L73) | `InProcessSessionEngine::SetObserver` | 定义 | `void InProcessSessionEngine::SetObserver(ISessionEngineObserver* observer)` | 更新或应用 set observer 相关逻辑。 |
-| [L86](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L86) | `InProcessSessionEngine::Start` | 定义 | `SessionCommandResult InProcessSessionEngine::Start()` | 启动 start 相关逻辑。 |
-| [L95](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L95) | `InProcessSessionEngine::BeginStart` | 定义 | `SessionCommandResult InProcessSessionEngine::BeginStart()` | 启动 begin start 相关逻辑。 |
-| [L133](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L133) | `InProcessSessionEngine::InitializeRuntimeForStart` | 定义 | `SessionCommandResult InProcessSessionEngine::InitializeRuntimeForStart()` | 创建或初始化 initialize runtime for start 相关逻辑。 |
-| [L276](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L276) | `InProcessSessionEngine::CompleteStart` | 定义 | `SessionCommandResult InProcessSessionEngine::CompleteStart( const SessionCommandResult& runtimeResult)` | 实现 complete start 对应的业务或工具逻辑。 |
-| [L330](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L330) | `InProcessSessionEngine::Stop` | 定义 | `void InProcessSessionEngine::Stop()` | 停止 stop 相关逻辑。 |
-| [L507](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L507) | `InProcessSessionEngine::Snapshot` | 定义 | `SessionEngineSnapshot InProcessSessionEngine::Snapshot() const` | 查询并返回 snapshot 相关逻辑。 |
-| [L513](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L513) | `InProcessSessionEngine::Capabilities` | 定义 | `SessionEngineCapabilities InProcessSessionEngine::Capabilities() const` | 查询并返回 capabilities 相关逻辑。 |
-| [L535](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L535) | `InProcessSessionEngine::Diagnostics` | 定义 | `SessionDiagnosticsSnapshot InProcessSessionEngine::Diagnostics() const` | 查询并返回 diagnostics 相关逻辑。 |
-| [L784](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L784) | `InProcessSessionEngine::StartStatsPolling` | 定义 | `void InProcessSessionEngine::StartStatsPolling()` | 启动 start stats polling 相关逻辑。 |
-| [L848](../src/apps/remote/InProcessSessionEngine.Lifecycle.inc#L848) | `InProcessSessionEngine::StopStatsPolling` | 定义 | `void InProcessSessionEngine::StopStatsPolling()` | 停止 stop stats polling 相关逻辑。 |
-
-## `src/apps/remote/InProcessSessionEngine.MediaDevices.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.MediaDevices.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 media devices 相关逻辑；成员状态仍定义在所属头文件中。
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L49](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L49) | `IdleRoomVideoSource` | class | 定义 IdleRoomVideoSource 的 class 类型和相关状态。 |
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.MediaDevices.inc#L4) | `InProcessSessionEngine::SetRemoteAudioPlaybackMuted` | 定义 | `SessionCommandResult InProcessSessionEngine::SetRemoteAudioPlaybackMuted( bool muted)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L36](../src/apps/remote/InProcessSessionEngine.MediaDevices.inc#L36) | `InProcessSessionEngine::SetRoomAudioPlaybackMuted` | 定义 | `SessionCommandResult InProcessSessionEngine::SetRoomAudioPlaybackMuted( bool muted)` | 更新或应用 set room audio playback muted 相关逻辑。 |
-| [L43](../src/apps/remote/InProcessSessionEngine.MediaDevices.inc#L43) | `InProcessSessionEngine::RefreshLocalMediaDevices` | 定义 | `InProcessSessionEngine::RefreshLocalMediaDevices()` | 刷新 refresh local media devices 相关逻辑。 |
-| [L188](../src/apps/remote/InProcessSessionEngine.MediaDevices.inc#L188) | `InProcessSessionEngine::SelectLocalCameraDevice` | 定义 | `InProcessSessionEngine::SelectLocalCameraDevice( const std::string& deviceId)` | 查询并返回 select local camera device 相关逻辑。 |
-| [L410](../src/apps/remote/InProcessSessionEngine.MediaDevices.inc#L410) | `InProcessSessionEngine::SelectLocalMicrophoneDevice` | 定义 | `InProcessSessionEngine::SelectLocalMicrophoneDevice( const std::string& deviceId)` | 查询并返回 select local microphone device 相关逻辑。 |
-| [L499](../src/apps/remote/InProcessSessionEngine.MediaDevices.inc#L499) | `InProcessSessionEngine::SelectLocalSpeakerDevice` | 定义 | `InProcessSessionEngine::SelectLocalSpeakerDevice( const std::string& deviceId)` | 查询并返回 select local speaker device 相关逻辑。 |
+| [L39](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L39) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L44](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L44) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L51](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L51) | `state` | 定义 | `SourceState state() const override { return kLive; }` | 实现 state 对应的业务或工具逻辑。 |
+| [L52](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L52) | `remote` | 定义 | `bool remote() const override { return false; }` | 实现 remote 对应的业务或工具逻辑。 |
+| [L53](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L53) | `is_screencast` | 定义 | `bool is_screencast() const override { return true; }` | 判断 is screencast 相关逻辑。 |
+| [L54](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L54) | `needs_denoising` | 定义 | `std::optional<bool> needs_denoising() const override { return false; }` | 判断 needs denoising 相关逻辑。 |
+| [L59](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L59) | `InProcessSessionEngine::InProcessSessionEngine` | 定义 | `InProcessSessionEngine::InProcessSessionEngine() : InProcessSessionEngine(nullptr, {})` | 构造并初始化 InProcessSessionEngine 实例。 |
+| [L81](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L81) | `signaling_` | 定义 | `, signaling_(std::move(signaling)) , signalingConfig_(std::move(signalingConfig)) , options_(options) , statsPoller_(std::make_unique<SessionStatsPoller>()) , mediaState_(std::make_unique<InProcessSessionMediaState>()...` | 实现 signaling 对应的业务或工具逻辑。 |
+| [L94](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L94) | `InProcessSessionEngine::~InProcessSessionEngine` | 定义 | `InProcessSessionEngine::~InProcessSessionEngine()` | 停止相关活动并释放 InProcessSessionEngine 实例拥有的资源。 |
+| [L99](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L99) | `InProcessSessionEngine::MediaAccess` | 定义 | `ISessionMediaAccess* InProcessSessionEngine::MediaAccess() noexcept` | 实现 media access 对应的业务或工具逻辑。 |
+| [L104](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L104) | `InProcessSessionEngine::UpdateSignalingAccessToken` | 定义 | `SessionCommandResult InProcessSessionEngine::UpdateSignalingAccessToken( std::string accessToken)` | 更新或应用 update signaling access token 相关逻辑。 |
+| [L119](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L119) | `InProcessSessionEngine::RequestAccountDeletion` | 定义 | `SessionCommandResult InProcessSessionEngine::RequestAccountDeletion()` | 发起请求或查询 request account deletion 相关逻辑。 |
+| [L131](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L131) | `InProcessSessionEngine::SetAccountDeletionResultCallback` | 定义 | `void InProcessSessionEngine::SetAccountDeletionResultCallback( std::function<void(const SignalingAccountDeletionResult&)> callback)` | 更新或应用 set account deletion result callback 相关逻辑。 |
+| [L138](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L138) | `InProcessSessionEngine::SetObserver` | 定义 | `void InProcessSessionEngine::SetObserver(ISessionEngineObserver* observer)` | 更新或应用 set observer 相关逻辑。 |
+| [L151](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L151) | `InProcessSessionEngine::Start` | 定义 | `SessionCommandResult InProcessSessionEngine::Start()` | 启动 start 相关逻辑。 |
+| [L222](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L222) | `InProcessSessionEngine::BeginStart` | 定义 | `SessionCommandResult InProcessSessionEngine::BeginStart()` | 启动 begin start 相关逻辑。 |
+| [L260](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L260) | `InProcessSessionEngine::InitializeRuntimeForStart` | 定义 | `SessionCommandResult InProcessSessionEngine::InitializeRuntimeForStart()` | 创建或初始化 initialize runtime for start 相关逻辑。 |
+| [L407](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L407) | `InProcessSessionEngine::CompleteStartOnOwnerThread` | 定义 | `void InProcessSessionEngine::CompleteStartOnOwnerThread( std::uint64_t startupGeneration, const SessionCommandResult& runtimeResult)` | 实现 complete start on owner thread 对应的业务或工具逻辑。 |
+| [L424](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L424) | `InProcessSessionEngine::MarkStartupDispatchFailed` | 定义 | `void InProcessSessionEngine::MarkStartupDispatchFailed( std::uint64_t startupGeneration)` | 实现 mark startup dispatch failed 对应的业务或工具逻辑。 |
+| [L445](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L445) | `InProcessSessionEngine::CompleteStart` | 定义 | `SessionCommandResult InProcessSessionEngine::CompleteStart( const SessionCommandResult& runtimeResult)` | 实现 complete start 对应的业务或工具逻辑。 |
+| [L499](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L499) | `InProcessSessionEngine::Stop` | 定义 | `void InProcessSessionEngine::Stop()` | 停止 stop 相关逻辑。 |
+| [L688](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L688) | `InProcessSessionEngine::Snapshot` | 定义 | `SessionEngineSnapshot InProcessSessionEngine::Snapshot() const` | 查询并返回 snapshot 相关逻辑。 |
+| [L694](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L694) | `InProcessSessionEngine::Capabilities` | 定义 | `SessionEngineCapabilities InProcessSessionEngine::Capabilities() const` | 查询并返回 capabilities 相关逻辑。 |
+| [L716](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L716) | `InProcessSessionEngine::Diagnostics` | 定义 | `SessionDiagnosticsSnapshot InProcessSessionEngine::Diagnostics() const` | 查询并返回 diagnostics 相关逻辑。 |
+| [L965](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L965) | `InProcessSessionEngine::StartStatsPolling` | 定义 | `void InProcessSessionEngine::StartStatsPolling()` | 启动 start stats polling 相关逻辑。 |
+| [L970](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L970) | `InProcessSessionEngine::StopStatsPolling` | 定义 | `void InProcessSessionEngine::StopStatsPolling()` | 停止 stop stats polling 相关逻辑。 |
+| [L975](../src/apps/remote/InProcessSessionEngine.Lifecycle.cpp#L975) | `InProcessSessionEngine::PollStatsOnce` | 定义 | `void InProcessSessionEngine::PollStatsOnce()` | 执行后台循环或调度 poll stats once 相关逻辑。 |
 
-## `src/apps/remote/InProcessSessionEngine.MediaHooks.inc`
+## `src/apps/remote/InProcessSessionEngine.MediaDevices.cpp`
 
-[打开源码](../src/apps/remote/InProcessSessionEngine.MediaHooks.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 media hooks 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.MediaHooks.inc#L4) | `InProcessSessionEngine::SetLocalCameraPreviewSink` | 定义 | `void InProcessSessionEngine::SetLocalCameraPreviewSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L23](../src/apps/remote/InProcessSessionEngine.MediaHooks.inc#L23) | `InProcessSessionEngine::SetRemoteInputSink` | 定义 | `void InProcessSessionEngine::SetRemoteInputSink(IRemoteInputSink* sink)` | 更新或应用 set remote input sink 相关逻辑。 |
-| [L29](../src/apps/remote/InProcessSessionEngine.MediaHooks.inc#L29) | `InProcessSessionEngine::SetRemoteFileTransferSink` | 定义 | `void InProcessSessionEngine::SetRemoteFileTransferSink( IFileTransferSink* sink)` | 更新或应用 set remote file transfer sink 相关逻辑。 |
-| [L36](../src/apps/remote/InProcessSessionEngine.MediaHooks.inc#L36) | `InProcessSessionEngine::SetRemoteClipboardSink` | 定义 | `void InProcessSessionEngine::SetRemoteClipboardSink(IClipboardSink* sink)` | 更新或应用 set remote clipboard sink 相关逻辑。 |
-| [L42](../src/apps/remote/InProcessSessionEngine.MediaHooks.inc#L42) | `InProcessSessionEngine::SetPreferredHardwareDecoderName` | 定义 | `void InProcessSessionEngine::SetPreferredHardwareDecoderName( std::string name)` | 更新或应用 set preferred hardware decoder name 相关逻辑。 |
-| [L50](../src/apps/remote/InProcessSessionEngine.MediaHooks.inc#L50) | `InProcessSessionEngine::ApplyVideoPipelinePreferences` | 定义 | `SessionCommandResult InProcessSessionEngine::ApplyVideoPipelinePreferences( DesktopCaptureImplementation desktopCaptureImplementation, VideoEncoderPreference videoEncoderPreference, FfmpegX264Preset quality, FfmpegHar...` | 更新或应用 apply video pipeline preferences 相关逻辑。 |
-
-## `src/apps/remote/InProcessSessionEngine.RemoteControl.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.RemoteControl.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 remote control 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.RemoteControl.inc#L4) | `InProcessSessionEngine::RequestRoomControl` | 定义 | `SessionCommandResult InProcessSessionEngine::RequestRoomControl()` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L41](../src/apps/remote/InProcessSessionEngine.RemoteControl.inc#L41) | `InProcessSessionEngine::RespondToRoomControl` | 定义 | `SessionCommandResult InProcessSessionEngine::RespondToRoomControl( const std::string& requestId, bool accepted)` | 处理并回复 respond to room control 相关逻辑。 |
-| [L87](../src/apps/remote/InProcessSessionEngine.RemoteControl.inc#L87) | `InProcessSessionEngine::ReleaseRoomControl` | 定义 | `SessionCommandResult InProcessSessionEngine::ReleaseRoomControl()` | 释放或取消 release room control 相关逻辑。 |
-| [L115](../src/apps/remote/InProcessSessionEngine.RemoteControl.inc#L115) | `InProcessSessionEngine::SendRoomMemberAction` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRoomMemberAction( const std::string& peerDeviceId, RoomMemberAction action, std::uint64_t screenShareEpoch)` | 发送或发布 send room member action 相关逻辑。 |
-| [L231](../src/apps/remote/InProcessSessionEngine.RemoteControl.inc#L231) | `InProcessSessionEngine::RequestRoomMemberScreenShare` | 定义 | `SessionCommandResult InProcessSessionEngine::RequestRoomMemberScreenShare( const std::string& peerDeviceId)` | 发起请求或查询 request room member screen share 相关逻辑。 |
-| [L239](../src/apps/remote/InProcessSessionEngine.RemoteControl.inc#L239) | `InProcessSessionEngine::RequestRoomMemberMicrophoneMute` | 定义 | `InProcessSessionEngine::RequestRoomMemberMicrophoneMute( const std::string& peerDeviceId)` | 发起请求或查询 request room member microphone mute 相关逻辑。 |
-| [L247](../src/apps/remote/InProcessSessionEngine.RemoteControl.inc#L247) | `InProcessSessionEngine::RequestRemoteRoomScreenShareStop` | 定义 | `InProcessSessionEngine::RequestRemoteRoomScreenShareStop( const std::string& peerDeviceId, std::uint64_t screenShareEpoch)` | 发起请求或查询 request remote room screen share stop 相关逻辑。 |
-| [L256](../src/apps/remote/InProcessSessionEngine.RemoteControl.inc#L256) | `InProcessSessionEngine::SendRoomMemberActionResponse` | 定义 | `SendResult InProcessSessionEngine::SendRoomMemberActionResponse( const std::shared_ptr<RoomPairRuntime>& pair, const RoomMemberActionEnvelope& request, bool accepted, const std::string& error)` | 发送或发布 send room member action response 相关逻辑。 |
-| [L284](../src/apps/remote/InProcessSessionEngine.RemoteControl.inc#L284) | `InProcessSessionEngine::RespondToRoomMemberScreenShare` | 定义 | `InProcessSessionEngine::RespondToRoomMemberScreenShare( const std::string& requesterDeviceId, std::uint64_t sequence, bool accepted)` | 处理并回复 respond to room member screen share 相关逻辑。 |
-| [L365](../src/apps/remote/InProcessSessionEngine.RemoteControl.inc#L365) | `InProcessSessionEngine::SendRoomInput` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRoomInput( const RemoteInputEvent& event)` | 发送或发布 send room input 相关逻辑。 |
-
-## `src/apps/remote/InProcessSessionEngine.RemoteCursor.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.RemoteCursor.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 remote cursor 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/InProcessSessionEngine.MediaDevices.cpp) · **文件作用：** 实现 in process session engine media devices 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.RemoteCursor.inc#L4) | `InProcessSessionEngine::SetRemoteCursorCallback` | 定义 | `void InProcessSessionEngine::SetRemoteCursorCallback( RemoteCursorCallback callback)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L11](../src/apps/remote/InProcessSessionEngine.RemoteCursor.inc#L11) | `InProcessSessionEngine::StartRemoteCursorPublishing` | 定义 | `void InProcessSessionEngine::StartRemoteCursorPublishing( const DisplayDescriptor& display, std::uint64_t layoutVersion)` | 启动 start remote cursor publishing 相关逻辑。 |
-| [L28](../src/apps/remote/InProcessSessionEngine.RemoteCursor.inc#L28) | `InProcessSessionEngine::StopRemoteCursorPublishing` | 定义 | `void InProcessSessionEngine::StopRemoteCursorPublishing()` | 停止 stop remote cursor publishing 相关逻辑。 |
-| [L88](../src/apps/remote/InProcessSessionEngine.RemoteCursor.inc#L88) | `InProcessSessionEngine::OnLocalCursorObservation` | 定义 | `void InProcessSessionEngine::OnLocalCursorObservation( WindowsCursorObservation observation)` | 接收并处理 on local cursor observation 相关逻辑。 |
-| [L192](../src/apps/remote/InProcessSessionEngine.RemoteCursor.inc#L192) | `InProcessSessionEngine::RepublishRemoteCursor` | 定义 | `void InProcessSessionEngine::RepublishRemoteCursor()` | 实现 republish remote cursor 对应的业务或工具逻辑。 |
-| [L204](../src/apps/remote/InProcessSessionEngine.RemoteCursor.inc#L204) | `InProcessSessionEngine::DispatchRemoteCursorData` | 定义 | `bool InProcessSessionEngine::DispatchRemoteCursorData( const std::string& pairId, const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch remote cursor data 相关逻辑。 |
+| [L25](../src/apps/remote/InProcessSessionEngine.MediaDevices.cpp#L25) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L30](../src/apps/remote/InProcessSessionEngine.MediaDevices.cpp#L30) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L37](../src/apps/remote/InProcessSessionEngine.MediaDevices.cpp#L37) | `InProcessSessionEngine::SetRemoteAudioPlaybackMuted` | 定义 | `SessionCommandResult InProcessSessionEngine::SetRemoteAudioPlaybackMuted( bool muted)` | 更新或应用 set remote audio playback muted 相关逻辑。 |
+| [L69](../src/apps/remote/InProcessSessionEngine.MediaDevices.cpp#L69) | `InProcessSessionEngine::SetRoomAudioPlaybackMuted` | 定义 | `SessionCommandResult InProcessSessionEngine::SetRoomAudioPlaybackMuted( bool muted)` | 更新或应用 set room audio playback muted 相关逻辑。 |
+| [L76](../src/apps/remote/InProcessSessionEngine.MediaDevices.cpp#L76) | `InProcessSessionEngine::RefreshLocalMediaDevices` | 定义 | `InProcessSessionEngine::RefreshLocalMediaDevices()` | 刷新 refresh local media devices 相关逻辑。 |
+| [L187](../src/apps/remote/InProcessSessionEngine.MediaDevices.cpp#L187) | `InProcessSessionEngine::SelectLocalCameraDevice` | 定义 | `InProcessSessionEngine::SelectLocalCameraDevice( const std::string& deviceId)` | 查询并返回 select local camera device 相关逻辑。 |
+| [L396](../src/apps/remote/InProcessSessionEngine.MediaDevices.cpp#L396) | `InProcessSessionEngine::SelectLocalMicrophoneDevice` | 定义 | `InProcessSessionEngine::SelectLocalMicrophoneDevice( const std::string& deviceId)` | 查询并返回 select local microphone device 相关逻辑。 |
+| [L473](../src/apps/remote/InProcessSessionEngine.MediaDevices.cpp#L473) | `InProcessSessionEngine::SelectLocalSpeakerDevice` | 定义 | `InProcessSessionEngine::SelectLocalSpeakerDevice( const std::string& deviceId)` | 查询并返回 select local speaker device 相关逻辑。 |
 
-## `src/apps/remote/InProcessSessionEngine.Room.inc`
+## `src/apps/remote/InProcessSessionEngine.RemoteControl.cpp`
 
-[打开源码](../src/apps/remote/InProcessSessionEngine.Room.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 room 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.Room.inc#L4) | `InProcessSessionEngine::CreateRoom` | 定义 | `SessionCommandResult InProcessSessionEngine::CreateRoom( std::uint32_t capacity)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L43](../src/apps/remote/InProcessSessionEngine.Room.inc#L43) | `InProcessSessionEngine::JoinRoom` | 定义 | `SessionCommandResult InProcessSessionEngine::JoinRoom( const std::string& roomId)` | 实现 join room 对应的业务或工具逻辑。 |
-| [L80](../src/apps/remote/InProcessSessionEngine.Room.inc#L80) | `InProcessSessionEngine::QueryRoomAvailability` | 定义 | `SessionCommandResult InProcessSessionEngine::QueryRoomAvailability( const std::vector<std::string>& roomIds)` | 发起请求或查询 query room availability 相关逻辑。 |
-| [L108](../src/apps/remote/InProcessSessionEngine.Room.inc#L108) | `InProcessSessionEngine::RespondToRoomJoin` | 定义 | `SessionCommandResult InProcessSessionEngine::RespondToRoomJoin( const std::string& requestId, bool accepted)` | 处理并回复 respond to room join 相关逻辑。 |
-| [L154](../src/apps/remote/InProcessSessionEngine.Room.inc#L154) | `InProcessSessionEngine::SetRoomCapacity` | 定义 | `SessionCommandResult InProcessSessionEngine::SetRoomCapacity( std::uint32_t capacity)` | 更新或应用 set room capacity 相关逻辑。 |
-| [L187](../src/apps/remote/InProcessSessionEngine.Room.inc#L187) | `InProcessSessionEngine::LeaveRoom` | 定义 | `SessionCommandResult InProcessSessionEngine::LeaveRoom()` | 实现 leave room 对应的业务或工具逻辑。 |
-| [L223](../src/apps/remote/InProcessSessionEngine.Room.inc#L223) | `InProcessSessionEngine::ExitRoomAfterRecoveryFailure` | 定义 | `InProcessSessionEngine::ExitRoomAfterRecoveryFailure()` | 实现 exit room after recovery failure 对应的业务或工具逻辑。 |
-
-## `src/apps/remote/InProcessSessionEngine.RoomCallbacks.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 room callbacks 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/InProcessSessionEngine.RemoteControl.cpp) · **文件作用：** 实现 in process session engine remote control 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.inc#L4) | `InProcessSessionEngine::OnRoomReady` | 定义 | `void InProcessSessionEngine::OnRoomReady( const SignalingRoomReady& ready)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L77](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.inc#L77) | `InProcessSessionEngine::OnRoomState` | 定义 | `void InProcessSessionEngine::OnRoomState(const RoomSnapshot& room)` | 接收并处理 on room state 相关逻辑。 |
-| [L290](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.inc#L290) | `InProcessSessionEngine::OnRoomJoinPending` | 定义 | `void InProcessSessionEngine::OnRoomJoinPending( const SignalingRoomJoinPending& pending)` | 接收并处理 on room join pending 相关逻辑。 |
-| [L305](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.inc#L305) | `InProcessSessionEngine::OnRoomJoinRequested` | 定义 | `void InProcessSessionEngine::OnRoomJoinRequested( const RoomJoinRequest& request)` | 接收并处理 on room join requested 相关逻辑。 |
-| [L328](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.inc#L328) | `InProcessSessionEngine::OnRoomJoinResult` | 定义 | `void InProcessSessionEngine::OnRoomJoinResult( const SignalingRoomJoinResult& result)` | 接收并处理 on room join result 相关逻辑。 |
-| [L369](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.inc#L369) | `InProcessSessionEngine::OnRoomAvailabilityResult` | 定义 | `void InProcessSessionEngine::OnRoomAvailabilityResult( const SignalingRoomAvailabilityResult& result)` | 接收并处理 on room availability result 相关逻辑。 |
-| [L388](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.inc#L388) | `InProcessSessionEngine::OnRoomClosed` | 定义 | `void InProcessSessionEngine::OnRoomClosed( const SignalingRoomClosed& closed)` | 接收并处理 on room closed 相关逻辑。 |
+| [L19](../src/apps/remote/InProcessSessionEngine.RemoteControl.cpp#L19) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L24](../src/apps/remote/InProcessSessionEngine.RemoteControl.cpp#L24) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L31](../src/apps/remote/InProcessSessionEngine.RemoteControl.cpp#L31) | `InProcessSessionEngine::RequestRoomControl` | 定义 | `SessionCommandResult InProcessSessionEngine::RequestRoomControl()` | 发起请求或查询 request room control 相关逻辑。 |
+| [L68](../src/apps/remote/InProcessSessionEngine.RemoteControl.cpp#L68) | `InProcessSessionEngine::RespondToRoomControl` | 定义 | `SessionCommandResult InProcessSessionEngine::RespondToRoomControl( const std::string& requestId, bool accepted)` | 处理并回复 respond to room control 相关逻辑。 |
+| [L114](../src/apps/remote/InProcessSessionEngine.RemoteControl.cpp#L114) | `InProcessSessionEngine::ReleaseRoomControl` | 定义 | `SessionCommandResult InProcessSessionEngine::ReleaseRoomControl()` | 释放或取消 release room control 相关逻辑。 |
+| [L142](../src/apps/remote/InProcessSessionEngine.RemoteControl.cpp#L142) | `InProcessSessionEngine::SendRoomMemberAction` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRoomMemberAction( const std::string& peerDeviceId, RoomMemberAction action, std::uint64_t screenShareEpoch)` | 发送或发布 send room member action 相关逻辑。 |
+| [L258](../src/apps/remote/InProcessSessionEngine.RemoteControl.cpp#L258) | `InProcessSessionEngine::RequestRoomMemberScreenShare` | 定义 | `SessionCommandResult InProcessSessionEngine::RequestRoomMemberScreenShare( const std::string& peerDeviceId)` | 发起请求或查询 request room member screen share 相关逻辑。 |
+| [L266](../src/apps/remote/InProcessSessionEngine.RemoteControl.cpp#L266) | `InProcessSessionEngine::RequestRoomMemberMicrophoneMute` | 定义 | `InProcessSessionEngine::RequestRoomMemberMicrophoneMute( const std::string& peerDeviceId)` | 发起请求或查询 request room member microphone mute 相关逻辑。 |
+| [L274](../src/apps/remote/InProcessSessionEngine.RemoteControl.cpp#L274) | `InProcessSessionEngine::RequestRemoteRoomScreenShareStop` | 定义 | `InProcessSessionEngine::RequestRemoteRoomScreenShareStop( const std::string& peerDeviceId, std::uint64_t screenShareEpoch)` | 发起请求或查询 request remote room screen share stop 相关逻辑。 |
+| [L283](../src/apps/remote/InProcessSessionEngine.RemoteControl.cpp#L283) | `InProcessSessionEngine::SendRoomMemberActionResponse` | 定义 | `SendResult InProcessSessionEngine::SendRoomMemberActionResponse( const std::shared_ptr<RoomPairRuntime>& pair, const RoomMemberActionEnvelope& request, bool accepted, const std::string& error)` | 发送或发布 send room member action response 相关逻辑。 |
+| [L311](../src/apps/remote/InProcessSessionEngine.RemoteControl.cpp#L311) | `InProcessSessionEngine::RespondToRoomMemberScreenShare` | 定义 | `InProcessSessionEngine::RespondToRoomMemberScreenShare( const std::string& requesterDeviceId, std::uint64_t sequence, bool accepted)` | 处理并回复 respond to room member screen share 相关逻辑。 |
+| [L392](../src/apps/remote/InProcessSessionEngine.RemoteControl.cpp#L392) | `InProcessSessionEngine::SendRoomInput` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRoomInput( const RemoteInputEvent& event)` | 发送或发布 send room input 相关逻辑。 |
 
-## `src/apps/remote/InProcessSessionEngine.RoomPairChannels.inc`
+## `src/apps/remote/InProcessSessionEngine.RemoteCursor.cpp`
 
-[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairChannels.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 room pair channels 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.RoomPairChannels.inc#L4) | `InProcessSessionEngine::OnRoomPairDataChannelStateChanged` | 定义 | `void InProcessSessionEngine::OnRoomPairDataChannelStateChanged( const std::string& pairId, const DataChannelInfo& channel)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L118](../src/apps/remote/InProcessSessionEngine.RoomPairChannels.inc#L118) | `InProcessSessionEngine::StartClipboardWarmup` | 定义 | `void InProcessSessionEngine::StartClipboardWarmup( const std::shared_ptr<RoomPairRuntime>& pair)` | 启动 start clipboard warmup 相关逻辑。 |
-
-## `src/apps/remote/InProcessSessionEngine.RoomPairControlDispatch.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairControlDispatch.inc) · **文件作用：** 所属主函数的连续实现片段；这里只包含该函数的局部流程，不单独声明成员变量或顶层函数。
-
-当前规则未提取到公开类型、成员/文件级变量或函数；该文件可能只包含宏、模板片段、资源数据或条件编译内容，请直接打开源码查看。
-
-## `src/apps/remote/InProcessSessionEngine.RoomPairDispatchPreamble.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairDispatchPreamble.inc) · **文件作用：** 所属主函数的连续实现片段；这里只包含该函数的局部流程，不单独声明成员变量或顶层函数。
-
-当前规则未提取到公开类型、成员/文件级变量或函数；该文件可能只包含宏、模板片段、资源数据或条件编译内容，请直接打开源码查看。
-
-## `src/apps/remote/InProcessSessionEngine.RoomPairInputDispatch.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairInputDispatch.inc) · **文件作用：** 所属主函数的连续实现片段；这里只包含该函数的局部流程，不单独声明成员变量或顶层函数。
-
-当前规则未提取到公开类型、成员/文件级变量或函数；该文件可能只包含宏、模板片段、资源数据或条件编译内容，请直接打开源码查看。
-
-## `src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 room pair lifecycle 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/InProcessSessionEngine.RemoteCursor.cpp) · **文件作用：** 实现 in process session engine remote cursor 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.inc#L4) | `InProcessSessionEngine::OnRoomPairReady` | 定义 | `void InProcessSessionEngine::OnRoomPairReady( const SignalingRoomPairReady& ready)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L114](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.inc#L114) | `InProcessSessionEngine::OnRoomPairClosed` | 定义 | `void InProcessSessionEngine::OnRoomPairClosed( const SignalingRoomPairClosed& closed)` | 接收并处理 on room pair closed 相关逻辑。 |
-| [L160](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.inc#L160) | `InProcessSessionEngine::RetireRoomPair` | 定义 | `void InProcessSessionEngine::RetireRoomPair( std::shared_ptr<RoomPairRuntime> pair)` | 实现 retire room pair 对应的业务或工具逻辑。 |
-| [L179](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.inc#L179) | `InProcessSessionEngine::SendRoomPairDescription` | 定义 | `bool InProcessSessionEngine::SendRoomPairDescription( const std::string& pairId, const SessionDescription& description)` | 发送或发布 send room pair description 相关逻辑。 |
-| [L204](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.inc#L204) | `InProcessSessionEngine::SendRoomPairIceCandidate` | 定义 | `bool InProcessSessionEngine::SendRoomPairIceCandidate( const std::string& pairId, const IceCandidate& candidate)` | 发送或发布 send room pair ice candidate 相关逻辑。 |
-| [L228](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.inc#L228) | `InProcessSessionEngine::SendRoomPairIceRestartRequest` | 定义 | `bool InProcessSessionEngine::SendRoomPairIceRestartRequest( const std::string& pairId, std::uint64_t observedGeneration, std::uint64_t requestSequence)` | 发送或发布 send room pair ice restart request 相关逻辑。 |
-| [L251](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.inc#L251) | `InProcessSessionEngine::SendRoomPairIceRestartCancel` | 定义 | `bool InProcessSessionEngine::SendRoomPairIceRestartCancel( const std::string& pairId, std::uint64_t observedGeneration, std::uint64_t requestSequence)` | 发送或发布 send room pair ice restart cancel 相关逻辑。 |
+| [L22](../src/apps/remote/InProcessSessionEngine.RemoteCursor.cpp#L22) | `InProcessSessionEngine::StartRemoteCursorPublishing` | 定义 | `void InProcessSessionEngine::StartRemoteCursorPublishing( const DisplayDescriptor& display, std::uint64_t layoutVersion)` | 启动 start remote cursor publishing 相关逻辑。 |
+| [L39](../src/apps/remote/InProcessSessionEngine.RemoteCursor.cpp#L39) | `InProcessSessionEngine::StopRemoteCursorPublishing` | 定义 | `void InProcessSessionEngine::StopRemoteCursorPublishing()` | 停止 stop remote cursor publishing 相关逻辑。 |
+| [L99](../src/apps/remote/InProcessSessionEngine.RemoteCursor.cpp#L99) | `InProcessSessionEngine::OnLocalCursorObservation` | 定义 | `void InProcessSessionEngine::OnLocalCursorObservation( WindowsCursorObservation observation)` | 接收并处理 on local cursor observation 相关逻辑。 |
+| [L203](../src/apps/remote/InProcessSessionEngine.RemoteCursor.cpp#L203) | `InProcessSessionEngine::RepublishRemoteCursor` | 定义 | `void InProcessSessionEngine::RepublishRemoteCursor()` | 实现 republish remote cursor 对应的业务或工具逻辑。 |
+| [L215](../src/apps/remote/InProcessSessionEngine.RemoteCursor.cpp#L215) | `InProcessSessionEngine::DispatchRemoteCursorData` | 定义 | `bool InProcessSessionEngine::DispatchRemoteCursorData( const std::string& pairId, const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch remote cursor data 相关逻辑。 |
 
-## `src/apps/remote/InProcessSessionEngine.RoomPairScreenDispatch.inc`
+## `src/apps/remote/InProcessSessionEngine.Room.cpp`
 
-[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairScreenDispatch.inc) · **文件作用：** 所属主函数的连续实现片段；这里只包含该函数的局部流程，不单独声明成员变量或顶层函数。
-
-当前规则未提取到公开类型、成员/文件级变量或函数；该文件可能只包含宏、模板片段、资源数据或条件编译内容，请直接打开源码查看。
-
-## `src/apps/remote/InProcessSessionEngine.RoomPairState.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairState.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 room pair state 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/InProcessSessionEngine.Room.cpp) · **文件作用：** 实现 in process session engine room 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.RoomPairState.inc#L4) | `InProcessSessionEngine::OnRoomPairControllerSnapshot` | 定义 | `void InProcessSessionEngine::OnRoomPairControllerSnapshot( const std::string& pairId, const SessionControllerSnapshot& controllerSnapshot)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L191](../src/apps/remote/InProcessSessionEngine.RoomPairState.inc#L191) | `InProcessSessionEngine::PrepareRoomPairMedia` | 定义 | `InProcessSessionEngine::PrepareRoomPairMedia( const std::string& pairId, bool bindNegotiatedSlots, bool preparationAlreadyClaimed)` | 实现 prepare room pair media 对应的业务或工具逻辑。 |
-| [L426](../src/apps/remote/InProcessSessionEngine.RoomPairState.inc#L426) | `InProcessSessionEngine::PrepareRoomPairAnswer` | 定义 | `InProcessSessionEngine::PrepareRoomPairAnswer( const std::string& pairId)` | 实现 prepare room pair answer 对应的业务或工具逻辑。 |
+| [L14](../src/apps/remote/InProcessSessionEngine.Room.cpp#L14) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L19](../src/apps/remote/InProcessSessionEngine.Room.cpp#L19) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L26](../src/apps/remote/InProcessSessionEngine.Room.cpp#L26) | `InProcessSessionEngine::CreateRoom` | 定义 | `SessionCommandResult InProcessSessionEngine::CreateRoom( std::uint32_t capacity)` | 创建或初始化 create room 相关逻辑。 |
+| [L61](../src/apps/remote/InProcessSessionEngine.Room.cpp#L61) | `InProcessSessionEngine::JoinRoom` | 定义 | `SessionCommandResult InProcessSessionEngine::JoinRoom( const std::string& roomId)` | 实现 join room 对应的业务或工具逻辑。 |
+| [L95](../src/apps/remote/InProcessSessionEngine.Room.cpp#L95) | `InProcessSessionEngine::QueryRoomAvailability` | 定义 | `SessionCommandResult InProcessSessionEngine::QueryRoomAvailability( const std::vector<std::string>& roomIds)` | 发起请求或查询 query room availability 相关逻辑。 |
+| [L119](../src/apps/remote/InProcessSessionEngine.Room.cpp#L119) | `InProcessSessionEngine::RespondToRoomJoin` | 定义 | `SessionCommandResult InProcessSessionEngine::RespondToRoomJoin( const std::string& requestId, bool accepted)` | 处理并回复 respond to room join 相关逻辑。 |
+| [L157](../src/apps/remote/InProcessSessionEngine.Room.cpp#L157) | `InProcessSessionEngine::SetRoomCapacity` | 定义 | `SessionCommandResult InProcessSessionEngine::SetRoomCapacity( std::uint32_t capacity)` | 更新或应用 set room capacity 相关逻辑。 |
+| [L183](../src/apps/remote/InProcessSessionEngine.Room.cpp#L183) | `InProcessSessionEngine::LeaveRoom` | 定义 | `SessionCommandResult InProcessSessionEngine::LeaveRoom()` | 实现 leave room 对应的业务或工具逻辑。 |
+| [L216](../src/apps/remote/InProcessSessionEngine.Room.cpp#L216) | `InProcessSessionEngine::ExitRoomAfterRecoveryFailure` | 定义 | `InProcessSessionEngine::ExitRoomAfterRecoveryFailure()` | 实现 exit room after recovery failure 对应的业务或工具逻辑。 |
 
-## `src/apps/remote/InProcessSessionEngine.RuntimeHelpers.inc`
+## `src/apps/remote/InProcessSessionEngine.RoomCallbacks.cpp`
 
-[打开源码](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 runtime helpers 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.inc#L4) | `InProcessSessionEngine::RequireReady` | 定义 | `SessionCommandResult InProcessSessionEngine::RequireReady( const char* operation) const` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L16](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.inc#L16) | `InProcessSessionEngine::SignalingIsOnline` | 定义 | `bool InProcessSessionEngine::SignalingIsOnline() const` | 实现 signaling is online 对应的业务或工具逻辑。 |
-| [L22](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.inc#L22) | `InProcessSessionEngine::DisposeClosedSession` | 定义 | `void InProcessSessionEngine::DisposeClosedSession()` | 关闭并清理 dispose closed session 相关逻辑。 |
-| [L45](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.inc#L45) | `InProcessSessionEngine::ResetSessionStateLocked` | 定义 | `void InProcessSessionEngine::ResetSessionStateLocked()` | 重置或移除 reset session state locked 相关逻辑。 |
-| [L96](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.inc#L96) | `InProcessSessionEngine::ResetRoomStateLocked` | 定义 | `void InProcessSessionEngine::ResetRoomStateLocked()` | 重置或移除 reset room state locked 相关逻辑。 |
-| [L164](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.inc#L164) | `InProcessSessionEngine::StopLocalDesktopCapture` | 定义 | `void InProcessSessionEngine::StopLocalDesktopCapture()` | 停止 stop local desktop capture 相关逻辑。 |
-| [L197](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.inc#L197) | `InProcessSessionEngine::BroadcastSharedDisplayLayout` | 定义 | `void InProcessSessionEngine::BroadcastSharedDisplayLayout()` | 实现 broadcast shared display layout 对应的业务或工具逻辑。 |
-| [L241](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.inc#L241) | `InProcessSessionEngine::BroadcastSharedDisplayCatalog` | 定义 | `void InProcessSessionEngine::BroadcastSharedDisplayCatalog()` | 实现 broadcast shared display catalog 对应的业务或工具逻辑。 |
-
-## `src/apps/remote/InProcessSessionEngine.ScreenPolicyFile.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.ScreenPolicyFile.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 screen policy file 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.cpp) · **文件作用：** 实现 in process session engine room callbacks 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.ScreenPolicyFile.inc#L4) | `InProcessSessionEngine::SetRoomScreenFrameRate` | 定义 | `SessionCommandResult InProcessSessionEngine::SetRoomScreenFrameRate( const std::string& pairId, std::uint32_t framesPerSecond)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L14](../src/apps/remote/InProcessSessionEngine.ScreenPolicyFile.inc#L14) | `InProcessSessionEngine::SetRoomScreenStreamPreference` | 定义 | `SessionCommandResult InProcessSessionEngine::SetRoomScreenStreamPreference( const std::string& pairId, const ScreenStreamPreferenceRequest& preference)` | 更新或应用 set room screen stream preference 相关逻辑。 |
-| [L143](../src/apps/remote/InProcessSessionEngine.ScreenPolicyFile.inc#L143) | `InProcessSessionEngine::RequestRemoteSharedDisplaySwitch` | 定义 | `InProcessSessionEngine::RequestRemoteSharedDisplaySwitch( const std::string& pairId, const std::string& stableDisplayKey)` | 发起请求或查询 request remote shared display switch 相关逻辑。 |
-| [L268](../src/apps/remote/InProcessSessionEngine.ScreenPolicyFile.inc#L268) | `InProcessSessionEngine::ApplyLocalScreenFrameRate` | 定义 | `SessionCommandResult InProcessSessionEngine::ApplyLocalScreenFrameRate( std::uint32_t framesPerSecond)` | 更新或应用 apply local screen frame rate 相关逻辑。 |
-| [L335](../src/apps/remote/InProcessSessionEngine.ScreenPolicyFile.inc#L335) | `InProcessSessionEngine::SwitchLocalSharedDisplay` | 定义 | `SessionCommandResult InProcessSessionEngine::SwitchLocalSharedDisplay( const std::string& stableDisplayKey)` | 实现 switch local shared display 对应的业务或工具逻辑。 |
-| [L549](../src/apps/remote/InProcessSessionEngine.ScreenPolicyFile.inc#L549) | `InProcessSessionEngine::SendRoomFileMessage` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRoomFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send room file message 相关逻辑。 |
-| [L640](../src/apps/remote/InProcessSessionEngine.ScreenPolicyFile.inc#L640) | `InProcessSessionEngine::SendRoomClipboardMessage` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRoomClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message)` | 发送或发布 send room clipboard message 相关逻辑。 |
+| [L14](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.cpp#L14) | `InProcessSessionEngine::OnRoomReady` | 定义 | `void InProcessSessionEngine::OnRoomReady( const SignalingRoomReady& ready)` | 接收并处理 on room ready 相关逻辑。 |
+| [L87](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.cpp#L87) | `InProcessSessionEngine::OnRoomState` | 定义 | `void InProcessSessionEngine::OnRoomState(const RoomSnapshot& room)` | 接收并处理 on room state 相关逻辑。 |
+| [L301](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.cpp#L301) | `InProcessSessionEngine::OnRoomJoinPending` | 定义 | `void InProcessSessionEngine::OnRoomJoinPending( const SignalingRoomJoinPending& pending)` | 接收并处理 on room join pending 相关逻辑。 |
+| [L316](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.cpp#L316) | `InProcessSessionEngine::OnRoomJoinRequested` | 定义 | `void InProcessSessionEngine::OnRoomJoinRequested( const RoomJoinRequest& request)` | 接收并处理 on room join requested 相关逻辑。 |
+| [L339](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.cpp#L339) | `InProcessSessionEngine::OnRoomJoinResult` | 定义 | `void InProcessSessionEngine::OnRoomJoinResult( const SignalingRoomJoinResult& result)` | 接收并处理 on room join result 相关逻辑。 |
+| [L380](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.cpp#L380) | `InProcessSessionEngine::OnRoomAvailabilityResult` | 定义 | `void InProcessSessionEngine::OnRoomAvailabilityResult( const SignalingRoomAvailabilityResult& result)` | 接收并处理 on room availability result 相关逻辑。 |
+| [L399](../src/apps/remote/InProcessSessionEngine.RoomCallbacks.cpp#L399) | `InProcessSessionEngine::OnRoomClosed` | 定义 | `void InProcessSessionEngine::OnRoomClosed( const SignalingRoomClosed& closed)` | 接收并处理 on room closed 相关逻辑。 |
 
-## `src/apps/remote/InProcessSessionEngine.ScreenShare.inc`
+## `src/apps/remote/InProcessSessionEngine.RoomPairChannels.cpp`
 
-[打开源码](../src/apps/remote/InProcessSessionEngine.ScreenShare.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 screen share 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.ScreenShare.inc#L4) | `InProcessSessionEngine::StartRoomScreenShare` | 定义 | `SessionCommandResult InProcessSessionEngine::StartRoomScreenShare()` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L37](../src/apps/remote/InProcessSessionEngine.ScreenShare.inc#L37) | `InProcessSessionEngine::RefreshLocalDisplays` | 定义 | `SessionCommandResult InProcessSessionEngine::RefreshLocalDisplays()` | 刷新 refresh local displays 相关逻辑。 |
-| [L112](../src/apps/remote/InProcessSessionEngine.ScreenShare.inc#L112) | `InProcessSessionEngine::SelectRoomScreenShareDisplay` | 定义 | `InProcessSessionEngine::SelectRoomScreenShareDisplay( const std::string& stableDisplayKey)` | 查询并返回 select room screen share display 相关逻辑。 |
-| [L140](../src/apps/remote/InProcessSessionEngine.ScreenShare.inc#L140) | `InProcessSessionEngine::StopRoomScreenShare` | 定义 | `SessionCommandResult InProcessSessionEngine::StopRoomScreenShare()` | 停止 stop room screen share 相关逻辑。 |
-| [L170](../src/apps/remote/InProcessSessionEngine.ScreenShare.inc#L170) | `InProcessSessionEngine::RespondToRoomScreenShareSwitch` | 定义 | `InProcessSessionEngine::RespondToRoomScreenShareSwitch( const std::string& requestId, bool accepted)` | 处理并回复 respond to room screen share switch 相关逻辑。 |
-| [L223](../src/apps/remote/InProcessSessionEngine.ScreenShare.inc#L223) | `InProcessSessionEngine::CancelRoomScreenShareSwitch` | 定义 | `InProcessSessionEngine::CancelRoomScreenShareSwitch()` | 判断 cancel room screen share switch 相关逻辑。 |
-
-## `src/apps/remote/InProcessSessionEngine.VideoSlots.inc`
-
-[打开源码](../src/apps/remote/InProcessSessionEngine.VideoSlots.inc) · **文件作用：** `InProcessSessionEngine` 的实现切片，集中实现 video slots 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairChannels.cpp) · **文件作用：** 实现 in process session engine room pair channels 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/apps/remote/InProcessSessionEngine.VideoSlots.inc#L4) | `InProcessSessionEngine::SetRoomVideoSource` | 定义 | `SessionCommandResult InProcessSessionEngine::SetRoomVideoSource( const std::string& slot, webrtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source, const std::string& trackId, std::optional<std::string> expecte...` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L121](../src/apps/remote/InProcessSessionEngine.VideoSlots.inc#L121) | `InProcessSessionEngine::ClearRoomVideoSource` | 定义 | `SessionCommandResult InProcessSessionEngine::ClearRoomVideoSource( const std::string& slot)` | 重置或移除 clear room video source 相关逻辑。 |
-| [L180](../src/apps/remote/InProcessSessionEngine.VideoSlots.inc#L180) | `InProcessSessionEngine::SetRoomVideoSlotSendingActive` | 定义 | `SessionCommandResult InProcessSessionEngine::SetRoomVideoSlotSendingActive( const std::string& slot, bool active)` | 更新或应用 set room video slot sending active 相关逻辑。 |
-| [L212](../src/apps/remote/InProcessSessionEngine.VideoSlots.inc#L212) | `InProcessSessionEngine::SetRoomRemoteVideoSink` | 定义 | `SessionCommandResult InProcessSessionEngine::SetRoomRemoteVideoSink( const std::string& pairId, const std::string& slot, webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set room remote video sink 相关逻辑。 |
-| [L300](../src/apps/remote/InProcessSessionEngine.VideoSlots.inc#L300) | `InProcessSessionEngine::NotifyRoomScreenFirstFramePresented` | 定义 | `InProcessSessionEngine::NotifyRoomScreenFirstFramePresented( const std::string& pairId, std::uint64_t screenShareGeneration, std::uint32_t startupElapsedMs)` | 通知或报告 notify room screen first frame presented 相关逻辑。 |
+| [L11](../src/apps/remote/InProcessSessionEngine.RoomPairChannels.cpp#L11) | `InProcessSessionEngine::OnRoomPairDataChannelStateChanged` | 定义 | `void InProcessSessionEngine::OnRoomPairDataChannelStateChanged( const std::string& pairId, const DataChannelInfo& channel)` | 接收并处理 on room pair data channel state changed 相关逻辑。 |
+| [L125](../src/apps/remote/InProcessSessionEngine.RoomPairChannels.cpp#L125) | `InProcessSessionEngine::StartClipboardWarmup` | 定义 | `void InProcessSessionEngine::StartClipboardWarmup( const std::shared_ptr<RoomPairRuntime>& pair)` | 启动 start clipboard warmup 相关逻辑。 |
+
+## `src/apps/remote/InProcessSessionEngine.RoomPairDataDispatch.cpp`
+
+[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairDataDispatch.cpp) · **文件作用：** 实现 in process session engine room pair data dispatch 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L32](../src/apps/remote/InProcessSessionEngine.RoomPairDataDispatch.cpp#L32) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L39](../src/apps/remote/InProcessSessionEngine.RoomPairDataDispatch.cpp#L39) | `InProcessSessionEngine::OnRoomPairDataMessage` | 定义 | `void InProcessSessionEngine::OnRoomPairDataMessage( const std::string& pairId, const std::string& label, std::span<const std::uint8_t> payload, bool binary)` | 接收并处理 on room pair data message 相关逻辑。 |
+
+## `src/apps/remote/InProcessSessionEngine.RoomPairInputDispatch.cpp`
+
+[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairInputDispatch.cpp) · **文件作用：** 实现 in process session engine room pair input dispatch 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L18](../src/apps/remote/InProcessSessionEngine.RoomPairInputDispatch.cpp#L18) | `InProcessSessionEngine::DispatchRoomPairInputData` | 定义 | `void InProcessSessionEngine::DispatchRoomPairInputData( const std::string& pairId, std::span<const std::uint8_t> payload, bool fastChannel)` | 接收并处理 dispatch room pair input data 相关逻辑。 |
+
+## `src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.cpp`
+
+[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.cpp) · **文件作用：** 实现 in process session engine room pair lifecycle 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L17](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.cpp#L17) | `InProcessSessionEngine::OnRoomPairReady` | 定义 | `void InProcessSessionEngine::OnRoomPairReady( const SignalingRoomPairReady& ready)` | 接收并处理 on room pair ready 相关逻辑。 |
+| [L127](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.cpp#L127) | `InProcessSessionEngine::OnRoomPairClosed` | 定义 | `void InProcessSessionEngine::OnRoomPairClosed( const SignalingRoomPairClosed& closed)` | 接收并处理 on room pair closed 相关逻辑。 |
+| [L173](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.cpp#L173) | `InProcessSessionEngine::RetireRoomPair` | 定义 | `void InProcessSessionEngine::RetireRoomPair( std::shared_ptr<RoomPairRuntime> pair)` | 实现 retire room pair 对应的业务或工具逻辑。 |
+| [L192](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.cpp#L192) | `InProcessSessionEngine::SendRoomPairDescription` | 定义 | `bool InProcessSessionEngine::SendRoomPairDescription( const std::string& pairId, const SessionDescription& description)` | 发送或发布 send room pair description 相关逻辑。 |
+| [L217](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.cpp#L217) | `InProcessSessionEngine::SendRoomPairIceCandidate` | 定义 | `bool InProcessSessionEngine::SendRoomPairIceCandidate( const std::string& pairId, const IceCandidate& candidate)` | 发送或发布 send room pair ice candidate 相关逻辑。 |
+| [L241](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.cpp#L241) | `InProcessSessionEngine::SendRoomPairIceRestartRequest` | 定义 | `bool InProcessSessionEngine::SendRoomPairIceRestartRequest( const std::string& pairId, std::uint64_t observedGeneration, std::uint64_t requestSequence)` | 发送或发布 send room pair ice restart request 相关逻辑。 |
+| [L264](../src/apps/remote/InProcessSessionEngine.RoomPairLifecycle.cpp#L264) | `InProcessSessionEngine::SendRoomPairIceRestartCancel` | 定义 | `bool InProcessSessionEngine::SendRoomPairIceRestartCancel( const std::string& pairId, std::uint64_t observedGeneration, std::uint64_t requestSequence)` | 发送或发布 send room pair ice restart cancel 相关逻辑。 |
+
+## `src/apps/remote/InProcessSessionEngine.RoomPairReliableDispatch.cpp`
+
+[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairReliableDispatch.cpp) · **文件作用：** 实现 in process session engine room pair reliable dispatch 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L29](../src/apps/remote/InProcessSessionEngine.RoomPairReliableDispatch.cpp#L29) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L36](../src/apps/remote/InProcessSessionEngine.RoomPairReliableDispatch.cpp#L36) | `InProcessSessionEngine::DispatchRoomPairReliableData` | 定义 | `void InProcessSessionEngine::DispatchRoomPairReliableData( const std::string& pairId, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch room pair reliable data 相关逻辑。 |
+
+## `src/apps/remote/InProcessSessionEngine.RoomPairScreenDispatch.cpp`
+
+[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairScreenDispatch.cpp) · **文件作用：** 实现 in process session engine room pair screen dispatch 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L26](../src/apps/remote/InProcessSessionEngine.RoomPairScreenDispatch.cpp#L26) | `InProcessSessionEngine::DispatchRoomPairScreenData` | 定义 | `bool InProcessSessionEngine::DispatchRoomPairScreenData( const std::string& pairId, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch room pair screen data 相关逻辑。 |
+
+## `src/apps/remote/InProcessSessionEngine.RoomPairState.cpp`
+
+[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairState.cpp) · **文件作用：** 实现 in process session engine room pair state 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L18](../src/apps/remote/InProcessSessionEngine.RoomPairState.cpp#L18) | `InProcessSessionEngine::OnRoomPairControllerSnapshot` | 定义 | `void InProcessSessionEngine::OnRoomPairControllerSnapshot( const std::string& pairId, const SessionControllerSnapshot& controllerSnapshot)` | 接收并处理 on room pair controller snapshot 相关逻辑。 |
+| [L205](../src/apps/remote/InProcessSessionEngine.RoomPairState.cpp#L205) | `InProcessSessionEngine::PrepareRoomPairMedia` | 定义 | `InProcessSessionEngine::PrepareRoomPairMedia( const std::string& pairId, bool bindNegotiatedSlots, bool preparationAlreadyClaimed)` | 实现 prepare room pair media 对应的业务或工具逻辑。 |
+| [L440](../src/apps/remote/InProcessSessionEngine.RoomPairState.cpp#L440) | `InProcessSessionEngine::PrepareRoomPairAnswer` | 定义 | `InProcessSessionEngine::PrepareRoomPairAnswer( const std::string& pairId)` | 实现 prepare room pair answer 对应的业务或工具逻辑。 |
+
+## `src/apps/remote/InProcessSessionEngine.RoomPairTransferDispatch.cpp`
+
+[打开源码](../src/apps/remote/InProcessSessionEngine.RoomPairTransferDispatch.cpp) · **文件作用：** 实现 in process session engine room pair transfer dispatch 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L18](../src/apps/remote/InProcessSessionEngine.RoomPairTransferDispatch.cpp#L18) | `InProcessSessionEngine::DispatchRoomPairTransferData` | 定义 | `bool InProcessSessionEngine::DispatchRoomPairTransferData( const std::string& pairId, const std::string& label, std::span<const std::uint8_t> payload)` | 接收并处理 dispatch room pair transfer data 相关逻辑。 |
+
+## `src/apps/remote/InProcessSessionEngine.RoomSessionCommands.cpp`
+
+[打开源码](../src/apps/remote/InProcessSessionEngine.RoomSessionCommands.cpp) · **文件作用：** 实现 in process session engine room session commands 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L34](../src/apps/remote/InProcessSessionEngine.RoomSessionCommands.cpp#L34) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L39](../src/apps/remote/InProcessSessionEngine.RoomSessionCommands.cpp#L39) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L46](../src/apps/remote/InProcessSessionEngine.RoomSessionCommands.cpp#L46) | `InProcessSessionEngine::SetRoomScreenFrameRate` | 定义 | `SessionCommandResult InProcessSessionEngine::SetRoomScreenFrameRate( const std::string& pairId, std::uint32_t framesPerSecond)` | 更新或应用 set room screen frame rate 相关逻辑。 |
+| [L56](../src/apps/remote/InProcessSessionEngine.RoomSessionCommands.cpp#L56) | `InProcessSessionEngine::SetRoomScreenStreamPreference` | 定义 | `SessionCommandResult InProcessSessionEngine::SetRoomScreenStreamPreference( const std::string& pairId, const ScreenStreamPreferenceRequest& preference)` | 更新或应用 set room screen stream preference 相关逻辑。 |
+| [L185](../src/apps/remote/InProcessSessionEngine.RoomSessionCommands.cpp#L185) | `InProcessSessionEngine::RequestRemoteSharedDisplaySwitch` | 定义 | `InProcessSessionEngine::RequestRemoteSharedDisplaySwitch( const std::string& pairId, const std::string& stableDisplayKey)` | 发起请求或查询 request remote shared display switch 相关逻辑。 |
+| [L310](../src/apps/remote/InProcessSessionEngine.RoomSessionCommands.cpp#L310) | `InProcessSessionEngine::ApplyLocalScreenFrameRate` | 定义 | `SessionCommandResult InProcessSessionEngine::ApplyLocalScreenFrameRate( std::uint32_t framesPerSecond)` | 更新或应用 apply local screen frame rate 相关逻辑。 |
+| [L377](../src/apps/remote/InProcessSessionEngine.RoomSessionCommands.cpp#L377) | `InProcessSessionEngine::SwitchLocalSharedDisplay` | 定义 | `SessionCommandResult InProcessSessionEngine::SwitchLocalSharedDisplay( const std::string& stableDisplayKey)` | 实现 switch local shared display 对应的业务或工具逻辑。 |
+| [L589](../src/apps/remote/InProcessSessionEngine.RoomSessionCommands.cpp#L589) | `InProcessSessionEngine::SendRoomFileMessage` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRoomFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send room file message 相关逻辑。 |
+| [L680](../src/apps/remote/InProcessSessionEngine.RoomSessionCommands.cpp#L680) | `InProcessSessionEngine::SendRoomClipboardMessage` | 定义 | `SessionCommandResult InProcessSessionEngine::SendRoomClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message)` | 发送或发布 send room clipboard message 相关逻辑。 |
+
+## `src/apps/remote/InProcessSessionEngine.RuntimeHelpers.cpp`
+
+[打开源码](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.cpp) · **文件作用：** 实现 in process session engine runtime helpers 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L22](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.cpp#L22) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L27](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.cpp#L27) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L34](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.cpp#L34) | `InProcessSessionEngine::RequireReady` | 定义 | `SessionCommandResult InProcessSessionEngine::RequireReady( const char* operation) const` | 实现 require ready 对应的业务或工具逻辑。 |
+| [L46](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.cpp#L46) | `InProcessSessionEngine::SignalingIsOnline` | 定义 | `bool InProcessSessionEngine::SignalingIsOnline() const` | 实现 signaling is online 对应的业务或工具逻辑。 |
+| [L52](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.cpp#L52) | `InProcessSessionEngine::DisposeClosedSession` | 定义 | `void InProcessSessionEngine::DisposeClosedSession()` | 关闭并清理 dispose closed session 相关逻辑。 |
+| [L75](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.cpp#L75) | `InProcessSessionEngine::ResetSessionStateLocked` | 定义 | `void InProcessSessionEngine::ResetSessionStateLocked()` | 重置或移除 reset session state locked 相关逻辑。 |
+| [L115](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.cpp#L115) | `InProcessSessionEngine::ResetRoomStateLocked` | 定义 | `void InProcessSessionEngine::ResetRoomStateLocked()` | 重置或移除 reset room state locked 相关逻辑。 |
+| [L170](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.cpp#L170) | `InProcessSessionEngine::StopLocalDesktopCapture` | 定义 | `void InProcessSessionEngine::StopLocalDesktopCapture()` | 停止 stop local desktop capture 相关逻辑。 |
+| [L203](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.cpp#L203) | `InProcessSessionEngine::BroadcastSharedDisplayLayout` | 定义 | `void InProcessSessionEngine::BroadcastSharedDisplayLayout()` | 实现 broadcast shared display layout 对应的业务或工具逻辑。 |
+| [L247](../src/apps/remote/InProcessSessionEngine.RuntimeHelpers.cpp#L247) | `InProcessSessionEngine::BroadcastSharedDisplayCatalog` | 定义 | `void InProcessSessionEngine::BroadcastSharedDisplayCatalog()` | 实现 broadcast shared display catalog 对应的业务或工具逻辑。 |
+
+## `src/apps/remote/InProcessSessionEngine.ScreenShare.cpp`
+
+[打开源码](../src/apps/remote/InProcessSessionEngine.ScreenShare.cpp) · **文件作用：** 实现 in process session engine screen share 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L16](../src/apps/remote/InProcessSessionEngine.ScreenShare.cpp#L16) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L21](../src/apps/remote/InProcessSessionEngine.ScreenShare.cpp#L21) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L28](../src/apps/remote/InProcessSessionEngine.ScreenShare.cpp#L28) | `InProcessSessionEngine::StartRoomScreenShare` | 定义 | `SessionCommandResult InProcessSessionEngine::StartRoomScreenShare()` | 启动 start room screen share 相关逻辑。 |
+| [L61](../src/apps/remote/InProcessSessionEngine.ScreenShare.cpp#L61) | `InProcessSessionEngine::RefreshLocalDisplays` | 定义 | `SessionCommandResult InProcessSessionEngine::RefreshLocalDisplays()` | 刷新 refresh local displays 相关逻辑。 |
+| [L136](../src/apps/remote/InProcessSessionEngine.ScreenShare.cpp#L136) | `InProcessSessionEngine::SelectRoomScreenShareDisplay` | 定义 | `InProcessSessionEngine::SelectRoomScreenShareDisplay( const std::string& stableDisplayKey)` | 查询并返回 select room screen share display 相关逻辑。 |
+| [L164](../src/apps/remote/InProcessSessionEngine.ScreenShare.cpp#L164) | `InProcessSessionEngine::StopRoomScreenShare` | 定义 | `SessionCommandResult InProcessSessionEngine::StopRoomScreenShare()` | 停止 stop room screen share 相关逻辑。 |
+| [L195](../src/apps/remote/InProcessSessionEngine.ScreenShare.cpp#L195) | `InProcessSessionEngine::RespondToRoomScreenShareSwitch` | 定义 | `InProcessSessionEngine::RespondToRoomScreenShareSwitch( const std::string& requestId, bool accepted)` | 处理并回复 respond to room screen share switch 相关逻辑。 |
+| [L248](../src/apps/remote/InProcessSessionEngine.ScreenShare.cpp#L248) | `InProcessSessionEngine::CancelRoomScreenShareSwitch` | 定义 | `InProcessSessionEngine::CancelRoomScreenShareSwitch()` | 判断 cancel room screen share switch 相关逻辑。 |
 
 ## `src/apps/remote/InProcessSessionEngineInternal.h`
 
@@ -1540,6 +1603,213 @@ direct/room 会话引擎、媒体路由、文件传输、远程粘贴与缓存�
 | [L56](../src/apps/remote/InProcessSessionEngineInternal.h#L56) | `OnDataChannelStateChanged` | 定义 | `void OnDataChannelStateChanged( const DataChannelInfo& channel) override` | 接收并处理 on data channel state changed 相关逻辑。 |
 | [L62](../src/apps/remote/InProcessSessionEngineInternal.h#L62) | `OnDataMessage` | 定义 | `void OnDataMessage(const std::string& label, std::span<const std::uint8_t> payload, bool binary) override` | 接收并处理 on data message 相关逻辑。 |
 | [L70](../src/apps/remote/InProcessSessionEngineInternal.h#L70) | `OnRemoteTrackAdded` | 定义 | `void OnRemoteTrackAdded(const RemoteTrackInfo& track) override` | 接收并处理 on remote track added 相关逻辑。 |
+
+## `src/apps/remote/InProcessSessionMediaAdapter.cpp`
+
+[打开源码](../src/apps/remote/InProcessSessionMediaAdapter.cpp) · **文件作用：** 实现 in process session media adapter 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L26](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L26) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L31](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L31) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L38](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L38) | `InProcessSessionMediaAdapter::InProcessSessionMediaAdapter` | 定义 | `InProcessSessionMediaAdapter::InProcessSessionMediaAdapter( InProcessSessionEngine& engine) : engine_(&engine) {}` | 构造并初始化 InProcessSessionMediaAdapter 实例。 |
+| [L43](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L43) | `InProcessSessionMediaAdapter::SetRoomVideoSource` | 定义 | `SessionCommandResult InProcessSessionMediaAdapter::SetRoomVideoSource( const std::string& slot, webrtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source, const std::string& trackId, std::optional<std::string> e...` | 更新或应用 set room video source 相关逻辑。 |
+| [L170](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L170) | `InProcessSessionMediaAdapter::ClearRoomVideoSource` | 定义 | `SessionCommandResult InProcessSessionMediaAdapter::ClearRoomVideoSource( const std::string& slot)` | 重置或移除 clear room video source 相关逻辑。 |
+| [L239](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L239) | `InProcessSessionMediaAdapter::SetRoomVideoSlotSendingActive` | 定义 | `InProcessSessionMediaAdapter::SetRoomVideoSlotSendingActive( const std::string& slot, bool active)` | 更新或应用 set room video slot sending active 相关逻辑。 |
+| [L272](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L272) | `InProcessSessionMediaAdapter::SetRoomRemoteVideoSink` | 定义 | `SessionCommandResult InProcessSessionMediaAdapter::SetRoomRemoteVideoSink( const std::string& pairId, const std::string& slot, webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set room remote video sink 相关逻辑。 |
+| [L364](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L364) | `InProcessSessionMediaAdapter::SetDirectRemoteVideoSink` | 定义 | `SessionCommandResult InProcessSessionMediaAdapter::SetDirectRemoteVideoSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set direct remote video sink 相关逻辑。 |
+| [L386](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L386) | `InProcessSessionMediaAdapter::NotifyRoomScreenFirstFramePresented` | 定义 | `InProcessSessionMediaAdapter::NotifyRoomScreenFirstFramePresented( const std::string& pairId, std::uint64_t screenShareGeneration, std::uint32_t startupElapsedMs)` | 通知或报告 notify room screen first frame presented 相关逻辑。 |
+| [L470](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L470) | `InProcessSessionMediaAdapter::SetLocalCameraPreviewSink` | 定义 | `void InProcessSessionMediaAdapter::SetLocalCameraPreviewSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set local camera preview sink 相关逻辑。 |
+| [L489](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L489) | `InProcessSessionMediaAdapter::SetRemoteInputSink` | 定义 | `void InProcessSessionMediaAdapter::SetRemoteInputSink(IRemoteInputSink* sink)` | 更新或应用 set remote input sink 相关逻辑。 |
+| [L495](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L495) | `InProcessSessionMediaAdapter::SetRemoteFileTransferSink` | 定义 | `void InProcessSessionMediaAdapter::SetRemoteFileTransferSink( IFileTransferSink* sink)` | 更新或应用 set remote file transfer sink 相关逻辑。 |
+| [L502](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L502) | `InProcessSessionMediaAdapter::SetRemoteClipboardSink` | 定义 | `void InProcessSessionMediaAdapter::SetRemoteClipboardSink(IClipboardSink* sink)` | 更新或应用 set remote clipboard sink 相关逻辑。 |
+| [L508](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L508) | `InProcessSessionMediaAdapter::SetRemoteCursorCallback` | 定义 | `void InProcessSessionMediaAdapter::SetRemoteCursorCallback( RemoteCursorCallback callback)` | 更新或应用 set remote cursor callback 相关逻辑。 |
+| [L515](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L515) | `InProcessSessionMediaAdapter::SendRemoteInput` | 定义 | `SessionCommandResult InProcessSessionMediaAdapter::SendRemoteInput( const RemoteInputEvent& event)` | 发送或发布 send remote input 相关逻辑。 |
+| [L521](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L521) | `InProcessSessionMediaAdapter::SendRemoteFileMessage` | 定义 | `SessionCommandResult InProcessSessionMediaAdapter::SendRemoteFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message)` | 发送或发布 send remote file message 相关逻辑。 |
+| [L528](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L528) | `InProcessSessionMediaAdapter::SendRemoteClipboardMessage` | 定义 | `SessionCommandResult InProcessSessionMediaAdapter::SendRemoteClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message)` | 发送或发布 send remote clipboard message 相关逻辑。 |
+| [L538](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L538) | `InProcessSessionMediaAdapter::SetRemoteAudioPlaybackMuted` | 定义 | `InProcessSessionMediaAdapter::SetRemoteAudioPlaybackMuted(bool muted)` | 更新或应用 set remote audio playback muted 相关逻辑。 |
+| [L544](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L544) | `InProcessSessionMediaAdapter::SetDirectScreenStreamPreference` | 定义 | `InProcessSessionMediaAdapter::SetDirectScreenStreamPreference( const ScreenStreamPreferenceRequest& preference)` | 更新或应用 set direct screen stream preference 相关逻辑。 |
+| [L551](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L551) | `InProcessSessionMediaAdapter::RequestDirectSharedDisplaySwitch` | 定义 | `InProcessSessionMediaAdapter::RequestDirectSharedDisplaySwitch( const std::string& stableDisplayKey)` | 发起请求或查询 request direct shared display switch 相关逻辑。 |
+| [L557](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L557) | `InProcessSessionMediaAdapter::SetPreferredHardwareDecoderName` | 定义 | `void InProcessSessionMediaAdapter::SetPreferredHardwareDecoderName( std::string name)` | 更新或应用 set preferred hardware decoder name 相关逻辑。 |
+| [L566](../src/apps/remote/InProcessSessionMediaAdapter.cpp#L566) | `InProcessSessionMediaAdapter::ApplyVideoPipelinePreferences` | 定义 | `InProcessSessionMediaAdapter::ApplyVideoPipelinePreferences( DesktopCaptureImplementation desktopCaptureImplementation, VideoEncoderPreference videoEncoderPreference, FfmpegX264Preset quality, FfmpegHardwareBackend ff...` | 更新或应用 apply video pipeline preferences 相关逻辑。 |
+
+## `src/apps/remote/InProcessSessionMediaAdapter.h`
+
+[打开源码](../src/apps/remote/InProcessSessionMediaAdapter.h) · **文件作用：** 声明 in process session media adapter 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L12](../src/apps/remote/InProcessSessionMediaAdapter.h#L12) | `scoped_refptr` | class | 定义 scoped_refptr 的 class 类型和相关状态。 |
+| [L13](../src/apps/remote/InProcessSessionMediaAdapter.h#L13) | `VideoTrackSourceInterface` | class | 定义 VideoTrackSourceInterface 的 class 类型和相关状态。 |
+| [L18](../src/apps/remote/InProcessSessionMediaAdapter.h#L18) | `InProcessSessionEngine` | class | 定义 InProcessSessionEngine 的 class 类型和相关状态。 |
+| [L22](../src/apps/remote/InProcessSessionMediaAdapter.h#L22) | `InProcessSessionMediaAdapter` | class | Keeps UI media bindings on a narrow port instead of handing the concrete session engine to controller windows. |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L12](../src/apps/remote/InProcessSessionMediaAdapter.h#L12) | `scoped_refptr` | `class scoped_refptr;` | 保存 scoped refptr 相关配置或运行状态。 |
+| [L13](../src/apps/remote/InProcessSessionMediaAdapter.h#L13) | `VideoTrackSourceInterface` | `class VideoTrackSourceInterface;` | 保存 video track source interface 相关配置或运行状态。 |
+| [L18](../src/apps/remote/InProcessSessionMediaAdapter.h#L18) | `InProcessSessionEngine` | `class InProcessSessionEngine;` | 保存 in process session engine 相关配置或运行状态。 |
+| [L80](../src/apps/remote/InProcessSessionMediaAdapter.h#L80) | `engine_` | `InProcessSessionEngine* engine_;` | 保存 engine 相关配置或运行状态。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L24](../src/apps/remote/InProcessSessionMediaAdapter.h#L24) | `InProcessSessionMediaAdapter` | 声明 | `explicit InProcessSessionMediaAdapter(InProcessSessionEngine& engine)` | 实现 in process session media adapter 对应的业务或工具逻辑。 |
+| [L26](../src/apps/remote/InProcessSessionMediaAdapter.h#L26) | `SetRoomRemoteVideoSink` | 声明 | `SessionCommandResult SetRoomRemoteVideoSink( const std::string& pairId, const std::string& slot, webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink) override` | 更新或应用 set room remote video sink 相关逻辑。 |
+| [L30](../src/apps/remote/InProcessSessionMediaAdapter.h#L30) | `SetDirectRemoteVideoSink` | 声明 | `SessionCommandResult SetDirectRemoteVideoSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink) override` | 更新或应用 set direct remote video sink 相关逻辑。 |
+| [L32](../src/apps/remote/InProcessSessionMediaAdapter.h#L32) | `NotifyRoomScreenFirstFramePresented` | 声明 | `SessionCommandResult NotifyRoomScreenFirstFramePresented( const std::string& pairId, std::uint64_t screenShareGeneration, std::uint32_t startupElapsedMs) override` | 通知或报告 notify room screen first frame presented 相关逻辑。 |
+| [L36](../src/apps/remote/InProcessSessionMediaAdapter.h#L36) | `SetLocalCameraPreviewSink` | 声明 | `void SetLocalCameraPreviewSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink) override` | 更新或应用 set local camera preview sink 相关逻辑。 |
+| [L38](../src/apps/remote/InProcessSessionMediaAdapter.h#L38) | `SetRemoteInputSink` | 声明 | `void SetRemoteInputSink(IRemoteInputSink* sink) override` | 更新或应用 set remote input sink 相关逻辑。 |
+| [L39](../src/apps/remote/InProcessSessionMediaAdapter.h#L39) | `SetRemoteFileTransferSink` | 声明 | `void SetRemoteFileTransferSink(IFileTransferSink* sink) override` | 更新或应用 set remote file transfer sink 相关逻辑。 |
+| [L40](../src/apps/remote/InProcessSessionMediaAdapter.h#L40) | `SetRemoteClipboardSink` | 声明 | `void SetRemoteClipboardSink(IClipboardSink* sink) override` | 更新或应用 set remote clipboard sink 相关逻辑。 |
+| [L41](../src/apps/remote/InProcessSessionMediaAdapter.h#L41) | `SetRemoteCursorCallback` | 声明 | `void SetRemoteCursorCallback(RemoteCursorCallback callback) override` | 更新或应用 set remote cursor callback 相关逻辑。 |
+| [L42](../src/apps/remote/InProcessSessionMediaAdapter.h#L42) | `SendRemoteInput` | 声明 | `SessionCommandResult SendRemoteInput( const RemoteInputEvent& event) override` | 发送或发布 send remote input 相关逻辑。 |
+| [L44](../src/apps/remote/InProcessSessionMediaAdapter.h#L44) | `SendRemoteFileMessage` | 声明 | `SessionCommandResult SendRemoteFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message) override` | 发送或发布 send remote file message 相关逻辑。 |
+| [L47](../src/apps/remote/InProcessSessionMediaAdapter.h#L47) | `SendRemoteClipboardMessage` | 声明 | `SessionCommandResult SendRemoteClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message) override` | 发送或发布 send remote clipboard message 相关逻辑。 |
+| [L51](../src/apps/remote/InProcessSessionMediaAdapter.h#L51) | `SetRemoteAudioPlaybackMuted` | 声明 | `SessionCommandResult SetRemoteAudioPlaybackMuted(bool muted) override` | 更新或应用 set remote audio playback muted 相关逻辑。 |
+| [L52](../src/apps/remote/InProcessSessionMediaAdapter.h#L52) | `SetDirectScreenStreamPreference` | 声明 | `SessionCommandResult SetDirectScreenStreamPreference( const ScreenStreamPreferenceRequest& preference) override` | 更新或应用 set direct screen stream preference 相关逻辑。 |
+| [L54](../src/apps/remote/InProcessSessionMediaAdapter.h#L54) | `RequestDirectSharedDisplaySwitch` | 声明 | `SessionCommandResult RequestDirectSharedDisplaySwitch( const std::string& stableDisplayKey) override` | 发起请求或查询 request direct shared display switch 相关逻辑。 |
+| [L56](../src/apps/remote/InProcessSessionMediaAdapter.h#L56) | `SetPreferredHardwareDecoderName` | 声明 | `void SetPreferredHardwareDecoderName(std::string name) override` | 更新或应用 set preferred hardware decoder name 相关逻辑。 |
+| [L57](../src/apps/remote/InProcessSessionMediaAdapter.h#L57) | `ApplyVideoPipelinePreferences` | 声明 | `SessionCommandResult ApplyVideoPipelinePreferences( DesktopCaptureImplementation desktopCaptureImplementation, VideoEncoderPreference videoEncoderPreference, FfmpegX264Preset quality, FfmpegHardwareBackend ffmpegHardw...` | 更新或应用 apply video pipeline preferences 相关逻辑。 |
+| [L68](../src/apps/remote/InProcessSessionMediaAdapter.h#L68) | `SetRoomVideoSource` | 声明 | `SessionCommandResult SetRoomVideoSource( const std::string& slot, webrtc::scoped_refptr<webrtc::VideoTrackSourceInterface> source, const std::string& trackId, std::optional<std::string> expectedRoomId = std::nullopt, ...` | 更新或应用 set room video source 相关逻辑。 |
+| [L75](../src/apps/remote/InProcessSessionMediaAdapter.h#L75) | `ClearRoomVideoSource` | 声明 | `SessionCommandResult ClearRoomVideoSource(const std::string& slot)` | 重置或移除 clear room video source 相关逻辑。 |
+| [L76](../src/apps/remote/InProcessSessionMediaAdapter.h#L76) | `SetRoomVideoSlotSendingActive` | 声明 | `SessionCommandResult SetRoomVideoSlotSendingActive( const std::string& slot, bool active)` | 更新或应用 set room video slot sending active 相关逻辑。 |
+
+## `src/apps/remote/InProcessSessionMediaState.h`
+
+[打开源码](../src/apps/remote/InProcessSessionMediaState.h) · **文件作用：** 声明 in process session media state 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L16](../src/apps/remote/InProcessSessionMediaState.h#L16) | `InProcessSessionMediaState` | struct | 定义 InProcessSessionMediaState 的 struct 类型和相关状态。 |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L20](../src/apps/remote/InProcessSessionMediaState.h#L20) | `localRoomVideoTracks` | `localRoomVideoTracks;` | 保存 local room video tracks 相关配置或运行状态。 |
+| [L24](../src/apps/remote/InProcessSessionMediaState.h#L24) | `idleRoomVideoTracks` | `idleRoomVideoTracks;` | 保存 idle room video tracks 相关配置或运行状态。 |
+| [L26](../src/apps/remote/InProcessSessionMediaState.h#L26) | `localCameraPreviewSink` | `localCameraPreviewSink = nullptr;` | 保存回调或观察者入口：local camera preview sink。 |
+| [L28](../src/apps/remote/InProcessSessionMediaState.h#L28) | `localCameraPreviewTrack` | `localCameraPreviewTrack;` | 保存 local camera preview track 相关配置或运行状态。 |
+| [L30](../src/apps/remote/InProcessSessionMediaState.h#L30) | `localMicrophoneAudioSource` | `localMicrophoneAudioSource;` | 保存 local microphone audio source 相关配置或运行状态。 |
+| [L32](../src/apps/remote/InProcessSessionMediaState.h#L32) | `localMicrophoneAudioTrack` | `localMicrophoneAudioTrack;` | 保存 local microphone audio track 相关配置或运行状态。 |
+
+## `src/apps/remote/ISessionMediaAccess.h`
+
+[打开源码](../src/apps/remote/ISessionMediaAccess.h) · **文件作用：** 声明 i session media access 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L19](../src/apps/remote/ISessionMediaAccess.h#L19) | `VideoFrame` | class | 定义 VideoFrame 的 class 类型和相关状态。 |
+| [L21](../src/apps/remote/ISessionMediaAccess.h#L21) | `VideoSinkInterface` | class | 定义 VideoSinkInterface 的 class 类型和相关状态。 |
+| [L28](../src/apps/remote/ISessionMediaAccess.h#L28) | `ISessionMediaAccess` | class | Narrow UI port for media bindings that are intentionally outside the command/snapshot session facade. |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L19](../src/apps/remote/ISessionMediaAccess.h#L19) | `VideoFrame` | `class VideoFrame;` | 保存媒体帧、图像或缓冲资源：video frame。 |
+| [L21](../src/apps/remote/ISessionMediaAccess.h#L21) | `VideoSinkInterface` | `class VideoSinkInterface;` | 保存 video sink interface 相关配置或运行状态。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L34](../src/apps/remote/ISessionMediaAccess.h#L34) | `~ISessionMediaAccess` | 声明 | `virtual ~ISessionMediaAccess() = default` | 停止相关活动并释放 ISessionMediaAccess 实例拥有的资源。 |
+| [L36](../src/apps/remote/ISessionMediaAccess.h#L36) | `SetRoomRemoteVideoSink` | 声明 | `virtual SessionCommandResult SetRoomRemoteVideoSink( const std::string& pairId, const std::string& slot, webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink) = 0` | 更新或应用 set room remote video sink 相关逻辑。 |
+| [L40](../src/apps/remote/ISessionMediaAccess.h#L40) | `SetDirectRemoteVideoSink` | 声明 | `virtual SessionCommandResult SetDirectRemoteVideoSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink) = 0` | 更新或应用 set direct remote video sink 相关逻辑。 |
+| [L42](../src/apps/remote/ISessionMediaAccess.h#L42) | `NotifyRoomScreenFirstFramePresented` | 声明 | `virtual SessionCommandResult NotifyRoomScreenFirstFramePresented( const std::string& pairId, std::uint64_t screenShareGeneration, std::uint32_t startupElapsedMs) = 0` | 通知或报告 notify room screen first frame presented 相关逻辑。 |
+| [L46](../src/apps/remote/ISessionMediaAccess.h#L46) | `SetLocalCameraPreviewSink` | 声明 | `virtual void SetLocalCameraPreviewSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink) = 0` | 更新或应用 set local camera preview sink 相关逻辑。 |
+| [L48](../src/apps/remote/ISessionMediaAccess.h#L48) | `SetRemoteInputSink` | 声明 | `virtual void SetRemoteInputSink(IRemoteInputSink* sink) = 0` | 更新或应用 set remote input sink 相关逻辑。 |
+| [L49](../src/apps/remote/ISessionMediaAccess.h#L49) | `SetRemoteFileTransferSink` | 声明 | `virtual void SetRemoteFileTransferSink(IFileTransferSink* sink) = 0` | 更新或应用 set remote file transfer sink 相关逻辑。 |
+| [L50](../src/apps/remote/ISessionMediaAccess.h#L50) | `SetRemoteClipboardSink` | 声明 | `virtual void SetRemoteClipboardSink(IClipboardSink* sink) = 0` | 更新或应用 set remote clipboard sink 相关逻辑。 |
+| [L51](../src/apps/remote/ISessionMediaAccess.h#L51) | `SetRemoteCursorCallback` | 声明 | `virtual void SetRemoteCursorCallback(RemoteCursorCallback callback) = 0` | 更新或应用 set remote cursor callback 相关逻辑。 |
+| [L53](../src/apps/remote/ISessionMediaAccess.h#L53) | `SendRemoteInput` | 声明 | `virtual SessionCommandResult SendRemoteInput( const RemoteInputEvent& event) = 0` | 发送或发布 send remote input 相关逻辑。 |
+| [L55](../src/apps/remote/ISessionMediaAccess.h#L55) | `SendRemoteFileMessage` | 声明 | `virtual SessionCommandResult SendRemoteFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message) = 0` | 发送或发布 send remote file message 相关逻辑。 |
+| [L58](../src/apps/remote/ISessionMediaAccess.h#L58) | `SendRemoteClipboardMessage` | 声明 | `virtual SessionCommandResult SendRemoteClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message) = 0` | 发送或发布 send remote clipboard message 相关逻辑。 |
+| [L62](../src/apps/remote/ISessionMediaAccess.h#L62) | `SetRemoteAudioPlaybackMuted` | 声明 | `virtual SessionCommandResult SetRemoteAudioPlaybackMuted(bool muted) = 0` | 更新或应用 set remote audio playback muted 相关逻辑。 |
+| [L63](../src/apps/remote/ISessionMediaAccess.h#L63) | `SetDirectScreenStreamPreference` | 声明 | `virtual SessionCommandResult SetDirectScreenStreamPreference( const ScreenStreamPreferenceRequest& preference) = 0` | 更新或应用 set direct screen stream preference 相关逻辑。 |
+| [L65](../src/apps/remote/ISessionMediaAccess.h#L65) | `RequestDirectSharedDisplaySwitch` | 声明 | `virtual SessionCommandResult RequestDirectSharedDisplaySwitch( const std::string& stableDisplayKey) = 0` | 发起请求或查询 request direct shared display switch 相关逻辑。 |
+| [L67](../src/apps/remote/ISessionMediaAccess.h#L67) | `SetPreferredHardwareDecoderName` | 声明 | `virtual void SetPreferredHardwareDecoderName(std::string name) = 0` | 更新或应用 set preferred hardware decoder name 相关逻辑。 |
+| [L68](../src/apps/remote/ISessionMediaAccess.h#L68) | `ApplyVideoPipelinePreferences` | 声明 | `virtual SessionCommandResult ApplyVideoPipelinePreferences( DesktopCaptureImplementation desktopCaptureImplementation, VideoEncoderPreference videoEncoderPreference, FfmpegX264Preset quality, FfmpegHardwareBackend ffm...` | 更新或应用 apply video pipeline preferences 相关逻辑。 |
+
+## `src/apps/remote/LocalMediaCoordinator.cpp`
+
+[打开源码](../src/apps/remote/LocalMediaCoordinator.cpp) · **文件作用：** 实现 local media coordinator 相关函数与文件级辅助逻辑。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L44](../src/apps/remote/LocalMediaCoordinator.cpp#L44) | `LocalMediaCoordinator::State` | struct | 定义 LocalMediaCoordinator::State 的 struct 类型和相关状态。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L14](../src/apps/remote/LocalMediaCoordinator.cpp#L14) | `DeviceName` | 定义 | `const char *DeviceName(LocalMediaDeviceKind kind)` | 实现 device name 对应的业务或工具逻辑。 |
+| [L26](../src/apps/remote/LocalMediaCoordinator.cpp#L26) | `ErrorCode` | 定义 | `std::string ErrorCode(LocalMediaDeviceKind kind, const char *suffix)` | 实现 error code 对应的业务或工具逻辑。 |
+| [L30](../src/apps/remote/LocalMediaCoordinator.cpp#L30) | `UnavailableMessage` | 定义 | `std::string UnavailableMessage(LocalMediaDeviceKind kind, bool noDevices)` | 实现 unavailable message 对应的业务或工具逻辑。 |
+| [L38](../src/apps/remote/LocalMediaCoordinator.cpp#L38) | `DisconnectedMessage` | 定义 | `std::string DisconnectedMessage(LocalMediaDeviceKind kind)` | 断开连接 disconnected message 相关逻辑。 |
+| [L49](../src/apps/remote/LocalMediaCoordinator.cpp#L49) | `LocalMediaCoordinator::LocalMediaCoordinator` | 定义 | `LocalMediaCoordinator::LocalMediaCoordinator() : state_(std::make_unique<State>()) {}` | 构造并初始化 LocalMediaCoordinator 实例。 |
+| [L55](../src/apps/remote/LocalMediaCoordinator.cpp#L55) | `LocalMediaCoordinator::NormalizeDeviceId` | 定义 | `LocalMediaCoordinator::NormalizeDeviceId(const std::string &deviceId)` | 实现 normalize device id 对应的业务或工具逻辑。 |
+| [L59](../src/apps/remote/LocalMediaCoordinator.cpp#L59) | `LocalMediaCoordinator::ValidateSelection` | 定义 | `SessionCommandResult LocalMediaCoordinator::ValidateSelection( const MediaDeviceCategorySnapshot &category, const std::string &normalizedDeviceId, LocalMediaDeviceKind kind) const` | 判断 validate selection 相关逻辑。 |
+| [L77](../src/apps/remote/LocalMediaCoordinator.cpp#L77) | `LocalMediaCoordinator::UpdateAvailability` | 定义 | `void LocalMediaCoordinator::UpdateAvailability( MediaDeviceCategorySnapshot &category, LocalMediaDeviceKind kind) const` | 更新或应用 update availability 相关逻辑。 |
+| [L100](../src/apps/remote/LocalMediaCoordinator.cpp#L100) | `LocalMediaCoordinator::ContainsDevice` | 定义 | `bool LocalMediaCoordinator::ContainsDevice( const std::vector<MediaDeviceDescriptor> &devices, const std::string &deviceId)` | 实现 contains device 对应的业务或工具逻辑。 |
+| [L109](../src/apps/remote/LocalMediaCoordinator.cpp#L109) | `LocalMediaCoordinator::BeginCameraOperation` | 定义 | `std::uint64_t LocalMediaCoordinator::BeginCameraOperation()` | 启动 begin camera operation 相关逻辑。 |
+| [L113](../src/apps/remote/LocalMediaCoordinator.cpp#L113) | `LocalMediaCoordinator::IsCurrentCameraOperation` | 定义 | `bool LocalMediaCoordinator::IsCurrentCameraOperation( std::uint64_t generation) const` | 判断 is current camera operation 相关逻辑。 |
+| [L119](../src/apps/remote/LocalMediaCoordinator.cpp#L119) | `LocalMediaCoordinator::CameraCaptureSource` | 定义 | `LocalMediaCoordinator::CameraCaptureSource() const` | 实现 camera capture source 对应的业务或工具逻辑。 |
+| [L123](../src/apps/remote/LocalMediaCoordinator.cpp#L123) | `LocalMediaCoordinator::SetCameraCaptureSource` | 定义 | `void LocalMediaCoordinator::SetCameraCaptureSource( webrtc::scoped_refptr<WindowsCameraCaptureSource> source)` | 更新或应用 set camera capture source 相关逻辑。 |
+| [L129](../src/apps/remote/LocalMediaCoordinator.cpp#L129) | `LocalMediaCoordinator::TakeCameraCaptureSource` | 定义 | `LocalMediaCoordinator::TakeCameraCaptureSource()` | 实现 take camera capture source 对应的业务或工具逻辑。 |
+
+## `src/apps/remote/LocalMediaCoordinator.h`
+
+[打开源码](../src/apps/remote/LocalMediaCoordinator.h) · **文件作用：** 声明 local media coordinator 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L16](../src/apps/remote/LocalMediaCoordinator.h#L16) | `WindowsCameraCaptureSource` | class | 定义 WindowsCameraCaptureSource 的 class 类型和相关状态。 |
+| [L20](../src/apps/remote/LocalMediaCoordinator.h#L20) | `LocalMediaDeviceKind` | enum class | 定义 LocalMediaDeviceKind 的 enum class 类型和相关状态。 |
+| [L26](../src/apps/remote/LocalMediaCoordinator.h#L26) | `LocalMediaCoordinator` | class | 定义 LocalMediaCoordinator 的 class 类型和相关状态。 |
+| [L56](../src/apps/remote/LocalMediaCoordinator.h#L56) | `State` | struct | 定义 State 的 struct 类型和相关状态。 |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L16](../src/apps/remote/LocalMediaCoordinator.h#L16) | `WindowsCameraCaptureSource` | `class WindowsCameraCaptureSource;` | 保存 windows camera capture source 相关配置或运行状态。 |
+| [L56](../src/apps/remote/LocalMediaCoordinator.h#L56) | `State` | `struct State;` | 保存状态机当前状态：state。 |
+| [L57](../src/apps/remote/LocalMediaCoordinator.h#L57) | `state_` | `std::unique_ptr<State> state_;` | 保存状态机当前状态：state。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L28](../src/apps/remote/LocalMediaCoordinator.h#L28) | `LocalMediaCoordinator` | 声明 | `LocalMediaCoordinator()` | 实现 local media coordinator 对应的业务或工具逻辑。 |
+| [L29](../src/apps/remote/LocalMediaCoordinator.h#L29) | `~LocalMediaCoordinator` | 声明 | `~LocalMediaCoordinator()` | 停止相关活动并释放 LocalMediaCoordinator 实例拥有的资源。 |
+| [L31](../src/apps/remote/LocalMediaCoordinator.h#L31) | `LocalMediaCoordinator` | 声明 | `LocalMediaCoordinator(const LocalMediaCoordinator &) = delete` | 实现 local media coordinator 对应的业务或工具逻辑。 |
+| [L34](../src/apps/remote/LocalMediaCoordinator.h#L34) | `NormalizeDeviceId` | 声明 | `static std::string NormalizeDeviceId(const std::string &deviceId)` | 实现 normalize device id 对应的业务或工具逻辑。 |
+| [L35](../src/apps/remote/LocalMediaCoordinator.h#L35) | `ContainsDevice` | 声明 | `static bool ContainsDevice( const std::vector<MediaDeviceDescriptor> &devices, const std::string &deviceId)` | 实现 contains device 对应的业务或工具逻辑。 |
+| [L39](../src/apps/remote/LocalMediaCoordinator.h#L39) | `ValidateSelection` | 声明 | `ValidateSelection(const MediaDeviceCategorySnapshot &category, const std::string &normalizedDeviceId, LocalMediaDeviceKind kind) const` | 判断 validate selection 相关逻辑。 |
+| [L42](../src/apps/remote/LocalMediaCoordinator.h#L42) | `UpdateAvailability` | 声明 | `void UpdateAvailability(MediaDeviceCategorySnapshot &category, LocalMediaDeviceKind kind) const` | 更新或应用 update availability 相关逻辑。 |
+| [L45](../src/apps/remote/LocalMediaCoordinator.h#L45) | `BeginCameraOperation` | 声明 | `[[nodiscard]] std::uint64_t BeginCameraOperation()` | 启动 begin camera operation 相关逻辑。 |
+| [L47](../src/apps/remote/LocalMediaCoordinator.h#L47) | `IsCurrentCameraOperation` | 声明 | `IsCurrentCameraOperation(std::uint64_t generation) const` | 判断 is current camera operation 相关逻辑。 |
+| [L49](../src/apps/remote/LocalMediaCoordinator.h#L49) | `CameraCaptureSource` | 声明 | `CameraCaptureSource() const` | 实现 camera capture source 对应的业务或工具逻辑。 |
+| [L50](../src/apps/remote/LocalMediaCoordinator.h#L50) | `SetCameraCaptureSource` | 声明 | `void SetCameraCaptureSource( webrtc::scoped_refptr<WindowsCameraCaptureSource> source)` | 更新或应用 set camera capture source 相关逻辑。 |
+| [L53](../src/apps/remote/LocalMediaCoordinator.h#L53) | `TakeCameraCaptureSource` | 声明 | `TakeCameraCaptureSource()` | 实现 take camera capture source 对应的业务或工具逻辑。 |
 
 ## `src/apps/remote/RemoteCApplicationCoordinator.cpp`
 
@@ -1660,40 +1930,279 @@ direct/room 会话引擎、媒体路由、文件传输、远程粘贴与缓存�
 
 | 行 | 类型 | 种类 | 作用 |
 |---:|---|---|---|
-| [L112](../src/apps/remote/RemoteCProductMain.cpp#L112) | `RemoteCToolTipBubble` | class | 定义 RemoteCToolTipBubble 的 class 类型和相关状态。 |
-| [L203](../src/apps/remote/RemoteCProductMain.cpp#L203) | `RemoteCToolTipController` | class | 定义 RemoteCToolTipController 的 class 类型和相关状态。 |
-| [L263](../src/apps/remote/RemoteCProductMain.cpp#L263) | `StartupSignalingConfiguration` | struct | 定义 StartupSignalingConfiguration 的 struct 类型和相关状态。 |
-| [L608](../src/apps/remote/RemoteCProductMain.cpp#L608) | `ScopedWinHandle` | class | 定义 ScopedWinHandle 的 class 类型和相关状态。 |
+| [L117](../src/apps/remote/RemoteCProductMain.cpp#L117) | `RemoteCToolTipBubble` | class | 定义 RemoteCToolTipBubble 的 class 类型和相关状态。 |
+| [L208](../src/apps/remote/RemoteCProductMain.cpp#L208) | `RemoteCToolTipController` | class | 定义 RemoteCToolTipController 的 class 类型和相关状态。 |
+| [L268](../src/apps/remote/RemoteCProductMain.cpp#L268) | `StartupSignalingConfiguration` | struct | 定义 StartupSignalingConfiguration 的 struct 类型和相关状态。 |
+| [L613](../src/apps/remote/RemoteCProductMain.cpp#L613) | `ScopedWinHandle` | class | 定义 ScopedWinHandle 的 class 类型和相关状态。 |
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L70](../src/apps/remote/RemoteCProductMain.cpp#L70) | `RegisterBundledFont` | 定义 | `QString RegisterBundledFont(const QString& resourcePath, const QString& fallbackFamily)` | 实现 register bundled font 对应的业务或工具逻辑。 |
-| [L82](../src/apps/remote/RemoteCProductMain.cpp#L82) | `InstalledApplicationVersion` | 定义 | `QString InstalledApplicationVersion()` | 实现 installed application version 对应的业务或工具逻辑。 |
-| [L114](../src/apps/remote/RemoteCProductMain.cpp#L114) | `RemoteCToolTipBubble` | 定义 | `RemoteCToolTipBubble() : QWidget(nullptr, Qt::ToolTip \| Qt::FramelessWindowHint \| Qt::NoDropShadowWindowHint)` | 实现 remote c tool tip bubble 对应的业务或工具逻辑。 |
-| [L147](../src/apps/remote/RemoteCProductMain.cpp#L147) | `ShowText` | 定义 | `void ShowText(const QString& text, const QPoint& globalPosition)` | 实现 show text 对应的业务或工具逻辑。 |
-| [L208](../src/apps/remote/RemoteCProductMain.cpp#L208) | `eventFilter` | 定义 | `bool eventFilter(QObject* watched, QEvent* event) override` | 实现 event filter 对应的业务或工具逻辑。 |
-| [L257](../src/apps/remote/RemoteCProductMain.cpp#L257) | `ToUtf8` | 定义 | `std::string ToUtf8(const QString& value)` | 实现 to utf8 对应的业务或工具逻辑。 |
-| [L278](../src/apps/remote/RemoteCProductMain.cpp#L278) | `InvalidStartupConfiguration` | 定义 | `StartupSignalingConfiguration InvalidStartupConfiguration( const QString& source, const QString& error, bool authenticationRequired = false)` | 实现 invalid startup configuration 对应的业务或工具逻辑。 |
-| [L291](../src/apps/remote/RemoteCProductMain.cpp#L291) | `LoadOrCreateLocalDeviceId` | 定义 | `QString LoadOrCreateLocalDeviceId()` | 读取或恢复 load or create local device id 相关逻辑。 |
-| [L307](../src/apps/remote/RemoteCProductMain.cpp#L307) | `GenerateSessionVerificationCode` | 定义 | `QString GenerateSessionVerificationCode()` | 实现 generate session verification code 对应的业务或工具逻辑。 |
-| [L313](../src/apps/remote/RemoteCProductMain.cpp#L313) | `LoadStartupSignalingConfiguration` | 定义 | `StartupSignalingConfiguration LoadStartupSignalingConfiguration()` | 读取或恢复 load startup signaling configuration 相关逻辑。 |
-| [L595](../src/apps/remote/RemoteCProductMain.cpp#L595) | `SingleInstanceServerName` | 定义 | `QString SingleInstanceServerName()` | 实现 single instance server name 对应的业务或工具逻辑。 |
-| [L610](../src/apps/remote/RemoteCProductMain.cpp#L610) | `ScopedWinHandle` | 定义 | `explicit ScopedWinHandle(HANDLE handle = nullptr) : handle_(handle) {}` | 实现 scoped win handle 对应的业务或工具逻辑。 |
-| [L611](../src/apps/remote/RemoteCProductMain.cpp#L611) | `~ScopedWinHandle` | 定义 | `~ScopedWinHandle()` | 停止相关活动并释放 ScopedWinHandle 实例拥有的资源。 |
-| [L620](../src/apps/remote/RemoteCProductMain.cpp#L620) | `ScopedWinHandle` | 定义 | `ScopedWinHandle(ScopedWinHandle&& other) noexcept : handle_(other.handle_)` | 实现 scoped win handle 对应的业务或工具逻辑。 |
-| [L637](../src/apps/remote/RemoteCProductMain.cpp#L637) | `get` | 定义 | `HANDLE get() const { return handle_; }` | 查询并返回 get 相关逻辑。 |
-| [L643](../src/apps/remote/RemoteCProductMain.cpp#L643) | `IsUtilityInvocation` | 定义 | `bool IsUtilityInvocation(const QStringList& arguments)` | 判断 is utility invocation 相关逻辑。 |
-| [L664](../src/apps/remote/RemoteCProductMain.cpp#L664) | `NotifyRunningInstance` | 定义 | `bool NotifyRunningInstance(const QString& serverName)` | 通知或报告 notify running instance 相关逻辑。 |
-| [L679](../src/apps/remote/RemoteCProductMain.cpp#L679) | `WriteCurrentUserRegistryString` | 定义 | `bool WriteCurrentUserRegistryString( const wchar_t* subkey, const wchar_t* valueName, const QString& value)` | 保存或写入 write current user registry string 相关逻辑。 |
-| [L700](../src/apps/remote/RemoteCProductMain.cpp#L700) | `EnsureRemoteCUrlProtocolRegistration` | 定义 | `bool EnsureRemoteCUrlProtocolRegistration()` | 实现 ensure remote c url protocol registration 对应的业务或工具逻辑。 |
-| [L719](../src/apps/remote/RemoteCProductMain.cpp#L719) | `ConfiguredVideoEncoderPreference` | 定义 | `remote::VideoEncoderPreference ConfiguredVideoEncoderPreference()` | 更新或应用 configured video encoder preference 相关逻辑。 |
-| [L739](../src/apps/remote/RemoteCProductMain.cpp#L739) | `ConfiguredFfmpegHardwareBackend` | 定义 | `remote::FfmpegHardwareBackend ConfiguredFfmpegHardwareBackend()` | 更新或应用 configured ffmpeg hardware backend 相关逻辑。 |
-| [L756](../src/apps/remote/RemoteCProductMain.cpp#L756) | `ConfiguredFfmpegX264Preset` | 定义 | `remote::FfmpegX264Preset ConfiguredFfmpegX264Preset()` | 更新或应用 configured ffmpeg x264 preset 相关逻辑。 |
-| [L807](../src/apps/remote/RemoteCProductMain.cpp#L807) | `ConfiguredVideoDecoderPreference` | 定义 | `remote::VideoDecoderPreference ConfiguredVideoDecoderPreference()` | 更新或应用 configured video decoder preference 相关逻辑。 |
-| [L849](../src/apps/remote/RemoteCProductMain.cpp#L849) | `ConfiguredDesktopCaptureImplementation` | 定义 | `remote::DesktopCaptureImplementation ConfiguredDesktopCaptureImplementation()` | 更新或应用 configured desktop capture implementation 相关逻辑。 |
-| [L860](../src/apps/remote/RemoteCProductMain.cpp#L860) | `CreateSessionEngine` | 定义 | `std::unique_ptr<remote::app::InProcessSessionEngine> CreateSessionEngine( const StartupSignalingConfiguration& startupConfiguration, const QString& deviceVerificationCode)` | 创建或初始化 create session engine 相关逻辑。 |
-| [L1030](../src/apps/remote/RemoteCProductMain.cpp#L1030) | `RunSignalingPolicySelfTest` | 定义 | `int RunSignalingPolicySelfTest()` | 执行后台循环或调度 run signaling policy self test 相关逻辑。 |
-| [L1067](../src/apps/remote/RemoteCProductMain.cpp#L1067) | `RunAuthCoordinatorSelfTest` | 定义 | `int RunAuthCoordinatorSelfTest()` | 执行后台循环或调度 run auth coordinator self test 相关逻辑。 |
-| [L1137](../src/apps/remote/RemoteCProductMain.cpp#L1137) | `main` | 定义 | `int main(int argc, char* argv[])` | 实现 main 对应的业务或工具逻辑。 |
+| [L75](../src/apps/remote/RemoteCProductMain.cpp#L75) | `RegisterBundledFont` | 定义 | `QString RegisterBundledFont(const QString& resourcePath, const QString& fallbackFamily)` | 实现 register bundled font 对应的业务或工具逻辑。 |
+| [L87](../src/apps/remote/RemoteCProductMain.cpp#L87) | `InstalledApplicationVersion` | 定义 | `QString InstalledApplicationVersion()` | 实现 installed application version 对应的业务或工具逻辑。 |
+| [L119](../src/apps/remote/RemoteCProductMain.cpp#L119) | `RemoteCToolTipBubble` | 定义 | `RemoteCToolTipBubble() : QWidget(nullptr, Qt::ToolTip \| Qt::FramelessWindowHint \| Qt::NoDropShadowWindowHint)` | 实现 remote c tool tip bubble 对应的业务或工具逻辑。 |
+| [L152](../src/apps/remote/RemoteCProductMain.cpp#L152) | `ShowText` | 定义 | `void ShowText(const QString& text, const QPoint& globalPosition)` | 实现 show text 对应的业务或工具逻辑。 |
+| [L213](../src/apps/remote/RemoteCProductMain.cpp#L213) | `eventFilter` | 定义 | `bool eventFilter(QObject* watched, QEvent* event) override` | 实现 event filter 对应的业务或工具逻辑。 |
+| [L262](../src/apps/remote/RemoteCProductMain.cpp#L262) | `ToUtf8` | 定义 | `std::string ToUtf8(const QString& value)` | 实现 to utf8 对应的业务或工具逻辑。 |
+| [L283](../src/apps/remote/RemoteCProductMain.cpp#L283) | `InvalidStartupConfiguration` | 定义 | `StartupSignalingConfiguration InvalidStartupConfiguration( const QString& source, const QString& error, bool authenticationRequired = false)` | 实现 invalid startup configuration 对应的业务或工具逻辑。 |
+| [L296](../src/apps/remote/RemoteCProductMain.cpp#L296) | `LoadOrCreateLocalDeviceId` | 定义 | `QString LoadOrCreateLocalDeviceId()` | 读取或恢复 load or create local device id 相关逻辑。 |
+| [L312](../src/apps/remote/RemoteCProductMain.cpp#L312) | `GenerateSessionVerificationCode` | 定义 | `QString GenerateSessionVerificationCode()` | 实现 generate session verification code 对应的业务或工具逻辑。 |
+| [L318](../src/apps/remote/RemoteCProductMain.cpp#L318) | `LoadStartupSignalingConfiguration` | 定义 | `StartupSignalingConfiguration LoadStartupSignalingConfiguration()` | 读取或恢复 load startup signaling configuration 相关逻辑。 |
+| [L600](../src/apps/remote/RemoteCProductMain.cpp#L600) | `SingleInstanceServerName` | 定义 | `QString SingleInstanceServerName()` | 实现 single instance server name 对应的业务或工具逻辑。 |
+| [L615](../src/apps/remote/RemoteCProductMain.cpp#L615) | `ScopedWinHandle` | 定义 | `explicit ScopedWinHandle(HANDLE handle = nullptr) : handle_(handle) {}` | 实现 scoped win handle 对应的业务或工具逻辑。 |
+| [L616](../src/apps/remote/RemoteCProductMain.cpp#L616) | `~ScopedWinHandle` | 定义 | `~ScopedWinHandle()` | 停止相关活动并释放 ScopedWinHandle 实例拥有的资源。 |
+| [L625](../src/apps/remote/RemoteCProductMain.cpp#L625) | `ScopedWinHandle` | 定义 | `ScopedWinHandle(ScopedWinHandle&& other) noexcept : handle_(other.handle_)` | 实现 scoped win handle 对应的业务或工具逻辑。 |
+| [L642](../src/apps/remote/RemoteCProductMain.cpp#L642) | `get` | 定义 | `HANDLE get() const { return handle_; }` | 查询并返回 get 相关逻辑。 |
+| [L648](../src/apps/remote/RemoteCProductMain.cpp#L648) | `IsUtilityInvocation` | 定义 | `bool IsUtilityInvocation(const QStringList& arguments)` | 判断 is utility invocation 相关逻辑。 |
+| [L677](../src/apps/remote/RemoteCProductMain.cpp#L677) | `NotifyRunningInstance` | 定义 | `bool NotifyRunningInstance(const QString& serverName)` | 通知或报告 notify running instance 相关逻辑。 |
+| [L692](../src/apps/remote/RemoteCProductMain.cpp#L692) | `WriteCurrentUserRegistryString` | 定义 | `bool WriteCurrentUserRegistryString( const wchar_t* subkey, const wchar_t* valueName, const QString& value)` | 保存或写入 write current user registry string 相关逻辑。 |
+| [L713](../src/apps/remote/RemoteCProductMain.cpp#L713) | `EnsureRemoteCUrlProtocolRegistration` | 定义 | `bool EnsureRemoteCUrlProtocolRegistration()` | 实现 ensure remote c url protocol registration 对应的业务或工具逻辑。 |
+| [L732](../src/apps/remote/RemoteCProductMain.cpp#L732) | `ConfiguredVideoEncoderPreference` | 定义 | `remote::VideoEncoderPreference ConfiguredVideoEncoderPreference()` | 更新或应用 configured video encoder preference 相关逻辑。 |
+| [L752](../src/apps/remote/RemoteCProductMain.cpp#L752) | `ConfiguredFfmpegHardwareBackend` | 定义 | `remote::FfmpegHardwareBackend ConfiguredFfmpegHardwareBackend()` | 更新或应用 configured ffmpeg hardware backend 相关逻辑。 |
+| [L769](../src/apps/remote/RemoteCProductMain.cpp#L769) | `ConfiguredFfmpegX264Preset` | 定义 | `remote::FfmpegX264Preset ConfiguredFfmpegX264Preset()` | 更新或应用 configured ffmpeg x264 preset 相关逻辑。 |
+| [L820](../src/apps/remote/RemoteCProductMain.cpp#L820) | `ConfiguredVideoDecoderPreference` | 定义 | `remote::VideoDecoderPreference ConfiguredVideoDecoderPreference()` | 更新或应用 configured video decoder preference 相关逻辑。 |
+| [L862](../src/apps/remote/RemoteCProductMain.cpp#L862) | `ConfiguredDesktopCaptureImplementation` | 定义 | `remote::DesktopCaptureImplementation ConfiguredDesktopCaptureImplementation()` | 更新或应用 configured desktop capture implementation 相关逻辑。 |
+| [L873](../src/apps/remote/RemoteCProductMain.cpp#L873) | `CreateSessionEngine` | 定义 | `std::unique_ptr<remote::app::InProcessSessionEngine> CreateSessionEngine( const StartupSignalingConfiguration& startupConfiguration, const QString& deviceVerificationCode)` | 创建或初始化 create session engine 相关逻辑。 |
+| [L1054](../src/apps/remote/RemoteCProductMain.cpp#L1054) | `RunSignalingPolicySelfTest` | 定义 | `int RunSignalingPolicySelfTest()` | 执行后台循环或调度 run signaling policy self test 相关逻辑。 |
+| [L1091](../src/apps/remote/RemoteCProductMain.cpp#L1091) | `RunDirectSessionCoordinatorSelfTest` | 定义 | `int RunDirectSessionCoordinatorSelfTest()` | 执行后台循环或调度 run direct session coordinator self test 相关逻辑。 |
+| [L1168](../src/apps/remote/RemoteCProductMain.cpp#L1168) | `RunRoomSessionCoordinatorSelfTest` | 定义 | `int RunRoomSessionCoordinatorSelfTest()` | 执行后台循环或调度 run room session coordinator self test 相关逻辑。 |
+| [L1238](../src/apps/remote/RemoteCProductMain.cpp#L1238) | `RunLocalMediaCoordinatorSelfTest` | 定义 | `int RunLocalMediaCoordinatorSelfTest()` | 执行后台循环或调度 run local media coordinator self test 相关逻辑。 |
+| [L1297](../src/apps/remote/RemoteCProductMain.cpp#L1297) | `RunScreenShareCoordinatorSelfTest` | 定义 | `int RunScreenShareCoordinatorSelfTest()` | 执行后台循环或调度 run screen share coordinator self test 相关逻辑。 |
+| [L1357](../src/apps/remote/RemoteCProductMain.cpp#L1357) | `RunAuthCoordinatorSelfTest` | 定义 | `int RunAuthCoordinatorSelfTest()` | 执行后台循环或调度 run auth coordinator self test 相关逻辑。 |
+| [L1427](../src/apps/remote/RemoteCProductMain.cpp#L1427) | `main` | 定义 | `int main(int argc, char* argv[])` | 实现 main 对应的业务或工具逻辑。 |
+
+## `src/apps/remote/RoomMediaSlots.h`
+
+[打开源码](../src/apps/remote/RoomMediaSlots.h) · **文件作用：** 声明 room media slots 相关类型、接口、配置和成员状态。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L16](../src/apps/remote/RoomMediaSlots.h#L16) | `IsRoomVideoSlot` | 定义 | `inline bool IsRoomVideoSlot(std::string_view slot)` | 判断 is room video slot 相关逻辑。 |
+
+## `src/apps/remote/RoomSessionCoordinator.cpp`
+
+[打开源码](../src/apps/remote/RoomSessionCoordinator.cpp) · **文件作用：** 实现 room session coordinator 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L13](../src/apps/remote/RoomSessionCoordinator.cpp#L13) | `Success` | 定义 | `SessionCommandResult Success()` | 实现 success 对应的业务或工具逻辑。 |
+| [L18](../src/apps/remote/RoomSessionCoordinator.cpp#L18) | `Failure` | 定义 | `SessionCommandResult Failure(std::string code, std::string message)` | 实现 failure 对应的业务或工具逻辑。 |
+| [L23](../src/apps/remote/RoomSessionCoordinator.cpp#L23) | `RoomOperationActive` | 定义 | `bool RoomOperationActive(const SessionEngineSnapshot& snapshot)` | 实现 room operation active 对应的业务或工具逻辑。 |
+| [L31](../src/apps/remote/RoomSessionCoordinator.cpp#L31) | `RoomSessionCoordinator::ValidateCapacity` | 定义 | `SessionCommandResult RoomSessionCoordinator::ValidateCapacity( std::uint32_t capacity) const` | 判断 validate capacity 相关逻辑。 |
+| [L42](../src/apps/remote/RoomSessionCoordinator.cpp#L42) | `RoomSessionCoordinator::ValidateCreate` | 定义 | `SessionCommandResult RoomSessionCoordinator::ValidateCreate( const SessionEngineSnapshot& snapshot, std::uint32_t capacity) const` | 判断 validate create 相关逻辑。 |
+| [L56](../src/apps/remote/RoomSessionCoordinator.cpp#L56) | `RoomSessionCoordinator::ApplyCreateRequested` | 定义 | `void RoomSessionCoordinator::ApplyCreateRequested( SessionEngineSnapshot* snapshot, std::uint32_t capacity) const` | 更新或应用 apply create requested 相关逻辑。 |
+| [L69](../src/apps/remote/RoomSessionCoordinator.cpp#L69) | `RoomSessionCoordinator::ValidateJoin` | 定义 | `SessionCommandResult RoomSessionCoordinator::ValidateJoin( const SessionEngineSnapshot& snapshot, const std::string& roomId) const` | 判断 validate join 相关逻辑。 |
+| [L83](../src/apps/remote/RoomSessionCoordinator.cpp#L83) | `RoomSessionCoordinator::ApplyJoinRequested` | 定义 | `void RoomSessionCoordinator::ApplyJoinRequested( SessionEngineSnapshot* snapshot, const std::string& roomId) const` | 更新或应用 apply join requested 相关逻辑。 |
+| [L96](../src/apps/remote/RoomSessionCoordinator.cpp#L96) | `RoomSessionCoordinator::ValidateAvailabilityQuery` | 定义 | `SessionCommandResult RoomSessionCoordinator::ValidateAvailabilityQuery( const std::vector<std::string>& roomIds) const` | 判断 validate availability query 相关逻辑。 |
+| [L106](../src/apps/remote/RoomSessionCoordinator.cpp#L106) | `RoomSessionCoordinator::ApplyAvailabilityQuery` | 定义 | `void RoomSessionCoordinator::ApplyAvailabilityQuery( SessionEngineSnapshot* snapshot, const std::vector<std::string>& roomIds) const` | 更新或应用 apply availability query 相关逻辑。 |
+| [L121](../src/apps/remote/RoomSessionCoordinator.cpp#L121) | `RoomSessionCoordinator::PrepareJoinResponse` | 定义 | `SessionCommandResult RoomSessionCoordinator::PrepareJoinResponse( const SessionEngineSnapshot& snapshot, const std::string& requestId, std::string* roomId) const` | 实现 prepare join response 对应的业务或工具逻辑。 |
+| [L150](../src/apps/remote/RoomSessionCoordinator.cpp#L150) | `RoomSessionCoordinator::PrepareCapacityUpdate` | 定义 | `SessionCommandResult RoomSessionCoordinator::PrepareCapacityUpdate( const SessionEngineSnapshot& snapshot, std::uint32_t capacity, std::string* roomId) const` | 实现 prepare capacity update 对应的业务或工具逻辑。 |
+| [L176](../src/apps/remote/RoomSessionCoordinator.cpp#L176) | `RoomSessionCoordinator::PrepareLeave` | 定义 | `SessionCommandResult RoomSessionCoordinator::PrepareLeave( SessionEngineSnapshot* snapshot, std::string* roomId) const` | 实现 prepare leave 对应的业务或工具逻辑。 |
+| [L194](../src/apps/remote/RoomSessionCoordinator.cpp#L194) | `RoomSessionCoordinator::ApplyLeaveFailed` | 定义 | `void RoomSessionCoordinator::ApplyLeaveFailed( SessionEngineSnapshot* snapshot, const std::string& errorCode, const std::string& errorMessage) const` | 更新或应用 apply leave failed 相关逻辑。 |
+| [L208](../src/apps/remote/RoomSessionCoordinator.cpp#L208) | `RoomSessionCoordinator::TakeNextScreenControlSequence` | 定义 | `RoomSessionCoordinator::TakeNextScreenControlSequence()` | 实现 take next screen control sequence 对应的业务或工具逻辑。 |
+| [L217](../src/apps/remote/RoomSessionCoordinator.cpp#L217) | `RoomSessionCoordinator::ResetActiveState` | 定义 | `void RoomSessionCoordinator::ResetActiveState()` | 重置或移除 reset active state 相关逻辑。 |
+
+## `src/apps/remote/RoomSessionCoordinator.h`
+
+[打开源码](../src/apps/remote/RoomSessionCoordinator.h) · **文件作用：** 声明 room session coordinator 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L17](../src/apps/remote/RoomSessionCoordinator.h#L17) | `InProcessSessionEngine` | class | 定义 InProcessSessionEngine 的 class 类型和相关状态。 |
+| [L19](../src/apps/remote/RoomSessionCoordinator.h#L19) | `RoomSessionCoordinator` | class | 定义 RoomSessionCoordinator 的 class 类型和相关状态。 |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L17](../src/apps/remote/RoomSessionCoordinator.h#L17) | `InProcessSessionEngine` | `class InProcessSessionEngine;` | 保存 in process session engine 相关配置或运行状态。 |
+| [L69](../src/apps/remote/RoomSessionCoordinator.h#L69) | `audioDevicesApplied_` | `bool audioDevicesApplied_ = false;` | 保存 audio devices applied 相关配置或运行状态。 |
+| [L70](../src/apps/remote/RoomSessionCoordinator.h#L70) | `recoveryToken_` | `std::string recoveryToken_;` | 保存 recovery token 相关配置或运行状态。 |
+| [L71](../src/apps/remote/RoomSessionCoordinator.h#L71) | `screenShareGrantId_` | `std::string screenShareGrantId_;` | 保存身份或作用域标识：screen share grant id。 |
+| [L72](../src/apps/remote/RoomSessionCoordinator.h#L72) | `controlGrantId_` | `std::string controlGrantId_;` | 保存身份或作用域标识：control grant id。 |
+| [L73](../src/apps/remote/RoomSessionCoordinator.h#L73) | `controlGrantScreenSharerDeviceId_` | `std::string controlGrantScreenSharerDeviceId_;` | 保存身份或作用域标识：control grant screen sharer device id。 |
+| [L74](../src/apps/remote/RoomSessionCoordinator.h#L74) | `controlGrantControllerDeviceId_` | `std::string controlGrantControllerDeviceId_;` | 保存身份或作用域标识：control grant controller device id。 |
+| [L75](../src/apps/remote/RoomSessionCoordinator.h#L75) | `nextInputSequence_` | `std::uint64_t nextInputSequence_ = 0;` | 保存单调序号，用于排序或去重：next input sequence。 |
+| [L76](../src/apps/remote/RoomSessionCoordinator.h#L76) | `nextScreenControlSequence_` | `std::uint64_t nextScreenControlSequence_ = 0;` | 保存单调序号，用于排序或去重：next screen control sequence。 |
+| [L77](../src/apps/remote/RoomSessionCoordinator.h#L77) | `localScreenFrameRate_` | `std::uint32_t localScreenFrameRate_ = kDefaultScreenFrameRate;` | 保存计数、尺寸或速率指标：local screen frame rate。 |
+| [L79](../src/apps/remote/RoomSessionCoordinator.h#L79) | `screenStreamPreferences_` | `screenStreamPreferences_;` | 保存 screen stream preferences 相关配置或运行状态。 |
+| [L80](../src/apps/remote/RoomSessionCoordinator.h#L80) | `recoveryPending_` | `bool recoveryPending_ = false;` | 保存待处理队列或请求：recovery pending。 |
+| [L81](../src/apps/remote/RoomSessionCoordinator.h#L81) | `leaveRequested_` | `bool leaveRequested_ = false;` | 保存 leave requested 相关配置或运行状态。 |
+| [L82](../src/apps/remote/RoomSessionCoordinator.h#L82) | `deferredLeaveId_` | `std::string deferredLeaveId_;` | 保存身份或作用域标识：deferred leave id。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L21](../src/apps/remote/RoomSessionCoordinator.h#L21) | `ValidateCapacity` | 声明 | `[[nodiscard]] SessionCommandResult ValidateCapacity( std::uint32_t capacity) const` | 判断 validate capacity 相关逻辑。 |
+| [L24](../src/apps/remote/RoomSessionCoordinator.h#L24) | `ValidateCreate` | 声明 | `[[nodiscard]] SessionCommandResult ValidateCreate( const SessionEngineSnapshot& snapshot, std::uint32_t capacity) const` | 判断 validate create 相关逻辑。 |
+| [L27](../src/apps/remote/RoomSessionCoordinator.h#L27) | `ApplyCreateRequested` | 声明 | `void ApplyCreateRequested( SessionEngineSnapshot* snapshot, std::uint32_t capacity) const` | 更新或应用 apply create requested 相关逻辑。 |
+| [L31](../src/apps/remote/RoomSessionCoordinator.h#L31) | `ValidateJoin` | 声明 | `[[nodiscard]] SessionCommandResult ValidateJoin( const SessionEngineSnapshot& snapshot, const std::string& roomId) const` | 判断 validate join 相关逻辑。 |
+| [L34](../src/apps/remote/RoomSessionCoordinator.h#L34) | `ApplyJoinRequested` | 声明 | `void ApplyJoinRequested( SessionEngineSnapshot* snapshot, const std::string& roomId) const` | 更新或应用 apply join requested 相关逻辑。 |
+| [L38](../src/apps/remote/RoomSessionCoordinator.h#L38) | `ValidateAvailabilityQuery` | 声明 | `[[nodiscard]] SessionCommandResult ValidateAvailabilityQuery( const std::vector<std::string>& roomIds) const` | 判断 validate availability query 相关逻辑。 |
+| [L40](../src/apps/remote/RoomSessionCoordinator.h#L40) | `ApplyAvailabilityQuery` | 声明 | `void ApplyAvailabilityQuery( SessionEngineSnapshot* snapshot, const std::vector<std::string>& roomIds) const` | 更新或应用 apply availability query 相关逻辑。 |
+| [L44](../src/apps/remote/RoomSessionCoordinator.h#L44) | `PrepareJoinResponse` | 声明 | `[[nodiscard]] SessionCommandResult PrepareJoinResponse( const SessionEngineSnapshot& snapshot, const std::string& requestId, std::string* roomId) const` | 实现 prepare join response 对应的业务或工具逻辑。 |
+| [L49](../src/apps/remote/RoomSessionCoordinator.h#L49) | `PrepareCapacityUpdate` | 声明 | `[[nodiscard]] SessionCommandResult PrepareCapacityUpdate( const SessionEngineSnapshot& snapshot, std::uint32_t capacity, std::string* roomId) const` | 实现 prepare capacity update 对应的业务或工具逻辑。 |
+| [L54](../src/apps/remote/RoomSessionCoordinator.h#L54) | `PrepareLeave` | 声明 | `[[nodiscard]] SessionCommandResult PrepareLeave( SessionEngineSnapshot* snapshot, std::string* roomId) const` | 实现 prepare leave 对应的业务或工具逻辑。 |
+| [L57](../src/apps/remote/RoomSessionCoordinator.h#L57) | `ApplyLeaveFailed` | 声明 | `void ApplyLeaveFailed( SessionEngineSnapshot* snapshot, const std::string& errorCode, const std::string& errorMessage) const` | 更新或应用 apply leave failed 相关逻辑。 |
+| [L63](../src/apps/remote/RoomSessionCoordinator.h#L63) | `TakeNextScreenControlSequence` | 声明 | `TakeNextScreenControlSequence()` | 实现 take next screen control sequence 对应的业务或工具逻辑。 |
+| [L64](../src/apps/remote/RoomSessionCoordinator.h#L64) | `ResetActiveState` | 声明 | `void ResetActiveState()` | 重置或移除 reset active state 相关逻辑。 |
+
+## `src/apps/remote/ScreenShareCoordinator.cpp`
+
+[打开源码](../src/apps/remote/ScreenShareCoordinator.cpp) · **文件作用：** 实现 screen share coordinator 相关函数与文件级辅助逻辑。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L12](../src/apps/remote/ScreenShareCoordinator.cpp#L12) | `ScreenShareCoordinator::State` | struct | 定义 ScreenShareCoordinator::State 的 struct 类型和相关状态。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L17](../src/apps/remote/ScreenShareCoordinator.cpp#L17) | `ScreenShareCoordinator::ScreenShareCoordinator` | 定义 | `ScreenShareCoordinator::ScreenShareCoordinator() : state_(std::make_unique<State>())` | 构造并初始化 ScreenShareCoordinator 实例。 |
+| [L24](../src/apps/remote/ScreenShareCoordinator.cpp#L24) | `ScreenShareCoordinator::BeginShare` | 定义 | `std::uint64_t ScreenShareCoordinator::BeginShare()` | 启动 begin share 相关逻辑。 |
+| [L29](../src/apps/remote/ScreenShareCoordinator.cpp#L29) | `ScreenShareCoordinator::NextGeneration` | 定义 | `std::uint64_t ScreenShareCoordinator::NextGeneration() const` | 实现 next generation 对应的业务或工具逻辑。 |
+| [L34](../src/apps/remote/ScreenShareCoordinator.cpp#L34) | `ScreenShareCoordinator::CommitGeneration` | 定义 | `void ScreenShareCoordinator::CommitGeneration(std::uint64_t generation)` | 实现 commit generation 对应的业务或工具逻辑。 |
+| [L39](../src/apps/remote/ScreenShareCoordinator.cpp#L39) | `ScreenShareCoordinator::IsCurrentGeneration` | 定义 | `bool ScreenShareCoordinator::IsCurrentGeneration( std::uint64_t generation) const` | 判断 is current generation 相关逻辑。 |
+| [L45](../src/apps/remote/ScreenShareCoordinator.cpp#L45) | `ScreenShareCoordinator::HasCaptureSource` | 定义 | `bool ScreenShareCoordinator::HasCaptureSource() const` | 判断 has capture source 相关逻辑。 |
+| [L50](../src/apps/remote/ScreenShareCoordinator.cpp#L50) | `ScreenShareCoordinator::CaptureSourceIs` | 定义 | `bool ScreenShareCoordinator::CaptureSourceIs( const WindowsDesktopCaptureSource* source) const` | 采集 capture source is 相关逻辑。 |
+| [L57](../src/apps/remote/ScreenShareCoordinator.cpp#L57) | `ScreenShareCoordinator::CaptureSource` | 定义 | `ScreenShareCoordinator::CaptureSource() const` | 采集 capture source 相关逻辑。 |
+| [L62](../src/apps/remote/ScreenShareCoordinator.cpp#L62) | `ScreenShareCoordinator::SetCaptureSource` | 定义 | `void ScreenShareCoordinator::SetCaptureSource( webrtc::scoped_refptr<WindowsDesktopCaptureSource> source)` | 更新或应用 set capture source 相关逻辑。 |
+| [L69](../src/apps/remote/ScreenShareCoordinator.cpp#L69) | `ScreenShareCoordinator::TakeCaptureSource` | 定义 | `ScreenShareCoordinator::TakeCaptureSource()` | 实现 take capture source 对应的业务或工具逻辑。 |
+| [L74](../src/apps/remote/ScreenShareCoordinator.cpp#L74) | `ScreenShareCoordinator::SelectDisplay` | 定义 | `std::optional<DisplayDescriptor> ScreenShareCoordinator::SelectDisplay( const DisplayTopologySnapshot& topology, const std::string& preferredStableDisplayKey)` | 查询并返回 select display 相关逻辑。 |
+| [L87](../src/apps/remote/ScreenShareCoordinator.cpp#L87) | `ScreenShareCoordinator::ResolvePolicy` | 定义 | `ScreenStreamPolicyResult ScreenShareCoordinator::ResolvePolicy( std::uint32_t sourceWidth, std::uint32_t sourceHeight, const ScreenStreamPreferenceRequest& request)` | 查询并返回 resolve policy 相关逻辑。 |
+| [L98](../src/apps/remote/ScreenShareCoordinator.cpp#L98) | `ScreenShareCoordinator::MaximumCaptureFrameRate` | 定义 | `std::uint32_t ScreenShareCoordinator::MaximumCaptureFrameRate( DesktopCaptureImplementation implementation, const WindowsDesktopCaptureSource* source)` | 实现 maximum capture frame rate 对应的业务或工具逻辑。 |
+
+## `src/apps/remote/ScreenShareCoordinator.h`
+
+[打开源码](../src/apps/remote/ScreenShareCoordinator.h) · **文件作用：** 声明 screen share coordinator 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L19](../src/apps/remote/ScreenShareCoordinator.h#L19) | `WindowsDesktopCaptureSource` | class | 定义 WindowsDesktopCaptureSource 的 class 类型和相关状态。 |
+| [L27](../src/apps/remote/ScreenShareCoordinator.h#L27) | `ScreenShareCoordinator` | class | Owns the policy and monotonically increasing identity of a local screen share. The engine still owns the capture transport; this coordinator keeps direct and room sessions from ... |
+| [L65](../src/apps/remote/ScreenShareCoordinator.h#L65) | `State` | struct | 定义 State 的 struct 类型和相关状态。 |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L19](../src/apps/remote/ScreenShareCoordinator.h#L19) | `WindowsDesktopCaptureSource` | `class WindowsDesktopCaptureSource;` | 保存 windows desktop capture source 相关配置或运行状态。 |
+| [L65](../src/apps/remote/ScreenShareCoordinator.h#L65) | `State` | `struct State;` | 保存状态机当前状态：state。 |
+| [L66](../src/apps/remote/ScreenShareCoordinator.h#L66) | `state_` | `std::unique_ptr<State> state_;` | 保存状态机当前状态：state。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L29](../src/apps/remote/ScreenShareCoordinator.h#L29) | `ScreenShareCoordinator` | 声明 | `ScreenShareCoordinator()` | 实现 screen share coordinator 对应的业务或工具逻辑。 |
+| [L30](../src/apps/remote/ScreenShareCoordinator.h#L30) | `~ScreenShareCoordinator` | 声明 | `~ScreenShareCoordinator()` | 停止相关活动并释放 ScreenShareCoordinator 实例拥有的资源。 |
+| [L32](../src/apps/remote/ScreenShareCoordinator.h#L32) | `ScreenShareCoordinator` | 声明 | `ScreenShareCoordinator(const ScreenShareCoordinator&) = delete` | 实现 screen share coordinator 对应的业务或工具逻辑。 |
+| [L35](../src/apps/remote/ScreenShareCoordinator.h#L35) | `BeginShare` | 声明 | `[[nodiscard]] std::uint64_t BeginShare()` | 启动 begin share 相关逻辑。 |
+| [L36](../src/apps/remote/ScreenShareCoordinator.h#L36) | `NextGeneration` | 声明 | `[[nodiscard]] std::uint64_t NextGeneration() const` | 实现 next generation 对应的业务或工具逻辑。 |
+| [L37](../src/apps/remote/ScreenShareCoordinator.h#L37) | `CommitGeneration` | 声明 | `void CommitGeneration(std::uint64_t generation)` | 实现 commit generation 对应的业务或工具逻辑。 |
+| [L38](../src/apps/remote/ScreenShareCoordinator.h#L38) | `IsCurrentGeneration` | 声明 | `[[nodiscard]] bool IsCurrentGeneration( std::uint64_t generation) const` | 判断 is current generation 相关逻辑。 |
+| [L41](../src/apps/remote/ScreenShareCoordinator.h#L41) | `HasCaptureSource` | 声明 | `[[nodiscard]] bool HasCaptureSource() const` | 判断 has capture source 相关逻辑。 |
+| [L42](../src/apps/remote/ScreenShareCoordinator.h#L42) | `CaptureSourceIs` | 声明 | `[[nodiscard]] bool CaptureSourceIs( const WindowsDesktopCaptureSource* source) const` | 采集 capture source is 相关逻辑。 |
+| [L45](../src/apps/remote/ScreenShareCoordinator.h#L45) | `CaptureSource` | 声明 | `CaptureSource() const` | 采集 capture source 相关逻辑。 |
+| [L46](../src/apps/remote/ScreenShareCoordinator.h#L46) | `SetCaptureSource` | 声明 | `void SetCaptureSource( webrtc::scoped_refptr<WindowsDesktopCaptureSource> source)` | 更新或应用 set capture source 相关逻辑。 |
+| [L49](../src/apps/remote/ScreenShareCoordinator.h#L49) | `TakeCaptureSource` | 声明 | `TakeCaptureSource()` | 实现 take capture source 对应的业务或工具逻辑。 |
+| [L51](../src/apps/remote/ScreenShareCoordinator.h#L51) | `SelectDisplay` | 声明 | `[[nodiscard]] static std::optional<DisplayDescriptor> SelectDisplay( const DisplayTopologySnapshot& topology, const std::string& preferredStableDisplayKey)` | 查询并返回 select display 相关逻辑。 |
+| [L55](../src/apps/remote/ScreenShareCoordinator.h#L55) | `ResolvePolicy` | 声明 | `[[nodiscard]] static ScreenStreamPolicyResult ResolvePolicy( std::uint32_t sourceWidth, std::uint32_t sourceHeight, const ScreenStreamPreferenceRequest& request)` | 查询并返回 resolve policy 相关逻辑。 |
+| [L60](../src/apps/remote/ScreenShareCoordinator.h#L60) | `MaximumCaptureFrameRate` | 声明 | `[[nodiscard]] static std::uint32_t MaximumCaptureFrameRate( DesktopCaptureImplementation implementation, const WindowsDesktopCaptureSource* source = nullptr)` | 实现 maximum capture frame rate 对应的业务或工具逻辑。 |
+
+## `src/apps/remote/SessionDataChannelPolicy.h`
+
+[打开源码](../src/apps/remote/SessionDataChannelPolicy.h) · **文件作用：** 声明 session data channel policy 相关类型、接口、配置和成员状态。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L22](../src/apps/remote/SessionDataChannelPolicy.h#L22) | `IsClipboardWarmupPayload` | 定义 | `inline bool IsClipboardWarmupPayload( std::span<const std::uint8_t> payload)` | 判断 is clipboard warmup payload 相关逻辑。 |
+
+## `src/apps/remote/SessionDiagnosticsFormatting.cpp`
+
+[打开源码](../src/apps/remote/SessionDiagnosticsFormatting.cpp) · **文件作用：** 实现 session diagnostics formatting 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L13](../src/apps/remote/SessionDiagnosticsFormatting.cpp#L13) | `DesktopCaptureBackendName` | 定义 | `std::string DesktopCaptureBackendName( WindowsDesktopCaptureSource::CaptureBackend backend)` | 实现 desktop capture backend name 对应的业务或工具逻辑。 |
+| [L27](../src/apps/remote/SessionDiagnosticsFormatting.cpp#L27) | `DescribeEncoderRuntimeInstance` | 定义 | `std::string DescribeEncoderRuntimeInstance( const VideoEncoderInstanceRuntimeStatus& status)` | 实现 describe encoder runtime instance 对应的业务或工具逻辑。 |
+
+## `src/apps/remote/SessionDiagnosticsFormatting.h`
+
+[打开源码](../src/apps/remote/SessionDiagnosticsFormatting.h) · **文件作用：** 声明 session diagnostics formatting 相关类型、接口、配置和成员状态。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L13](../src/apps/remote/SessionDiagnosticsFormatting.h#L13) | `DesktopCaptureBackendName` | 声明 | `std::string DesktopCaptureBackendName( WindowsDesktopCaptureSource::CaptureBackend backend)` | 实现 desktop capture backend name 对应的业务或工具逻辑。 |
+| [L16](../src/apps/remote/SessionDiagnosticsFormatting.h#L16) | `DescribeEncoderRuntimeInstance` | 声明 | `std::string DescribeEncoderRuntimeInstance( const VideoEncoderInstanceRuntimeStatus& status)` | 实现 describe encoder runtime instance 对应的业务或工具逻辑。 |
+
+## `src/apps/remote/SessionStatsPoller.cpp`
+
+[打开源码](../src/apps/remote/SessionStatsPoller.cpp) · **文件作用：** 实现 session stats poller 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L10](../src/apps/remote/SessionStatsPoller.cpp#L10) | `SessionStatsPoller::~SessionStatsPoller` | 定义 | `SessionStatsPoller::~SessionStatsPoller()` | 停止相关活动并释放 SessionStatsPoller 实例拥有的资源。 |
+| [L15](../src/apps/remote/SessionStatsPoller.cpp#L15) | `SessionStatsPoller::Start` | 定义 | `void SessionStatsPoller::Start( PollAction action, const std::chrono::milliseconds interval)` | 启动 start 相关逻辑。 |
+| [L32](../src/apps/remote/SessionStatsPoller.cpp#L32) | `SessionStatsPoller::Stop` | 定义 | `void SessionStatsPoller::Stop()` | 停止 stop 相关逻辑。 |
+
+## `src/apps/remote/SessionStatsPoller.h`
+
+[打开源码](../src/apps/remote/SessionStatsPoller.h) · **文件作用：** 声明 session stats poller 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L14](../src/apps/remote/SessionStatsPoller.h#L14) | `SessionStatsPoller` | class | 定义 SessionStatsPoller 的 class 类型和相关状态。 |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L30](../src/apps/remote/SessionStatsPoller.h#L30) | `worker_` | `std::jthread worker_;` | 拥有后台执行线程或工作器：worker。 |
+| [L31](../src/apps/remote/SessionStatsPoller.h#L31) | `wake_` | `std::condition_variable_any wake_;` | 保存 wake 相关配置或运行状态。 |
+| [L32](../src/apps/remote/SessionStatsPoller.h#L32) | `waitMutex_` | `std::mutex waitMutex_;` | 保护跨线程共享状态：wait mutex。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L18](../src/apps/remote/SessionStatsPoller.h#L18) | `SessionStatsPoller` | 声明 | `SessionStatsPoller() = default` | 实现 session stats poller 对应的业务或工具逻辑。 |
+| [L19](../src/apps/remote/SessionStatsPoller.h#L19) | `~SessionStatsPoller` | 声明 | `~SessionStatsPoller()` | 停止相关活动并释放 SessionStatsPoller 实例拥有的资源。 |
+| [L21](../src/apps/remote/SessionStatsPoller.h#L21) | `SessionStatsPoller` | 声明 | `SessionStatsPoller(const SessionStatsPoller&) = delete` | 实现 session stats poller 对应的业务或工具逻辑。 |
+| [L24](../src/apps/remote/SessionStatsPoller.h#L24) | `Start` | 声明 | `void Start( PollAction action, std::chrono::milliseconds interval = std::chrono::seconds(1))` | 启动 start 相关逻辑。 |
+| [L27](../src/apps/remote/SessionStatsPoller.h#L27) | `Stop` | 声明 | `void Stop()` | 停止 stop 相关逻辑。 |
+
+## `src/apps/remote/VideoPipelinePreferenceNames.h`
+
+[打开源码](../src/apps/remote/VideoPipelinePreferenceNames.h) · **文件作用：** 声明 video pipeline preference names 相关类型、接口、配置和成员状态。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L14](../src/apps/remote/VideoPipelinePreferenceNames.h#L14) | `EncoderPreferenceName` | 定义 | `inline std::string EncoderPreferenceName(VideoEncoderPreference preference)` | 编码 encoder preference name 相关逻辑。 |
+| [L31](../src/apps/remote/VideoPipelinePreferenceNames.h#L31) | `DecoderPreferenceName` | 定义 | `inline std::string DecoderPreferenceName(VideoDecoderPreference preference)` | 解码或解析 decoder preference name 相关逻辑。 |
+| [L44](../src/apps/remote/VideoPipelinePreferenceNames.h#L44) | `DesktopCaptureImplementationName` | 定义 | `inline std::string DesktopCaptureImplementationName( DesktopCaptureImplementation implementation)` | 实现 desktop capture implementation name 对应的业务或工具逻辑。 |

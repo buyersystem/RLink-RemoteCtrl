@@ -21,34 +21,6 @@ if (-not (Test-Path -LiteralPath $sourceRoot -PathType Container)) {
 
 New-Item -ItemType Directory -Force -Path $outputRoot | Out-Null
 
-# These files are deliberately included in the middle of one function body.
-# Parsing them as standalone C++ would turn ordinary calls and local variables
-# into fake declarations. Their owning function is indexed from the fragment
-# that contains the real function signature.
-$bodyOnlyFragments = [System.Collections.Generic.HashSet[string]]::new(
-    [System.StringComparer]::OrdinalIgnoreCase)
-@(
-    'src/apps/controller/ControllerMainWindow.DiagnosticsPeers.inc',
-    'src/apps/controller/ControllerMainWindow.DiagnosticsOutbound.inc',
-    'src/apps/controller/ControllerMainWindow.DiagnosticsInbound.inc',
-    'src/apps/controller/ControllerMainWindow.DiagnosticsPublish.inc',
-    'src/apps/controller/ControllerMainWindow.LocalDeviceV2Patch.inc',
-    'src/apps/controller/ControllerMainWindow.SnapshotConnectivity.inc',
-    'src/apps/controller/ControllerMainWindow.SnapshotLocal.inc',
-    'src/apps/controller/ControllerMainWindow.SnapshotDebug.inc',
-    'src/apps/controller/ControllerMainWindow.SnapshotCopy.inc',
-    'src/apps/controller/ControllerMainWindow.SnapshotWindows.inc',
-    'src/apps/controller/ControllerMainWindow.UiDeviceRecent.inc',
-    'src/apps/controller/ControllerMainWindow.UiDiagnostics.inc',
-    'src/apps/controller/ControllerMainWindow.UiOwnedDevices.inc',
-    'src/apps/controller/ControllerMainWindow.UiSettings.inc',
-    'src/apps/controller/ControllerMainWindow.UiConnections.inc',
-    'src/apps/remote/InProcessSessionEngine.RoomPairDispatchPreamble.inc',
-    'src/apps/remote/InProcessSessionEngine.RoomPairControlDispatch.inc',
-    'src/apps/remote/InProcessSessionEngine.RoomPairScreenDispatch.inc',
-    'src/apps/remote/InProcessSessionEngine.RoomPairInputDispatch.inc'
-) | ForEach-Object { [void]$bodyOnlyFragments.Add($_) }
-
 function Normalize-Text {
     param([string]$Text)
 
@@ -239,20 +211,6 @@ function Get-FilePurpose {
     $extension = [System.IO.Path]::GetExtension($fileName).ToLowerInvariant()
     $topic = Convert-IdentifierToWords ($baseName -replace '\.', ' ')
 
-    if ($bodyOnlyFragments.Contains($RelativePath.Replace('\', '/'))) {
-        return '所属主函数的连续实现片段；这里只包含该函数的局部流程，不单独声明成员变量或顶层函数。'
-    }
-
-    if ($extension -eq '.inc') {
-        $parts = $baseName -split '\.'
-        $owner = $parts[0]
-        $slice = if ($parts.Count -gt 1) {
-            Convert-IdentifierToWords (($parts[1..($parts.Count - 1)]) -join ' ')
-        } else {
-            $topic
-        }
-        return "``$owner`` 的实现切片，集中实现 $slice 相关逻辑；成员状态仍定义在所属头文件中。"
-    }
     if ($extension -in @('.h', '.hpp')) {
         return "声明 $topic 相关类型、接口、配置和成员状态。"
     }
@@ -286,7 +244,7 @@ function Get-AreaDefinition {
     if ($normalized.StartsWith('src/server/')) {
         return @{ Key = '07_server'; Title = '信令服务器'; Description = 'WSS 认证、设备注册、direct session、协作房间、持久化、限流和诊断。' }
     }
-    return @{ Key = '08_other'; Title = '其他源码'; Description = '未归入现有模块的源码文件。' }
+    return @{ Key = '08_other'; Title = '应用入口与软件更新'; Description = '顶层应用入口、更新清单控制器与独立更新器。' }
 }
 
 function Get-TypeSymbols {
@@ -514,7 +472,7 @@ function Get-VariableSymbols {
 }
 
 $sourceFiles = Get-ChildItem -LiteralPath $sourceRoot -Recurse -File |
-    Where-Object { $_.Extension.ToLowerInvariant() -in @('.h', '.hpp', '.cpp', '.inc') } |
+    Where-Object { $_.Extension.ToLowerInvariant() -in @('.h', '.hpp', '.cpp') } |
     Sort-Object FullName
 
 $areas = [ordered]@{}
@@ -533,16 +491,10 @@ foreach ($file in $sourceFiles) {
     $relativePath = $file.FullName.Substring(
         $repositoryPrefix.Length).Replace('\', '/')
     $lines = [System.IO.File]::ReadAllLines($file.FullName)
-    if ($bodyOnlyFragments.Contains($relativePath)) {
-        $types = @()
-        $functions = @()
-        $variables = @()
-    } else {
-        $types = @(Get-TypeSymbols -Lines $lines)
-        $functionScan = Get-FunctionSymbols -Lines $lines -Extension $file.Extension.ToLowerInvariant()
-        $functions = @($functionScan.Symbols)
-        $variables = @(Get-VariableSymbols -Lines $lines -Extension $file.Extension.ToLowerInvariant() -FunctionBodyLines $functionScan.BodyLines)
-    }
+    $types = @(Get-TypeSymbols -Lines $lines)
+    $functionScan = Get-FunctionSymbols -Lines $lines -Extension $file.Extension.ToLowerInvariant()
+    $functions = @($functionScan.Symbols)
+    $variables = @(Get-VariableSymbols -Lines $lines -Extension $file.Extension.ToLowerInvariant() -FunctionBodyLines $functionScan.BodyLines)
     $area = Get-AreaDefinition -RelativePath $relativePath
 
     $record = [pscustomobject]@{
@@ -658,15 +610,15 @@ $readme = [System.Text.StringBuilder]::new()
 [void]$readme.AppendLine()
 [void]$readme.AppendLine('这套文档按源码文件回答四个问题：这个文件负责什么、定义哪些类型、保存哪些长期状态、提供哪些函数。每个符号都链接到当前源码行。')
 [void]$readme.AppendLine()
-[void]$readme.AppendLine('建议先读人工整理的 [核心源码符号说明](00_核心符号说明.md)，建立三条会话路径、对象所有权和线程关系；再用下面的自动分册查全量符号。')
+[void]$readme.AppendLine('建议先读人工整理的 [核心源码阅读指南](00_核心符号说明.md)，建立模块边界、对象所有权和线程关系；再用下面的自动分册查全量符号。')
 [void]$readme.AppendLine()
 [void]$readme.AppendLine('## 阅读边界')
 [void]$readme.AppendLine()
-[void]$readme.AppendLine('- 收录 `src` 下全部 `.h/.hpp/.cpp/.inc` 文件。')
+[void]$readme.AppendLine('- 收录 `src` 下全部 `.h/.hpp/.cpp` 文件。')
 [void]$readme.AppendLine('- “变量”只收录成员字段和文件级常量/状态，不罗列函数内部临时变量、循环下标和 lambda 捕获。')
 [void]$readme.AppendLine('- “函数”同时收录头文件声明和实现文件定义，因此同一函数可能在两处出现，方便从接口或实现双向查找。')
 [void]$readme.AppendLine('- 紧邻源码注释优先作为作用说明；没有注释时按命名生成中文提示。自动提示是导航，不替代对函数体和调用方的阅读。')
-[void]$readme.AppendLine('- `.inc` 属于其主类的实现切片，成员变量通常只会在主 `.h` 中列出。')
+[void]$readme.AppendLine('- 大型类按职责拆成 `ClassName.Topic.cpp` 实现文件；共享状态与接口仍以对应 `.h` 为准。')
 [void]$readme.AppendLine()
 [void]$readme.AppendLine('## 规模')
 [void]$readme.AppendLine()
@@ -690,7 +642,7 @@ foreach ($entry in ($areas.GetEnumerator() | Sort-Object Name)) {
 [void]$readme.AppendLine('1. 先在本页选择所属模块。')
 [void]$readme.AppendLine('2. 在分册中搜索类名、函数名、变量名或文件名。')
 [void]$readme.AppendLine('3. 点击行号进入源码，检查调用者、锁、generation/sequence 和失败路径。')
-[void]$readme.AppendLine('4. 结合人工整理的 [核心源码符号说明](00_核心符号说明.md) 理解跨模块调用和对象所有权。')
+[void]$readme.AppendLine('4. 结合人工整理的 [核心源码阅读指南](00_核心符号说明.md) 理解跨模块调用和对象所有权。')
 [void]$readme.AppendLine()
 [void]$readme.AppendLine('常见入口：')
 [void]$readme.AppendLine()

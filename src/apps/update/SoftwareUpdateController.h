@@ -6,6 +6,7 @@
 #include <functional>
 
 #include <QObject>
+#include <QList>
 #include <QPointer>
 #include <QString>
 #include <QStringList>
@@ -53,7 +54,9 @@ public:
 
 private:
     void PublishSnapshot();
+    void StartNextManifestRequest();
     void FinishCheck(QNetworkReply* reply);
+    void FailCurrentManifest(const QString& message);
     void SetFailure(const QString& message, bool manualRequest);
 
     QNetworkAccessManager* network_ = nullptr;
@@ -61,8 +64,11 @@ private:
     QByteArray responseBody_;
     Snapshot snapshot_;
     StateChangedCallback stateChangedCallback_;
-    QUrl manifestUrl_;
-    QUrl packageUrl_;
+    QList<QUrl> manifestUrls_;
+    QList<QUrl> packageUrls_;
+    QUrl activeManifestUrl_;
+    qsizetype nextManifestIndex_ = 0;
+    QStringList manifestErrors_;
     QString packageSha256_;
     qint64 packageSize_ = -1;
 };

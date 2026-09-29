@@ -789,6 +789,20 @@ QFrame#profileCard:hover {
     background: #E9ECEE;
     border-color: #C9CED6;
 }
+QToolButton#profileUpdateButton {
+    background: #E8EDFF;
+    border: 1px solid #C8D2FF;
+    border-radius: 10px;
+    padding: 6px;
+}
+QToolButton#profileUpdateButton:hover {
+    background: #DCE4FF;
+    border-color: #AAB9FF;
+}
+QToolButton#profileUpdateButton:pressed {
+    background: #CDD8FF;
+    border-color: #8FA3F7;
+}
 QLabel#profileAvatar {
     background: #315EFB;
     border-radius: 17px;

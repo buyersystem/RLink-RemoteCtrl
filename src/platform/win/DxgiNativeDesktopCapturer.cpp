@@ -10,6 +10,7 @@
 #include <d3d10_1.h>
 #include <d3d11.h>
 #include <dxgi1_2.h>
+#include <dxgi1_5.h>
 #include <wrl/client.h>
 
 #include "api/make_ref_counted.h"
@@ -179,10 +180,32 @@ public:
             Reset();
             return false;
         }
-        result = output1->DuplicateOutput(
-            device.Get(), &duplication);
+        // Prefer explicit format negotiation on Windows 10 and later.  The
+        // legacy DuplicateOutput contract says that it converts the desktop
+        // to BGRA8, but some HDR/full-screen driver paths have returned their
+        // native scan-out format instead.  Requesting only BGRA8 keeps the
+        // rest of the capture and encoder pipeline format-stable.
+        ComPtr<IDXGIOutput5> output5;
+        if (SUCCEEDED(output.As(&output5)) && output5) {
+            constexpr DXGI_FORMAT supportedFormats[] = {
+                DXGI_FORMAT_B8G8R8A8_UNORM,
+            };
+            result = output5->DuplicateOutput1(
+                device.Get(),
+                0,
+                static_cast<UINT>(std::size(supportedFormats)),
+                supportedFormats,
+                &duplication);
+        } else {
+            result = E_NOINTERFACE;
+        }
         if (FAILED(result) || !duplication) {
-            error = HResultText("DuplicateOutput", result);
+            duplication.Reset();
+            result = output1->DuplicateOutput(
+                device.Get(), &duplication);
+        }
+        if (FAILED(result) || !duplication) {
+            error = HResultText("Desktop duplication", result);
             Reset();
             return false;
         }
@@ -224,7 +247,12 @@ public:
         if (source.Format != DXGI_FORMAT_B8G8R8A8_UNORM &&
             source.Format != DXGI_FORMAT_B8G8R8A8_UNORM_SRGB) {
             duplication->ReleaseFrame();
-            error = "The native DXGI desktop texture is not BGRA8.";
+            std::ostringstream stream;
+            stream << "The native DXGI desktop texture is not BGRA8 "
+                   << "(DXGI_FORMAT="
+                   << static_cast<unsigned int>(source.Format)
+                   << ").";
+            error = stream.str();
             return Result::kFailed;
         }
 

@@ -1,10 +1,82 @@
 # WebRTC 传输与媒体运行时
 
-> 自动生成于 2026-09-06，源码树 `1ae783c8db12-dirty`。请运行 `tools/Generate-SourceSymbolReference.ps1` 刷新。
+> 自动生成于 2026-09-28，源码树 `f12aea4209d9-dirty`。请运行 `tools/Generate-SourceSymbolReference.ps1` 刷新。
 
 PeerConnection、RTP sender、DataChannel、统计、编解码工厂与运行时线程。
 
-本册共收录 27 个源码文件。函数与变量的中文作用优先采用源码紧邻注释；无注释时根据符号命名生成阅读提示，最终语义仍以源码为准。
+本册共收录 31 个源码文件。函数与变量的中文作用优先采用源码紧邻注释；无注释时根据符号命名生成阅读提示，最终语义仍以源码为准。
+
+## `src/webrtc/DataChannelManager.cpp`
+
+[打开源码](../src/webrtc/DataChannelManager.cpp) · **文件作用：** 实现 data channel manager 相关函数与文件级辅助逻辑。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L32](../src/webrtc/DataChannelManager.cpp#L32) | `DataChannelManager::Binding` | class | 定义 DataChannelManager::Binding 的 class 类型和相关状态。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L14](../src/webrtc/DataChannelManager.cpp#L14) | `ToPublicState` | 定义 | `DataChannelState ToPublicState( webrtc::DataChannelInterface::DataState state)` | 实现 to public state 对应的业务或工具逻辑。 |
+| [L35](../src/webrtc/DataChannelManager.cpp#L35) | `Binding` | 定义 | `Binding(DataChannelManager* owner, webrtc::scoped_refptr<webrtc::DataChannelInterface> channel) : owner_(owner), channel_(std::move(channel))` | 实现 binding 对应的业务或工具逻辑。 |
+| [L42](../src/webrtc/DataChannelManager.cpp#L42) | `~Binding` | 定义 | `~Binding() override { channel_->UnregisterObserver(); }` | 停止相关活动并释放 Binding 实例拥有的资源。 |
+| [L44](../src/webrtc/DataChannelManager.cpp#L44) | `Channel` | 定义 | `webrtc::scoped_refptr<webrtc::DataChannelInterface> Channel() const` | 实现 channel 对应的业务或工具逻辑。 |
+| [L49](../src/webrtc/DataChannelManager.cpp#L49) | `Close` | 定义 | `void Close() { channel_->Close(); }` | 关闭并清理 close 相关逻辑。 |
+| [L51](../src/webrtc/DataChannelManager.cpp#L51) | `OnStateChange` | 定义 | `void OnStateChange() override` | 接收并处理 on state change 相关逻辑。 |
+| [L56](../src/webrtc/DataChannelManager.cpp#L56) | `OnMessage` | 定义 | `void OnMessage(const webrtc::DataBuffer& buffer) override` | 接收并处理 on message 相关逻辑。 |
+| [L66](../src/webrtc/DataChannelManager.cpp#L66) | `DataChannelManager::DataChannelManager` | 定义 | `DataChannelManager::DataChannelManager(StateCallback stateCallback, MessageCallback messageCallback) : stateCallback_(std::move(stateCallback)), messageCallback_(std::move(messageCallback)) {}` | 构造并初始化 DataChannelManager 实例。 |
+| [L72](../src/webrtc/DataChannelManager.cpp#L72) | `DataChannelManager::~DataChannelManager` | 定义 | `DataChannelManager::~DataChannelManager()` | 停止相关活动并释放 DataChannelManager 实例拥有的资源。 |
+| [L77](../src/webrtc/DataChannelManager.cpp#L77) | `DataChannelManager::Create` | 定义 | `std::optional<DataChannelCreateError> DataChannelManager::Create( webrtc::scoped_refptr<webrtc::PeerConnectionInterface> peer, const std::vector<DataChannelSpec>& channels)` | 创建或初始化 create 相关逻辑。 |
+| [L135](../src/webrtc/DataChannelManager.cpp#L135) | `DataChannelManager::Attach` | 定义 | `bool DataChannelManager::Attach( webrtc::scoped_refptr<webrtc::DataChannelInterface> channel)` | 实现 attach 对应的业务或工具逻辑。 |
+| [L159](../src/webrtc/DataChannelManager.cpp#L159) | `DataChannelManager::Send` | 定义 | `SendResult DataChannelManager::Send( const std::string& channelName, std::span<const std::uint8_t> data, bool binary) const` | 发送或发布 send 相关逻辑。 |
+| [L183](../src/webrtc/DataChannelManager.cpp#L183) | `DataChannelManager::BufferedAmount` | 定义 | `std::optional<std::uint64_t> DataChannelManager::BufferedAmount( const std::string& channelName) const` | 实现 buffered amount 对应的业务或工具逻辑。 |
+| [L202](../src/webrtc/DataChannelManager.cpp#L202) | `DataChannelManager::Close` | 定义 | `void DataChannelManager::Close()` | 关闭并清理 close 相关逻辑。 |
+| [L215](../src/webrtc/DataChannelManager.cpp#L215) | `DataChannelManager::Contains` | 定义 | `bool DataChannelManager::Contains(const std::string& label) const` | 实现 contains 对应的业务或工具逻辑。 |
+| [L221](../src/webrtc/DataChannelManager.cpp#L221) | `DataChannelManager::PublishState` | 定义 | `void DataChannelManager::PublishState( webrtc::scoped_refptr<webrtc::DataChannelInterface> channel)` | 发送或发布 publish state 相关逻辑。 |
+| [L237](../src/webrtc/DataChannelManager.cpp#L237) | `DataChannelManager::PublishMessage` | 定义 | `void DataChannelManager::PublishMessage( const std::string& label, const webrtc::DataBuffer& buffer)` | 发送或发布 publish message 相关逻辑。 |
+
+## `src/webrtc/DataChannelManager.h`
+
+[打开源码](../src/webrtc/DataChannelManager.h) · **文件作用：** 声明 data channel manager 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L23](../src/webrtc/DataChannelManager.h#L23) | `DataChannelCreateError` | struct | 定义 DataChannelCreateError 的 struct 类型和相关状态。 |
+| [L28](../src/webrtc/DataChannelManager.h#L28) | `DataChannelManager` | class | 定义 DataChannelManager 的 class 类型和相关状态。 |
+| [L54](../src/webrtc/DataChannelManager.h#L54) | `Binding` | class | 定义 Binding 的 class 类型和相关状态。 |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L24](../src/webrtc/DataChannelManager.h#L24) | `code` | `std::string code;` | 保存 code 相关配置或运行状态。 |
+| [L25](../src/webrtc/DataChannelManager.h#L25) | `message` | `std::string message;` | 保存 message 相关配置或运行状态。 |
+| [L54](../src/webrtc/DataChannelManager.h#L54) | `Binding` | `class Binding;` | 保存 binding 相关配置或运行状态。 |
+| [L62](../src/webrtc/DataChannelManager.h#L62) | `mutex_` | `mutable std::mutex mutex_;` | 保护跨线程共享状态：mutex。 |
+| [L63](../src/webrtc/DataChannelManager.h#L63) | `channels_` | `std::unordered_map<std::string, std::unique_ptr<Binding>> channels_;` | 保存 channels 相关配置或运行状态。 |
+| [L64](../src/webrtc/DataChannelManager.h#L64) | `stateCallback_` | `StateCallback stateCallback_;` | 保存回调或观察者入口：state callback。 |
+| [L65](../src/webrtc/DataChannelManager.h#L65) | `messageCallback_` | `MessageCallback messageCallback_;` | 保存回调或观察者入口：message callback。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L34](../src/webrtc/DataChannelManager.h#L34) | `DataChannelManager` | 声明 | `DataChannelManager(StateCallback stateCallback, MessageCallback messageCallback)` | 实现 data channel manager 对应的业务或工具逻辑。 |
+| [L36](../src/webrtc/DataChannelManager.h#L36) | `~DataChannelManager` | 声明 | `~DataChannelManager()` | 停止相关活动并释放 DataChannelManager 实例拥有的资源。 |
+| [L38](../src/webrtc/DataChannelManager.h#L38) | `DataChannelManager` | 声明 | `DataChannelManager(const DataChannelManager&) = delete` | 实现 data channel manager 对应的业务或工具逻辑。 |
+| [L41](../src/webrtc/DataChannelManager.h#L41) | `Create` | 声明 | `std::optional<DataChannelCreateError> Create( webrtc::scoped_refptr<webrtc::PeerConnectionInterface> peer, const std::vector<DataChannelSpec>& channels)` | 创建或初始化 create 相关逻辑。 |
+| [L44](../src/webrtc/DataChannelManager.h#L44) | `Attach` | 声明 | `bool Attach( webrtc::scoped_refptr<webrtc::DataChannelInterface> channel)` | 实现 attach 对应的业务或工具逻辑。 |
+| [L46](../src/webrtc/DataChannelManager.h#L46) | `Send` | 声明 | `SendResult Send(const std::string& channelName, std::span<const std::uint8_t> data, bool binary) const` | 发送或发布 send 相关逻辑。 |
+| [L49](../src/webrtc/DataChannelManager.h#L49) | `BufferedAmount` | 声明 | `std::optional<std::uint64_t> BufferedAmount( const std::string& channelName) const` | 实现 buffered amount 对应的业务或工具逻辑。 |
+| [L51](../src/webrtc/DataChannelManager.h#L51) | `Close` | 声明 | `void Close()` | 关闭并清理 close 相关逻辑。 |
+| [L56](../src/webrtc/DataChannelManager.h#L56) | `Contains` | 声明 | `bool Contains(const std::string& label) const` | 实现 contains 对应的业务或工具逻辑。 |
+| [L57](../src/webrtc/DataChannelManager.h#L57) | `PublishState` | 声明 | `void PublishState( webrtc::scoped_refptr<webrtc::DataChannelInterface> channel)` | 发送或发布 publish state 相关逻辑。 |
+| [L59](../src/webrtc/DataChannelManager.h#L59) | `PublishMessage` | 声明 | `void PublishMessage(const std::string& label, const webrtc::DataBuffer& buffer)` | 发送或发布 publish message 相关逻辑。 |
 
 ## `src/webrtc/IWebRtcSession.h`
 
@@ -103,85 +175,44 @@ PeerConnection、RTP sender、DataChannel、统计、编解码工厂与运行时
 | [L174](../src/webrtc/IWebRtcSession.h#L174) | `StatsSnapshot` | 定义 | `virtual WebRtcSessionStatsSnapshot StatsSnapshot() const { return {}; }` | 实现 stats snapshot 对应的业务或工具逻辑。 |
 | [L175](../src/webrtc/IWebRtcSession.h#L175) | `Close` | 声明 | `virtual void Close() = 0` | 关闭并清理 close 相关逻辑。 |
 
-## `src/webrtc/LibWebRtcSession.AudioSlot.inc`
+## `src/webrtc/LibWebRtcSession.AudioSlot.cpp`
 
-[打开源码](../src/webrtc/LibWebRtcSession.AudioSlot.inc) · **文件作用：** `LibWebRtcSession` 的实现切片，集中实现 audio slot 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/webrtc/LibWebRtcSession.AudioSlot.cpp) · **文件作用：** 实现 lib web rtc session audio slot 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/webrtc/LibWebRtcSession.AudioSlot.inc#L4) | `LibWebRtcSession::PrepareAudioTransceiverSlot` | 定义 | `webrtc::RTCError LibWebRtcSession::PrepareAudioTransceiverSlot( const std::string& slot)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L45](../src/webrtc/LibWebRtcSession.AudioSlot.inc#L45) | `LibWebRtcSession::BindNegotiatedAudioTransceiverSlot` | 定义 | `webrtc::RTCError LibWebRtcSession::BindNegotiatedAudioTransceiverSlot( const std::string& slot)` | 实现 bind negotiated audio transceiver slot 对应的业务或工具逻辑。 |
-| [L85](../src/webrtc/LibWebRtcSession.AudioSlot.inc#L85) | `LibWebRtcSession::SetAudioSlotTrack` | 定义 | `webrtc::RTCError LibWebRtcSession::SetAudioSlotTrack( const std::string& slot, webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track)` | 更新或应用 set audio slot track 相关逻辑。 |
-| [L123](../src/webrtc/LibWebRtcSession.AudioSlot.inc#L123) | `LibWebRtcSession::SetRemoteAudioSlotEnabled` | 定义 | `void LibWebRtcSession::SetRemoteAudioSlotEnabled( const std::string& slot, bool enabled)` | 更新或应用 set remote audio slot enabled 相关逻辑。 |
-| [L140](../src/webrtc/LibWebRtcSession.AudioSlot.inc#L140) | `LibWebRtcSession::AudioSlotPrepared` | 定义 | `bool LibWebRtcSession::AudioSlotPrepared(const std::string& slot) const` | 实现 audio slot prepared 对应的业务或工具逻辑。 |
-| [L146](../src/webrtc/LibWebRtcSession.AudioSlot.inc#L146) | `LibWebRtcSession::PreparedVideoSlotCount` | 定义 | `std::size_t LibWebRtcSession::PreparedVideoSlotCount() const` | 实现 prepared video slot count 对应的业务或工具逻辑。 |
-| [L152](../src/webrtc/LibWebRtcSession.AudioSlot.inc#L152) | `LibWebRtcSession::SetRemoteVideoSink` | 定义 | `void LibWebRtcSession::SetRemoteVideoSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set remote video sink 相关逻辑。 |
-| [L178](../src/webrtc/LibWebRtcSession.AudioSlot.inc#L178) | `LibWebRtcSession::SetRemoteVideoSlotSink` | 定义 | `void LibWebRtcSession::SetRemoteVideoSlotSink( const std::string& slot, webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set remote video slot sink 相关逻辑。 |
+| [L10](../src/webrtc/LibWebRtcSession.AudioSlot.cpp#L10) | `LibWebRtcSession::PrepareAudioTransceiverSlot` | 定义 | `webrtc::RTCError LibWebRtcSession::PrepareAudioTransceiverSlot( const std::string& slot)` | 实现 prepare audio transceiver slot 对应的业务或工具逻辑。 |
+| [L51](../src/webrtc/LibWebRtcSession.AudioSlot.cpp#L51) | `LibWebRtcSession::BindNegotiatedAudioTransceiverSlot` | 定义 | `webrtc::RTCError LibWebRtcSession::BindNegotiatedAudioTransceiverSlot( const std::string& slot)` | 实现 bind negotiated audio transceiver slot 对应的业务或工具逻辑。 |
+| [L91](../src/webrtc/LibWebRtcSession.AudioSlot.cpp#L91) | `LibWebRtcSession::SetAudioSlotTrack` | 定义 | `webrtc::RTCError LibWebRtcSession::SetAudioSlotTrack( const std::string& slot, webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track)` | 更新或应用 set audio slot track 相关逻辑。 |
+| [L129](../src/webrtc/LibWebRtcSession.AudioSlot.cpp#L129) | `LibWebRtcSession::SetRemoteAudioSlotEnabled` | 定义 | `void LibWebRtcSession::SetRemoteAudioSlotEnabled( const std::string& slot, bool enabled)` | 更新或应用 set remote audio slot enabled 相关逻辑。 |
+| [L146](../src/webrtc/LibWebRtcSession.AudioSlot.cpp#L146) | `LibWebRtcSession::AudioSlotPrepared` | 定义 | `bool LibWebRtcSession::AudioSlotPrepared(const std::string& slot) const` | 实现 audio slot prepared 对应的业务或工具逻辑。 |
+| [L152](../src/webrtc/LibWebRtcSession.AudioSlot.cpp#L152) | `LibWebRtcSession::PreparedVideoSlotCount` | 定义 | `std::size_t LibWebRtcSession::PreparedVideoSlotCount() const` | 实现 prepared video slot count 对应的业务或工具逻辑。 |
+| [L158](../src/webrtc/LibWebRtcSession.AudioSlot.cpp#L158) | `LibWebRtcSession::SetRemoteVideoSink` | 定义 | `void LibWebRtcSession::SetRemoteVideoSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set remote video sink 相关逻辑。 |
+| [L184](../src/webrtc/LibWebRtcSession.AudioSlot.cpp#L184) | `LibWebRtcSession::SetRemoteVideoSlotSink` | 定义 | `void LibWebRtcSession::SetRemoteVideoSlotSink( const std::string& slot, webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set remote video slot sink 相关逻辑。 |
 
 ## `src/webrtc/LibWebRtcSession.cpp`
 
 [打开源码](../src/webrtc/LibWebRtcSession.cpp) · **文件作用：** 实现 lib web rtc session 相关函数与文件级辅助逻辑。
 
-### 类型
+### 函数
 
-| 行 | 类型 | 种类 | 作用 |
-|---:|---|---|---|
-| [L81](../src/webrtc/LibWebRtcSession.cpp#L81) | `CreateDescriptionCallback` | class | 定义 CreateDescriptionCallback 的 class 类型和相关状态。 |
-| [L109](../src/webrtc/LibWebRtcSession.cpp#L109) | `SetDescriptionCallback` | class | 定义 SetDescriptionCallback 的 class 类型和相关状态。 |
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L8](../src/webrtc/LibWebRtcSession.cpp#L8) | `LibWebRtcSession::DetachRemoteVideoSink` | 定义 | `void LibWebRtcSession::DetachRemoteVideoSink()` | 实现 detach remote video sink 对应的业务或工具逻辑。 |
 
-### 成员与文件级变量
+## `src/webrtc/LibWebRtcSession.DataChannels.cpp`
 
-| 行 | 变量 | 声明 | 作用 |
-|---:|---|---|---|
-| [L26](../src/webrtc/LibWebRtcSession.cpp#L26) | `kMaximumScreenBitrateBps` | `constexpr int kMaximumScreenBitrateBps = 100'000'000;` | 定义 maximum screen bitrate bps 的编译期常量或产品边界。 |
-| [L27](../src/webrtc/LibWebRtcSession.cpp#L27) | `kDesktopStartupProbeFloorBps` | `constexpr int kDesktopStartupProbeFloorBps = 2'000'000;` | 定义 desktop startup probe floor bps 的编译期常量或产品边界。 |
-| [L28](../src/webrtc/LibWebRtcSession.cpp#L28) | `kDefaultWebRtcMinimumBitrateBps` | `constexpr int kDefaultWebRtcMinimumBitrateBps = 30'000;` | 定义 default web rtc minimum bitrate bps 的编译期常量或产品边界。 |
+[打开源码](../src/webrtc/LibWebRtcSession.DataChannels.cpp) · **文件作用：** 实现 lib web rtc session data channels 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L30](../src/webrtc/LibWebRtcSession.cpp#L30) | `SteadyNowMs` | 定义 | `std::uint64_t SteadyNowMs()` | 实现 steady now ms 对应的业务或工具逻辑。 |
-| [L37](../src/webrtc/LibWebRtcSession.cpp#L37) | `ProgressiveBitrateCeilingStatusName` | 定义 | `const char* ProgressiveBitrateCeilingStatusName( ProgressiveBitrateCeilingStatus status)` | 实现 progressive bitrate ceiling status name 对应的业务或工具逻辑。 |
-| [L57](../src/webrtc/LibWebRtcSession.cpp#L57) | `AdaptiveScreenFrameRateStatusName` | 定义 | `const char* AdaptiveScreenFrameRateStatusName( AdaptiveScreenFrameRateStatus status)` | 实现 adaptive screen frame rate status name 对应的业务或工具逻辑。 |
-| [L88](../src/webrtc/LibWebRtcSession.cpp#L88) | `CreateDescriptionCallback` | 定义 | `CreateDescriptionCallback(SuccessCallback success, FailureCallback failure) : success_(std::move(success)), failure_(std::move(failure)) {}` | 创建或初始化 create description callback 相关逻辑。 |
-| [L93](../src/webrtc/LibWebRtcSession.cpp#L93) | `OnSuccess` | 定义 | `void OnSuccess(webrtc::SessionDescriptionInterface* description) override` | 接收并处理 on success 相关逻辑。 |
-| [L99](../src/webrtc/LibWebRtcSession.cpp#L99) | `OnFailure` | 定义 | `void OnFailure(webrtc::RTCError error) override` | 接收并处理 on failure 相关逻辑。 |
-| [L115](../src/webrtc/LibWebRtcSession.cpp#L115) | `SetDescriptionCallback` | 定义 | `SetDescriptionCallback(SuccessCallback success, FailureCallback failure) : success_(std::move(success)), failure_(std::move(failure)) {}` | 更新或应用 set description callback 相关逻辑。 |
-| [L119](../src/webrtc/LibWebRtcSession.cpp#L119) | `OnSuccess` | 定义 | `void OnSuccess() override { success_(); }` | 接收并处理 on success 相关逻辑。 |
-| [L121](../src/webrtc/LibWebRtcSession.cpp#L121) | `OnFailure` | 定义 | `void OnFailure(webrtc::RTCError error) override` | 接收并处理 on failure 相关逻辑。 |
-| [L131](../src/webrtc/LibWebRtcSession.cpp#L131) | `ToNativeSdpType` | 定义 | `webrtc::SdpType ToNativeSdpType(SessionDescriptionType type)` | 实现 to native sdp type 对应的业务或工具逻辑。 |
-| [L137](../src/webrtc/LibWebRtcSession.cpp#L137) | `ToPublicDataChannelState` | 定义 | `DataChannelState ToPublicDataChannelState( webrtc::DataChannelInterface::DataState state)` | 实现 to public data channel state 对应的业务或工具逻辑。 |
-| [L153](../src/webrtc/LibWebRtcSession.cpp#L153) | `ToPublicIceGatheringState` | 定义 | `WebRtcIceGatheringState ToPublicIceGatheringState( webrtc::PeerConnectionInterface::IceGatheringState state)` | 实现 to public ice gathering state 对应的业务或工具逻辑。 |
-| [L167](../src/webrtc/LibWebRtcSession.cpp#L167) | `EqualsIgnoreCase` | 定义 | `bool EqualsIgnoreCase(const std::string& left, const char* right)` | 判断 equals ignore case 相关逻辑。 |
-| [L182](../src/webrtc/LibWebRtcSession.cpp#L182) | `H264CodecPreferences` | 定义 | `std::vector<webrtc::RtpCodecCapability> H264CodecPreferences( webrtc::PeerConnectionFactoryInterface* factory)` | 实现 h264 codec preferences 对应的业务或工具逻辑。 |
-| [L208](../src/webrtc/LibWebRtcSession.cpp#L208) | `LibWebRtcSession::DetachRemoteVideoSink` | 定义 | `void LibWebRtcSession::DetachRemoteVideoSink()` | 实现 detach remote video sink 对应的业务或工具逻辑。 |
-
-## `src/webrtc/LibWebRtcSession.DataChannelCallbacks.inc`
-
-[打开源码](../src/webrtc/LibWebRtcSession.DataChannelCallbacks.inc) · **文件作用：** `LibWebRtcSession` 的实现切片，集中实现 data channel callbacks 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/webrtc/LibWebRtcSession.DataChannelCallbacks.inc#L4) | `LibWebRtcSession::AttachDataChannel` | 定义 | `void LibWebRtcSession::AttachDataChannel( webrtc::scoped_refptr<webrtc::DataChannelInterface> channel)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L27](../src/webrtc/LibWebRtcSession.DataChannelCallbacks.inc#L27) | `LibWebRtcSession::HandleDataChannelState` | 定义 | `void LibWebRtcSession::HandleDataChannelState( webrtc::scoped_refptr<webrtc::DataChannelInterface> channel)` | 接收并处理 handle data channel state 相关逻辑。 |
-| [L45](../src/webrtc/LibWebRtcSession.DataChannelCallbacks.inc#L45) | `LibWebRtcSession::HandleDataMessage` | 定义 | `void LibWebRtcSession::HandleDataMessage( const std::string& label, const webrtc::DataBuffer& buffer)` | 接收并处理 handle data message 相关逻辑。 |
-
-## `src/webrtc/LibWebRtcSession.DataChannels.inc`
-
-[打开源码](../src/webrtc/LibWebRtcSession.DataChannels.inc) · **文件作用：** `LibWebRtcSession` 的实现切片，集中实现 data channels 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/webrtc/LibWebRtcSession.DataChannels.inc#L4) | `LibWebRtcSession::CreateDataChannels` | 定义 | `OperationId LibWebRtcSession::CreateDataChannels( const std::vector<DataChannelSpec>& channels)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L72](../src/webrtc/LibWebRtcSession.DataChannels.inc#L72) | `LibWebRtcSession::SendData` | 定义 | `SendResult LibWebRtcSession::SendData(const std::string& channelName, std::span<const std::uint8_t> data, bool binary)` | 发送或发布 send data 相关逻辑。 |
-| [L100](../src/webrtc/LibWebRtcSession.DataChannels.inc#L100) | `LibWebRtcSession::DataChannelBufferedAmount` | 定义 | `LibWebRtcSession::DataChannelBufferedAmount( const std::string& channelName) const` | 实现 data channel buffered amount 对应的业务或工具逻辑。 |
+| [L10](../src/webrtc/LibWebRtcSession.DataChannels.cpp#L10) | `LibWebRtcSession::CreateDataChannels` | 定义 | `OperationId LibWebRtcSession::CreateDataChannels( const std::vector<DataChannelSpec>& channels)` | 创建或初始化 create data channels 相关逻辑。 |
+| [L30](../src/webrtc/LibWebRtcSession.DataChannels.cpp#L30) | `LibWebRtcSession::SendData` | 定义 | `SendResult LibWebRtcSession::SendData(const std::string& channelName, std::span<const std::uint8_t> data, bool binary)` | 发送或发布 send data 相关逻辑。 |
+| [L42](../src/webrtc/LibWebRtcSession.DataChannels.cpp#L42) | `LibWebRtcSession::DataChannelBufferedAmount` | 定义 | `LibWebRtcSession::DataChannelBufferedAmount( const std::string& channelName) const` | 实现 data channel buffered amount 对应的业务或工具逻辑。 |
 
 ## `src/webrtc/LibWebRtcSession.h`
 
@@ -191,283 +222,267 @@ PeerConnection、RTP sender、DataChannel、统计、编解码工厂与运行时
 
 | 行 | 类型 | 种类 | 作用 |
 |---:|---|---|---|
-| [L26](../src/webrtc/LibWebRtcSession.h#L26) | `PeerConnectionStatsCollector` | class | 定义 PeerConnectionStatsCollector 的 class 类型和相关状态。 |
-| [L28](../src/webrtc/LibWebRtcSession.h#L28) | `LibWebRtcSession` | class | 定义 LibWebRtcSession 的 class 类型和相关状态。 |
-| [L120](../src/webrtc/LibWebRtcSession.h#L120) | `CallbackGate` | class | 定义 CallbackGate 的 class 类型和相关状态。 |
-| [L121](../src/webrtc/LibWebRtcSession.h#L121) | `DataChannelBinding` | class | 定义 DataChannelBinding 的 class 类型和相关状态。 |
-| [L122](../src/webrtc/LibWebRtcSession.h#L122) | `VideoSlotBinding` | struct | 定义 VideoSlotBinding 的 struct 类型和相关状态。 |
-| [L144](../src/webrtc/LibWebRtcSession.h#L144) | `AudioSlotBinding` | struct | 定义 AudioSlotBinding 的 struct 类型和相关状态。 |
+| [L25](../src/webrtc/LibWebRtcSession.h#L25) | `PeerConnectionStatsCollector` | class | 定义 PeerConnectionStatsCollector 的 class 类型和相关状态。 |
+| [L26](../src/webrtc/LibWebRtcSession.h#L26) | `DataChannelManager` | class | 定义 DataChannelManager 的 class 类型和相关状态。 |
+| [L27](../src/webrtc/LibWebRtcSession.h#L27) | `MediaSlotManager` | class | 定义 MediaSlotManager 的 class 类型和相关状态。 |
+| [L28](../src/webrtc/LibWebRtcSession.h#L28) | `PeerNegotiator` | class | 定义 PeerNegotiator 的 class 类型和相关状态。 |
+| [L30](../src/webrtc/LibWebRtcSession.h#L30) | `LibWebRtcSession` | class | 定义 LibWebRtcSession 的 class 类型和相关状态。 |
+| [L122](../src/webrtc/LibWebRtcSession.h#L122) | `CallbackGate` | class | 定义 CallbackGate 的 class 类型和相关状态。 |
 
 ### 成员与文件级变量
 
 | 行 | 变量 | 声明 | 作用 |
 |---:|---|---|---|
-| [L26](../src/webrtc/LibWebRtcSession.h#L26) | `PeerConnectionStatsCollector` | `class PeerConnectionStatsCollector;` | 保存 peer connection stats collector 相关配置或运行状态。 |
-| [L117](../src/webrtc/LibWebRtcSession.h#L117) | `override` | `override;` | 保存 override 相关配置或运行状态。 |
-| [L120](../src/webrtc/LibWebRtcSession.h#L120) | `CallbackGate` | `class CallbackGate;` | 保存 callback gate 相关配置或运行状态。 |
-| [L121](../src/webrtc/LibWebRtcSession.h#L121) | `DataChannelBinding` | `class DataChannelBinding;` | 保存 data channel binding 相关配置或运行状态。 |
-| [L123](../src/webrtc/LibWebRtcSession.h#L123) | `transceiver` | `webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver;` | 保存 transceiver 相关配置或运行状态。 |
-| [L124](../src/webrtc/LibWebRtcSession.h#L124) | `remoteTrack` | `webrtc::scoped_refptr<webrtc::VideoTrackInterface> remoteTrack;` | 保存 remote track 相关配置或运行状态。 |
-| [L125](../src/webrtc/LibWebRtcSession.h#L125) | `remoteSink` | `webrtc::VideoSinkInterface<webrtc::VideoFrame>* remoteSink = nullptr;` | 保存回调或观察者入口：remote sink。 |
-| [L126](../src/webrtc/LibWebRtcSession.h#L126) | `configuredMaxFrameRate` | `std::uint32_t configuredMaxFrameRate = 0;` | 保存计数、尺寸或速率指标：configured max frame rate。 |
-| [L127](../src/webrtc/LibWebRtcSession.h#L127) | `configuredOutputWidth` | `std::uint32_t configuredOutputWidth = 0;` | 保存计数、尺寸或速率指标：configured output width。 |
-| [L128](../src/webrtc/LibWebRtcSession.h#L128) | `configuredOutputHeight` | `std::uint32_t configuredOutputHeight = 0;` | 保存计数、尺寸或速率指标：configured output height。 |
-| [L129](../src/webrtc/LibWebRtcSession.h#L129) | `configuredStartBitrateBps` | `std::uint64_t configuredStartBitrateBps = 0;` | 保存计数、尺寸或速率指标：configured start bitrate bps。 |
-| [L130](../src/webrtc/LibWebRtcSession.h#L130) | `configuredMaxBitrateBps` | `std::uint64_t configuredMaxBitrateBps = 0;` | 保存计数、尺寸或速率指标：configured max bitrate bps。 |
-| [L131](../src/webrtc/LibWebRtcSession.h#L131) | `adaptiveFrameRate` | `AdaptiveScreenFrameRateState adaptiveFrameRate;` | 保存计数、尺寸或速率指标：adaptive frame rate。 |
-| [L132](../src/webrtc/LibWebRtcSession.h#L132) | `adaptiveFrameRateRevision` | `std::uint64_t adaptiveFrameRateRevision = 0;` | 标记当前世代，用于拒绝过期异步结果：adaptive frame rate revision。 |
-| [L133](../src/webrtc/LibWebRtcSession.h#L133) | `adaptiveFrameRateError` | `std::string adaptiveFrameRateError;` | 保存最近错误或失败原因：adaptive frame rate error。 |
-| [L134](../src/webrtc/LibWebRtcSession.h#L134) | `sendingActive` | `bool sendingActive = false;` | 保存能力或开关状态：sending active。 |
-| [L135](../src/webrtc/LibWebRtcSession.h#L135) | `startBitrateBootstrapPending` | `bool startBitrateBootstrapPending = true;` | 保存待处理队列或请求：start bitrate bootstrap pending。 |
-| [L136](../src/webrtc/LibWebRtcSession.h#L136) | `bitrateBootstrapAttempts` | `std::uint32_t bitrateBootstrapAttempts = 0;` | 保存 bitrate bootstrap attempts 相关配置或运行状态。 |
-| [L137](../src/webrtc/LibWebRtcSession.h#L137) | `bitrateBootstrapSuccesses` | `std::uint32_t bitrateBootstrapSuccesses = 0;` | 保存 bitrate bootstrap successes 相关配置或运行状态。 |
-| [L138](../src/webrtc/LibWebRtcSession.h#L138) | `mediaReadyBitrateRestarts` | `std::uint32_t mediaReadyBitrateRestarts = 0;` | 保存 media ready bitrate restarts 相关配置或运行状态。 |
-| [L139](../src/webrtc/LibWebRtcSession.h#L139) | `allocationProbePulses` | `std::uint32_t allocationProbePulses = 0;` | 保存 allocation probe pulses 相关配置或运行状态。 |
-| [L140](../src/webrtc/LibWebRtcSession.h#L140) | `bitrateProbeFloorReleases` | `std::uint32_t bitrateProbeFloorReleases = 0;` | 保存 bitrate probe floor releases 相关配置或运行状态。 |
-| [L141](../src/webrtc/LibWebRtcSession.h#L141) | `bitrateProbeFloorActive` | `bool bitrateProbeFloorActive = false;` | 保存能力或开关状态：bitrate probe floor active。 |
-| [L142](../src/webrtc/LibWebRtcSession.h#L142) | `bitrateBootstrapError` | `std::string bitrateBootstrapError;` | 保存最近错误或失败原因：bitrate bootstrap error。 |
-| [L145](../src/webrtc/LibWebRtcSession.h#L145) | `name` | `std::string name;` | 保存路径、地址或显示名称：name。 |
-| [L146](../src/webrtc/LibWebRtcSession.h#L146) | `transceiver` | `webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver;` | 保存 transceiver 相关配置或运行状态。 |
-| [L147](../src/webrtc/LibWebRtcSession.h#L147) | `remoteTrack` | `webrtc::scoped_refptr<webrtc::AudioTrackInterface> remoteTrack;` | 保存 remote track 相关配置或运行状态。 |
-| [L148](../src/webrtc/LibWebRtcSession.h#L148) | `remotePlaybackEnabled` | `bool remotePlaybackEnabled = true;` | 保存能力或开关状态：remote playback enabled。 |
-| [L196](../src/webrtc/LibWebRtcSession.h#L196) | `mutex_` | `mutable std::mutex mutex_;` | 保护跨线程共享状态：mutex。 |
-| [L200](../src/webrtc/LibWebRtcSession.h#L200) | `videoSenderParametersMutex_` | `std::mutex videoSenderParametersMutex_;` | Serializes read-modify-write updates to RtpSender parameters. User preference changes, share activation and stats-driven per-viewer FPS adaptation may arrive on different threads. |
-| [L201](../src/webrtc/LibWebRtcSession.h#L201) | `nextOperationId_` | `std::atomic<OperationId> nextOperationId_{1};` | 保存身份或作用域标识：next operation id。 |
-| [L202](../src/webrtc/LibWebRtcSession.h#L202) | `callbackGate_` | `std::shared_ptr<CallbackGate> callbackGate_;` | 保存 callback gate 相关配置或运行状态。 |
-| [L203](../src/webrtc/LibWebRtcSession.h#L203) | `factory_` | `webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> factory_;` | 保存 factory 相关配置或运行状态。 |
-| [L204](../src/webrtc/LibWebRtcSession.h#L204) | `statsCollector_` | `std::unique_ptr<PeerConnectionStatsCollector> statsCollector_;` | 保存 stats collector 相关配置或运行状态。 |
-| [L205](../src/webrtc/LibWebRtcSession.h#L205) | `peerConnection_` | `webrtc::scoped_refptr<webrtc::PeerConnectionInterface> peerConnection_;` | 保存 peer connection 相关配置或运行状态。 |
-| [L206](../src/webrtc/LibWebRtcSession.h#L206) | `observer_` | `IWebRtcSessionObserver* observer_ = nullptr;` | 保存回调或观察者入口：observer。 |
-| [L207](../src/webrtc/LibWebRtcSession.h#L207) | `fastDesktopBweStartup_` | `bool fastDesktopBweStartup_ = false;` | 保存 fast desktop bwe startup 相关配置或运行状态。 |
-| [L208](../src/webrtc/LibWebRtcSession.h#L208) | `adaptiveDesktopNetworkFrameRate_` | `bool adaptiveDesktopNetworkFrameRate_ = false;` | 保存计数、尺寸或速率指标：adaptive desktop network frame rate。 |
-| [L209](../src/webrtc/LibWebRtcSession.h#L209) | `progressiveBitrateCeiling_` | `ProgressiveBitrateCeilingState progressiveBitrateCeiling_;` | 保存 progressive bitrate ceiling 相关配置或运行状态。 |
-| [L210](../src/webrtc/LibWebRtcSession.h#L210) | `progressiveBitrateCeilingRevision_` | `std::uint64_t progressiveBitrateCeilingRevision_ = 0;` | 标记当前世代，用于拒绝过期异步结果：progressive bitrate ceiling revision。 |
-| [L211](../src/webrtc/LibWebRtcSession.h#L211) | `progressiveBitrateCeilingError_` | `std::string progressiveBitrateCeilingError_;` | 保存最近错误或失败原因：progressive bitrate ceiling error。 |
-| [L213](../src/webrtc/LibWebRtcSession.h#L213) | `kUnknown` | `ScreenContentActivity::kUnknown;` | 定义 unknown 的编译期常量或产品边界。 |
-| [L214](../src/webrtc/LibWebRtcSession.h#L214) | `state_` | `WebRtcSessionState state_ = WebRtcSessionState::kNew;` | 保存状态机当前状态：state。 |
-| [L217](../src/webrtc/LibWebRtcSession.h#L217) | `kNew` | `webrtc::PeerConnectionInterface::PeerConnectionState::kNew;` | 定义 new 的编译期常量或产品边界。 |
-| [L219](../src/webrtc/LibWebRtcSession.h#L219) | `kIceConnectionNew` | `webrtc::PeerConnectionInterface::kIceConnectionNew;` | 定义 ice connection new 的编译期常量或产品边界。 |
-| [L221](../src/webrtc/LibWebRtcSession.h#L221) | `dataChannels_` | `dataChannels_;` | 保存 data channels 相关配置或运行状态。 |
-| [L222](../src/webrtc/LibWebRtcSession.h#L222) | `videoSlots_` | `std::unordered_map<std::string, VideoSlotBinding> videoSlots_;` | 保存 video slots 相关配置或运行状态。 |
-| [L223](../src/webrtc/LibWebRtcSession.h#L223) | `videoSlotOrder_` | `std::vector<std::string> videoSlotOrder_;` | 保存 video slot order 相关配置或运行状态。 |
-| [L224](../src/webrtc/LibWebRtcSession.h#L224) | `audioSlot_` | `AudioSlotBinding audioSlot_;` | 保存 audio slot 相关配置或运行状态。 |
-| [L225](../src/webrtc/LibWebRtcSession.h#L225) | `remoteVideoSink_` | `webrtc::VideoSinkInterface<webrtc::VideoFrame>* remoteVideoSink_ = nullptr;` | 保存回调或观察者入口：remote video sink。 |
-| [L226](../src/webrtc/LibWebRtcSession.h#L226) | `remoteVideoTrack_` | `webrtc::scoped_refptr<webrtc::VideoTrackInterface> remoteVideoTrack_;` | 保存 remote video track 相关配置或运行状态。 |
+| [L25](../src/webrtc/LibWebRtcSession.h#L25) | `PeerConnectionStatsCollector` | `class PeerConnectionStatsCollector;` | 保存 peer connection stats collector 相关配置或运行状态。 |
+| [L26](../src/webrtc/LibWebRtcSession.h#L26) | `DataChannelManager` | `class DataChannelManager;` | 保存 data channel manager 相关配置或运行状态。 |
+| [L27](../src/webrtc/LibWebRtcSession.h#L27) | `MediaSlotManager` | `class MediaSlotManager;` | 保存 media slot manager 相关配置或运行状态。 |
+| [L28](../src/webrtc/LibWebRtcSession.h#L28) | `PeerNegotiator` | `class PeerNegotiator;` | 保存 peer negotiator 相关配置或运行状态。 |
+| [L119](../src/webrtc/LibWebRtcSession.h#L119) | `override` | `override;` | 保存 override 相关配置或运行状态。 |
+| [L122](../src/webrtc/LibWebRtcSession.h#L122) | `CallbackGate` | `class CallbackGate;` | 保存 callback gate 相关配置或运行状态。 |
+| [L155](../src/webrtc/LibWebRtcSession.h#L155) | `mutex_` | `mutable std::mutex mutex_;` | 保护跨线程共享状态：mutex。 |
+| [L159](../src/webrtc/LibWebRtcSession.h#L159) | `videoSenderParametersMutex_` | `std::mutex videoSenderParametersMutex_;` | Serializes read-modify-write updates to RtpSender parameters. User preference changes, share activation and stats-driven per-viewer FPS adaptation may arrive on different threads. |
+| [L160](../src/webrtc/LibWebRtcSession.h#L160) | `nextOperationId_` | `std::atomic<OperationId> nextOperationId_{1};` | 保存身份或作用域标识：next operation id。 |
+| [L161](../src/webrtc/LibWebRtcSession.h#L161) | `callbackGate_` | `std::shared_ptr<CallbackGate> callbackGate_;` | 保存 callback gate 相关配置或运行状态。 |
+| [L162](../src/webrtc/LibWebRtcSession.h#L162) | `factory_` | `webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> factory_;` | 保存 factory 相关配置或运行状态。 |
+| [L163](../src/webrtc/LibWebRtcSession.h#L163) | `statsCollector_` | `std::unique_ptr<PeerConnectionStatsCollector> statsCollector_;` | 保存 stats collector 相关配置或运行状态。 |
+| [L164](../src/webrtc/LibWebRtcSession.h#L164) | `dataChannelManager_` | `std::unique_ptr<DataChannelManager> dataChannelManager_;` | 保存 data channel manager 相关配置或运行状态。 |
+| [L165](../src/webrtc/LibWebRtcSession.h#L165) | `peerNegotiator_` | `std::unique_ptr<PeerNegotiator> peerNegotiator_;` | 保存 peer negotiator 相关配置或运行状态。 |
+| [L166](../src/webrtc/LibWebRtcSession.h#L166) | `mediaSlots_` | `std::unique_ptr<MediaSlotManager> mediaSlots_;` | 保存 media slots 相关配置或运行状态。 |
+| [L167](../src/webrtc/LibWebRtcSession.h#L167) | `peerConnection_` | `webrtc::scoped_refptr<webrtc::PeerConnectionInterface> peerConnection_;` | 保存 peer connection 相关配置或运行状态。 |
+| [L168](../src/webrtc/LibWebRtcSession.h#L168) | `observer_` | `IWebRtcSessionObserver* observer_ = nullptr;` | 保存回调或观察者入口：observer。 |
+| [L169](../src/webrtc/LibWebRtcSession.h#L169) | `fastDesktopBweStartup_` | `bool fastDesktopBweStartup_ = false;` | 保存 fast desktop bwe startup 相关配置或运行状态。 |
+| [L170](../src/webrtc/LibWebRtcSession.h#L170) | `adaptiveDesktopNetworkFrameRate_` | `bool adaptiveDesktopNetworkFrameRate_ = false;` | 保存计数、尺寸或速率指标：adaptive desktop network frame rate。 |
+| [L171](../src/webrtc/LibWebRtcSession.h#L171) | `progressiveBitrateCeiling_` | `ProgressiveBitrateCeilingState progressiveBitrateCeiling_;` | 保存 progressive bitrate ceiling 相关配置或运行状态。 |
+| [L172](../src/webrtc/LibWebRtcSession.h#L172) | `progressiveBitrateCeilingRevision_` | `std::uint64_t progressiveBitrateCeilingRevision_ = 0;` | 标记当前世代，用于拒绝过期异步结果：progressive bitrate ceiling revision。 |
+| [L173](../src/webrtc/LibWebRtcSession.h#L173) | `progressiveBitrateCeilingError_` | `std::string progressiveBitrateCeilingError_;` | 保存最近错误或失败原因：progressive bitrate ceiling error。 |
+| [L175](../src/webrtc/LibWebRtcSession.h#L175) | `kUnknown` | `ScreenContentActivity::kUnknown;` | 定义 unknown 的编译期常量或产品边界。 |
+| [L176](../src/webrtc/LibWebRtcSession.h#L176) | `state_` | `WebRtcSessionState state_ = WebRtcSessionState::kNew;` | 保存状态机当前状态：state。 |
+| [L179](../src/webrtc/LibWebRtcSession.h#L179) | `kNew` | `webrtc::PeerConnectionInterface::PeerConnectionState::kNew;` | 定义 new 的编译期常量或产品边界。 |
+| [L181](../src/webrtc/LibWebRtcSession.h#L181) | `kIceConnectionNew` | `webrtc::PeerConnectionInterface::kIceConnectionNew;` | 定义 ice connection new 的编译期常量或产品边界。 |
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L31](../src/webrtc/LibWebRtcSession.h#L31) | `LibWebRtcSession` | 声明 | `explicit LibWebRtcSession( webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> factory)` | 实现 lib web rtc session 对应的业务或工具逻辑。 |
-| [L33](../src/webrtc/LibWebRtcSession.h#L33) | `~LibWebRtcSession` | 声明 | `~LibWebRtcSession() override` | 停止相关活动并释放 LibWebRtcSession 实例拥有的资源。 |
-| [L35](../src/webrtc/LibWebRtcSession.h#L35) | `LibWebRtcSession` | 声明 | `LibWebRtcSession(const LibWebRtcSession&) = delete` | 实现 lib web rtc session 对应的业务或工具逻辑。 |
-| [L38](../src/webrtc/LibWebRtcSession.h#L38) | `SetObserver` | 声明 | `void SetObserver(IWebRtcSessionObserver* observer) override` | 更新或应用 set observer 相关逻辑。 |
-| [L39](../src/webrtc/LibWebRtcSession.h#L39) | `Start` | 声明 | `OperationId Start(const WebRtcSessionConfig& config) override` | 启动 start 相关逻辑。 |
-| [L40](../src/webrtc/LibWebRtcSession.h#L40) | `CreateOffer` | 声明 | `OperationId CreateOffer() override` | 创建或初始化 create offer 相关逻辑。 |
-| [L41](../src/webrtc/LibWebRtcSession.h#L41) | `CreateIceRestartOffer` | 声明 | `OperationId CreateIceRestartOffer() override` | 创建或初始化 create ice restart offer 相关逻辑。 |
-| [L42](../src/webrtc/LibWebRtcSession.h#L42) | `CreateAnswer` | 声明 | `OperationId CreateAnswer() override` | 创建或初始化 create answer 相关逻辑。 |
-| [L43](../src/webrtc/LibWebRtcSession.h#L43) | `ApplyRemoteDescription` | 声明 | `OperationId ApplyRemoteDescription( const SessionDescription& description) override` | 更新或应用 apply remote description 相关逻辑。 |
-| [L45](../src/webrtc/LibWebRtcSession.h#L45) | `AddRemoteIceCandidate` | 声明 | `OperationId AddRemoteIceCandidate( const IceCandidate& candidate) override` | 实现 add remote ice candidate 对应的业务或工具逻辑。 |
-| [L47](../src/webrtc/LibWebRtcSession.h#L47) | `CreateDataChannels` | 声明 | `OperationId CreateDataChannels( const std::vector<DataChannelSpec>& channels) override` | 创建或初始化 create data channels 相关逻辑。 |
-| [L49](../src/webrtc/LibWebRtcSession.h#L49) | `SendData` | 声明 | `SendResult SendData(const std::string& channelName, std::span<const std::uint8_t> data, bool binary) override` | 发送或发布 send data 相关逻辑。 |
-| [L52](../src/webrtc/LibWebRtcSession.h#L52) | `DataChannelBufferedAmount` | 声明 | `std::optional<std::uint64_t> DataChannelBufferedAmount( const std::string& channelName) const override` | 实现 data channel buffered amount 对应的业务或工具逻辑。 |
-| [L54](../src/webrtc/LibWebRtcSession.h#L54) | `RequestStats` | 声明 | `void RequestStats() override` | 发起请求或查询 request stats 相关逻辑。 |
-| [L55](../src/webrtc/LibWebRtcSession.h#L55) | `StatsSnapshot` | 声明 | `WebRtcSessionStatsSnapshot StatsSnapshot() const override` | 实现 stats snapshot 对应的业务或工具逻辑。 |
-| [L56](../src/webrtc/LibWebRtcSession.h#L56) | `Close` | 声明 | `void Close() override` | 关闭并清理 close 相关逻辑。 |
-| [L63](../src/webrtc/LibWebRtcSession.h#L63) | `AddVideoTrack` | 声明 | `AddVideoTrack( webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track)` | 实现 add video track 对应的业务或工具逻辑。 |
-| [L67](../src/webrtc/LibWebRtcSession.h#L67) | `AddVideoReceiveTransceiver` | 声明 | `AddVideoReceiveTransceiver()` | 实现 add video receive transceiver 对应的业务或工具逻辑。 |
-| [L68](../src/webrtc/LibWebRtcSession.h#L68) | `PrepareVideoTransceiverSlot` | 声明 | `webrtc::RTCError PrepareVideoTransceiverSlot( const std::string& slot)` | 实现 prepare video transceiver slot 对应的业务或工具逻辑。 |
-| [L70](../src/webrtc/LibWebRtcSession.h#L70) | `BindNegotiatedVideoTransceiverSlots` | 声明 | `webrtc::RTCError BindNegotiatedVideoTransceiverSlots( const std::vector<std::string>& slots)` | 实现 bind negotiated video transceiver slots 对应的业务或工具逻辑。 |
-| [L72](../src/webrtc/LibWebRtcSession.h#L72) | `SetVideoSlotTrack` | 声明 | `webrtc::RTCError SetVideoSlotTrack( const std::string& slot, webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track)` | 更新或应用 set video slot track 相关逻辑。 |
-| [L75](../src/webrtc/LibWebRtcSession.h#L75) | `SetVideoSlotSendingActive` | 声明 | `webrtc::RTCError SetVideoSlotSendingActive( const std::string& slot, bool active)` | 更新或应用 set video slot sending active 相关逻辑。 |
-| [L78](../src/webrtc/LibWebRtcSession.h#L78) | `SetFastDesktopBweStartupEnabled` | 声明 | `void SetFastDesktopBweStartupEnabled(bool enabled)` | 更新或应用 set fast desktop bwe startup enabled 相关逻辑。 |
-| [L79](../src/webrtc/LibWebRtcSession.h#L79) | `SetAdaptiveDesktopNetworkFrameRateEnabled` | 声明 | `void SetAdaptiveDesktopNetworkFrameRateEnabled(bool enabled)` | 更新或应用 set adaptive desktop network frame rate enabled 相关逻辑。 |
-| [L80](../src/webrtc/LibWebRtcSession.h#L80) | `SetScreenContentActivity` | 声明 | `void SetScreenContentActivity(ScreenContentActivity activity)` | 更新或应用 set screen content activity 相关逻辑。 |
-| [L81](../src/webrtc/LibWebRtcSession.h#L81) | `RestartVideoSlotBandwidthEstimation` | 声明 | `void RestartVideoSlotBandwidthEstimation(const std::string& slot)` | 实现 restart video slot bandwidth estimation 对应的业务或工具逻辑。 |
-| [L82](../src/webrtc/LibWebRtcSession.h#L82) | `FinishVideoSlotBandwidthBootstrap` | 声明 | `void FinishVideoSlotBandwidthBootstrap(const std::string& slot)` | 停止 finish video slot bandwidth bootstrap 相关逻辑。 |
-| [L83](../src/webrtc/LibWebRtcSession.h#L83) | `SetVideoSlotEncodingPolicy` | 声明 | `webrtc::RTCError SetVideoSlotEncodingPolicy( const std::string& slot, std::uint32_t framesPerSecond, std::uint32_t width, std::uint32_t height)` | 更新或应用 set video slot encoding policy 相关逻辑。 |
-| [L88](../src/webrtc/LibWebRtcSession.h#L88) | `PrepareAudioTransceiverSlot` | 声明 | `webrtc::RTCError PrepareAudioTransceiverSlot( const std::string& slot)` | 实现 prepare audio transceiver slot 对应的业务或工具逻辑。 |
-| [L90](../src/webrtc/LibWebRtcSession.h#L90) | `BindNegotiatedAudioTransceiverSlot` | 声明 | `webrtc::RTCError BindNegotiatedAudioTransceiverSlot( const std::string& slot)` | 实现 bind negotiated audio transceiver slot 对应的业务或工具逻辑。 |
-| [L92](../src/webrtc/LibWebRtcSession.h#L92) | `SetAudioSlotTrack` | 声明 | `webrtc::RTCError SetAudioSlotTrack( const std::string& slot, webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track)` | 更新或应用 set audio slot track 相关逻辑。 |
-| [L95](../src/webrtc/LibWebRtcSession.h#L95) | `SetRemoteAudioSlotEnabled` | 声明 | `void SetRemoteAudioSlotEnabled(const std::string& slot, bool enabled)` | 更新或应用 set remote audio slot enabled 相关逻辑。 |
-| [L96](../src/webrtc/LibWebRtcSession.h#L96) | `AudioSlotPrepared` | 声明 | `bool AudioSlotPrepared(const std::string& slot) const` | 实现 audio slot prepared 对应的业务或工具逻辑。 |
-| [L97](../src/webrtc/LibWebRtcSession.h#L97) | `PreparedVideoSlotCount` | 声明 | `std::size_t PreparedVideoSlotCount() const` | 实现 prepared video slot count 对应的业务或工具逻辑。 |
-| [L98](../src/webrtc/LibWebRtcSession.h#L98) | `SetRemoteVideoSink` | 声明 | `void SetRemoteVideoSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set remote video sink 相关逻辑。 |
-| [L100](../src/webrtc/LibWebRtcSession.h#L100) | `SetRemoteVideoSlotSink` | 声明 | `void SetRemoteVideoSlotSink( const std::string& slot, webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set remote video slot sink 相关逻辑。 |
-| [L104](../src/webrtc/LibWebRtcSession.h#L104) | `OnSignalingChange` | 声明 | `void OnSignalingChange( webrtc::PeerConnectionInterface::SignalingState state) override` | 接收并处理 on signaling change 相关逻辑。 |
-| [L106](../src/webrtc/LibWebRtcSession.h#L106) | `OnDataChannel` | 声明 | `void OnDataChannel( webrtc::scoped_refptr<webrtc::DataChannelInterface> channel) override` | 接收并处理 on data channel 相关逻辑。 |
-| [L108](../src/webrtc/LibWebRtcSession.h#L108) | `OnIceGatheringChange` | 声明 | `void OnIceGatheringChange( webrtc::PeerConnectionInterface::IceGatheringState state) override` | 接收并处理 on ice gathering change 相关逻辑。 |
-| [L110](../src/webrtc/LibWebRtcSession.h#L110) | `OnIceCandidate` | 声明 | `void OnIceCandidate(const webrtc::IceCandidate* candidate) override` | 接收并处理 on ice candidate 相关逻辑。 |
-| [L111](../src/webrtc/LibWebRtcSession.h#L111) | `OnConnectionChange` | 声明 | `void OnConnectionChange( webrtc::PeerConnectionInterface::PeerConnectionState state) override` | 接收并处理 on connection change 相关逻辑。 |
-| [L113](../src/webrtc/LibWebRtcSession.h#L113) | `OnIceConnectionChange` | 声明 | `void OnIceConnectionChange( webrtc::PeerConnectionInterface::IceConnectionState state) override` | 接收并处理 on ice connection change 相关逻辑。 |
-| [L115](../src/webrtc/LibWebRtcSession.h#L115) | `OnTrack` | 声明 | `void OnTrack( webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver) override` | 接收并处理 on track 相关逻辑。 |
-| [L151](../src/webrtc/LibWebRtcSession.h#L151) | `NextOperationId` | 声明 | `OperationId NextOperationId()` | 实现 next operation id 对应的业务或工具逻辑。 |
-| [L153](../src/webrtc/LibWebRtcSession.h#L153) | `PeerConnection` | 声明 | `PeerConnection() const` | 实现 peer connection 对应的业务或工具逻辑。 |
-| [L154](../src/webrtc/LibWebRtcSession.h#L154) | `CreateLocalDescription` | 声明 | `void CreateLocalDescription(OperationId operationId, SessionDescriptionType type, bool iceRestart = false)` | 创建或初始化 create local description 相关逻辑。 |
-| [L157](../src/webrtc/LibWebRtcSession.h#L157) | `SetLocalDescription` | 声明 | `void SetLocalDescription( OperationId operationId, SessionDescription description, std::unique_ptr<webrtc::SessionDescriptionInterface> nativeDescription)` | 更新或应用 set local description 相关逻辑。 |
-| [L161](../src/webrtc/LibWebRtcSession.h#L161) | `AttachDataChannel` | 声明 | `void AttachDataChannel( webrtc::scoped_refptr<webrtc::DataChannelInterface> channel)` | 实现 attach data channel 对应的业务或工具逻辑。 |
-| [L163](../src/webrtc/LibWebRtcSession.h#L163) | `HandleDataChannelState` | 声明 | `void HandleDataChannelState( webrtc::scoped_refptr<webrtc::DataChannelInterface> channel)` | 接收并处理 handle data channel state 相关逻辑。 |
-| [L165](../src/webrtc/LibWebRtcSession.h#L165) | `HandleDataMessage` | 声明 | `void HandleDataMessage(const std::string& label, const webrtc::DataBuffer& buffer)` | 接收并处理 handle data message 相关逻辑。 |
-| [L167](../src/webrtc/LibWebRtcSession.h#L167) | `UpdatePeerConnectionState` | 声明 | `void UpdatePeerConnectionState( webrtc::PeerConnectionInterface::PeerConnectionState state)` | 更新或应用 update peer connection state 相关逻辑。 |
-| [L169](../src/webrtc/LibWebRtcSession.h#L169) | `UpdateIceConnectionState` | 声明 | `void UpdateIceConnectionState( webrtc::PeerConnectionInterface::IceConnectionState state)` | 更新或应用 update ice connection state 相关逻辑。 |
-| [L171](../src/webrtc/LibWebRtcSession.h#L171) | `ApplyPendingVideoStartBitrateBootstrap` | 声明 | `void ApplyPendingVideoStartBitrateBootstrap()` | 更新或应用 apply pending video start bitrate bootstrap 相关逻辑。 |
-| [L172](../src/webrtc/LibWebRtcSession.h#L172) | `HandleCompletedStatsSample` | 声明 | `void HandleCompletedStatsSample()` | 接收并处理 handle completed stats sample 相关逻辑。 |
-| [L173](../src/webrtc/LibWebRtcSession.h#L173) | `ApplyProgressiveBitrateCeilingDecision` | 声明 | `webrtc::RTCError ApplyProgressiveBitrateCeilingDecision( const ProgressiveBitrateCeilingDecision& decision, std::uint64_t decisionRevision, const ProgressiveBitrateCeilingState& previousState)` | 更新或应用 apply progressive bitrate ceiling decision 相关逻辑。 |
-| [L177](../src/webrtc/LibWebRtcSession.h#L177) | `ApplyAdaptiveScreenFrameRateDecision` | 声明 | `webrtc::RTCError ApplyAdaptiveScreenFrameRateDecision( const AdaptiveScreenFrameRateDecision& decision, std::uint64_t decisionRevision, const AdaptiveScreenFrameRateState& previousState, webrtc::scoped_refptr<webrtc::...` | 更新或应用 apply adaptive screen frame rate decision 相关逻辑。 |
-| [L182](../src/webrtc/LibWebRtcSession.h#L182) | `PulseVideoSlotAllocationProbe` | 声明 | `bool PulseVideoSlotAllocationProbe( webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver, std::uint64_t startBitrate, std::uint64_t maxBitrate, std::string* error)` | 实现 pulse video slot allocation probe 对应的业务或工具逻辑。 |
-| [L187](../src/webrtc/LibWebRtcSession.h#L187) | `CombinedConnectionStateLocked` | 声明 | `WebRtcSessionState CombinedConnectionStateLocked() const` | 实现 combined connection state locked 对应的业务或工具逻辑。 |
-| [L188](../src/webrtc/LibWebRtcSession.h#L188) | `ChangeState` | 声明 | `void ChangeState(WebRtcSessionState state)` | 实现 change state 对应的业务或工具逻辑。 |
-| [L189](../src/webrtc/LibWebRtcSession.h#L189) | `CompleteOperation` | 声明 | `void CompleteOperation(OperationId operationId)` | 实现 complete operation 对应的业务或工具逻辑。 |
-| [L190](../src/webrtc/LibWebRtcSession.h#L190) | `FailOperation` | 声明 | `void FailOperation(OperationId operationId, std::string code, std::string message)` | 实现 fail operation 对应的业务或工具逻辑。 |
-| [L193](../src/webrtc/LibWebRtcSession.h#L193) | `Observer` | 声明 | `IWebRtcSessionObserver* Observer() const` | 实现 observer 对应的业务或工具逻辑。 |
-| [L194](../src/webrtc/LibWebRtcSession.h#L194) | `DetachRemoteVideoSink` | 声明 | `void DetachRemoteVideoSink()` | 实现 detach remote video sink 对应的业务或工具逻辑。 |
+| [L33](../src/webrtc/LibWebRtcSession.h#L33) | `LibWebRtcSession` | 声明 | `explicit LibWebRtcSession( webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> factory)` | 实现 lib web rtc session 对应的业务或工具逻辑。 |
+| [L35](../src/webrtc/LibWebRtcSession.h#L35) | `~LibWebRtcSession` | 声明 | `~LibWebRtcSession() override` | 停止相关活动并释放 LibWebRtcSession 实例拥有的资源。 |
+| [L37](../src/webrtc/LibWebRtcSession.h#L37) | `LibWebRtcSession` | 声明 | `LibWebRtcSession(const LibWebRtcSession&) = delete` | 实现 lib web rtc session 对应的业务或工具逻辑。 |
+| [L40](../src/webrtc/LibWebRtcSession.h#L40) | `SetObserver` | 声明 | `void SetObserver(IWebRtcSessionObserver* observer) override` | 更新或应用 set observer 相关逻辑。 |
+| [L41](../src/webrtc/LibWebRtcSession.h#L41) | `Start` | 声明 | `OperationId Start(const WebRtcSessionConfig& config) override` | 启动 start 相关逻辑。 |
+| [L42](../src/webrtc/LibWebRtcSession.h#L42) | `CreateOffer` | 声明 | `OperationId CreateOffer() override` | 创建或初始化 create offer 相关逻辑。 |
+| [L43](../src/webrtc/LibWebRtcSession.h#L43) | `CreateIceRestartOffer` | 声明 | `OperationId CreateIceRestartOffer() override` | 创建或初始化 create ice restart offer 相关逻辑。 |
+| [L44](../src/webrtc/LibWebRtcSession.h#L44) | `CreateAnswer` | 声明 | `OperationId CreateAnswer() override` | 创建或初始化 create answer 相关逻辑。 |
+| [L45](../src/webrtc/LibWebRtcSession.h#L45) | `ApplyRemoteDescription` | 声明 | `OperationId ApplyRemoteDescription( const SessionDescription& description) override` | 更新或应用 apply remote description 相关逻辑。 |
+| [L47](../src/webrtc/LibWebRtcSession.h#L47) | `AddRemoteIceCandidate` | 声明 | `OperationId AddRemoteIceCandidate( const IceCandidate& candidate) override` | 实现 add remote ice candidate 对应的业务或工具逻辑。 |
+| [L49](../src/webrtc/LibWebRtcSession.h#L49) | `CreateDataChannels` | 声明 | `OperationId CreateDataChannels( const std::vector<DataChannelSpec>& channels) override` | 创建或初始化 create data channels 相关逻辑。 |
+| [L51](../src/webrtc/LibWebRtcSession.h#L51) | `SendData` | 声明 | `SendResult SendData(const std::string& channelName, std::span<const std::uint8_t> data, bool binary) override` | 发送或发布 send data 相关逻辑。 |
+| [L54](../src/webrtc/LibWebRtcSession.h#L54) | `DataChannelBufferedAmount` | 声明 | `std::optional<std::uint64_t> DataChannelBufferedAmount( const std::string& channelName) const override` | 实现 data channel buffered amount 对应的业务或工具逻辑。 |
+| [L56](../src/webrtc/LibWebRtcSession.h#L56) | `RequestStats` | 声明 | `void RequestStats() override` | 发起请求或查询 request stats 相关逻辑。 |
+| [L57](../src/webrtc/LibWebRtcSession.h#L57) | `StatsSnapshot` | 声明 | `WebRtcSessionStatsSnapshot StatsSnapshot() const override` | 实现 stats snapshot 对应的业务或工具逻辑。 |
+| [L58](../src/webrtc/LibWebRtcSession.h#L58) | `Close` | 声明 | `void Close() override` | 关闭并清理 close 相关逻辑。 |
+| [L65](../src/webrtc/LibWebRtcSession.h#L65) | `AddVideoTrack` | 声明 | `AddVideoTrack( webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track)` | 实现 add video track 对应的业务或工具逻辑。 |
+| [L69](../src/webrtc/LibWebRtcSession.h#L69) | `AddVideoReceiveTransceiver` | 声明 | `AddVideoReceiveTransceiver()` | 实现 add video receive transceiver 对应的业务或工具逻辑。 |
+| [L70](../src/webrtc/LibWebRtcSession.h#L70) | `PrepareVideoTransceiverSlot` | 声明 | `webrtc::RTCError PrepareVideoTransceiverSlot( const std::string& slot)` | 实现 prepare video transceiver slot 对应的业务或工具逻辑。 |
+| [L72](../src/webrtc/LibWebRtcSession.h#L72) | `BindNegotiatedVideoTransceiverSlots` | 声明 | `webrtc::RTCError BindNegotiatedVideoTransceiverSlots( const std::vector<std::string>& slots)` | 实现 bind negotiated video transceiver slots 对应的业务或工具逻辑。 |
+| [L74](../src/webrtc/LibWebRtcSession.h#L74) | `SetVideoSlotTrack` | 声明 | `webrtc::RTCError SetVideoSlotTrack( const std::string& slot, webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track)` | 更新或应用 set video slot track 相关逻辑。 |
+| [L77](../src/webrtc/LibWebRtcSession.h#L77) | `SetVideoSlotSendingActive` | 声明 | `webrtc::RTCError SetVideoSlotSendingActive( const std::string& slot, bool active)` | 更新或应用 set video slot sending active 相关逻辑。 |
+| [L80](../src/webrtc/LibWebRtcSession.h#L80) | `SetFastDesktopBweStartupEnabled` | 声明 | `void SetFastDesktopBweStartupEnabled(bool enabled)` | 更新或应用 set fast desktop bwe startup enabled 相关逻辑。 |
+| [L81](../src/webrtc/LibWebRtcSession.h#L81) | `SetAdaptiveDesktopNetworkFrameRateEnabled` | 声明 | `void SetAdaptiveDesktopNetworkFrameRateEnabled(bool enabled)` | 更新或应用 set adaptive desktop network frame rate enabled 相关逻辑。 |
+| [L82](../src/webrtc/LibWebRtcSession.h#L82) | `SetScreenContentActivity` | 声明 | `void SetScreenContentActivity(ScreenContentActivity activity)` | 更新或应用 set screen content activity 相关逻辑。 |
+| [L83](../src/webrtc/LibWebRtcSession.h#L83) | `RestartVideoSlotBandwidthEstimation` | 声明 | `void RestartVideoSlotBandwidthEstimation(const std::string& slot)` | 实现 restart video slot bandwidth estimation 对应的业务或工具逻辑。 |
+| [L84](../src/webrtc/LibWebRtcSession.h#L84) | `FinishVideoSlotBandwidthBootstrap` | 声明 | `void FinishVideoSlotBandwidthBootstrap(const std::string& slot)` | 停止 finish video slot bandwidth bootstrap 相关逻辑。 |
+| [L85](../src/webrtc/LibWebRtcSession.h#L85) | `SetVideoSlotEncodingPolicy` | 声明 | `webrtc::RTCError SetVideoSlotEncodingPolicy( const std::string& slot, std::uint32_t framesPerSecond, std::uint32_t width, std::uint32_t height)` | 更新或应用 set video slot encoding policy 相关逻辑。 |
+| [L90](../src/webrtc/LibWebRtcSession.h#L90) | `PrepareAudioTransceiverSlot` | 声明 | `webrtc::RTCError PrepareAudioTransceiverSlot( const std::string& slot)` | 实现 prepare audio transceiver slot 对应的业务或工具逻辑。 |
+| [L92](../src/webrtc/LibWebRtcSession.h#L92) | `BindNegotiatedAudioTransceiverSlot` | 声明 | `webrtc::RTCError BindNegotiatedAudioTransceiverSlot( const std::string& slot)` | 实现 bind negotiated audio transceiver slot 对应的业务或工具逻辑。 |
+| [L94](../src/webrtc/LibWebRtcSession.h#L94) | `SetAudioSlotTrack` | 声明 | `webrtc::RTCError SetAudioSlotTrack( const std::string& slot, webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track)` | 更新或应用 set audio slot track 相关逻辑。 |
+| [L97](../src/webrtc/LibWebRtcSession.h#L97) | `SetRemoteAudioSlotEnabled` | 声明 | `void SetRemoteAudioSlotEnabled(const std::string& slot, bool enabled)` | 更新或应用 set remote audio slot enabled 相关逻辑。 |
+| [L98](../src/webrtc/LibWebRtcSession.h#L98) | `AudioSlotPrepared` | 声明 | `bool AudioSlotPrepared(const std::string& slot) const` | 实现 audio slot prepared 对应的业务或工具逻辑。 |
+| [L99](../src/webrtc/LibWebRtcSession.h#L99) | `PreparedVideoSlotCount` | 声明 | `std::size_t PreparedVideoSlotCount() const` | 实现 prepared video slot count 对应的业务或工具逻辑。 |
+| [L100](../src/webrtc/LibWebRtcSession.h#L100) | `SetRemoteVideoSink` | 声明 | `void SetRemoteVideoSink( webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set remote video sink 相关逻辑。 |
+| [L102](../src/webrtc/LibWebRtcSession.h#L102) | `SetRemoteVideoSlotSink` | 声明 | `void SetRemoteVideoSlotSink( const std::string& slot, webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)` | 更新或应用 set remote video slot sink 相关逻辑。 |
+| [L106](../src/webrtc/LibWebRtcSession.h#L106) | `OnSignalingChange` | 声明 | `void OnSignalingChange( webrtc::PeerConnectionInterface::SignalingState state) override` | 接收并处理 on signaling change 相关逻辑。 |
+| [L108](../src/webrtc/LibWebRtcSession.h#L108) | `OnDataChannel` | 声明 | `void OnDataChannel( webrtc::scoped_refptr<webrtc::DataChannelInterface> channel) override` | 接收并处理 on data channel 相关逻辑。 |
+| [L110](../src/webrtc/LibWebRtcSession.h#L110) | `OnIceGatheringChange` | 声明 | `void OnIceGatheringChange( webrtc::PeerConnectionInterface::IceGatheringState state) override` | 接收并处理 on ice gathering change 相关逻辑。 |
+| [L112](../src/webrtc/LibWebRtcSession.h#L112) | `OnIceCandidate` | 声明 | `void OnIceCandidate(const webrtc::IceCandidate* candidate) override` | 接收并处理 on ice candidate 相关逻辑。 |
+| [L113](../src/webrtc/LibWebRtcSession.h#L113) | `OnConnectionChange` | 声明 | `void OnConnectionChange( webrtc::PeerConnectionInterface::PeerConnectionState state) override` | 接收并处理 on connection change 相关逻辑。 |
+| [L115](../src/webrtc/LibWebRtcSession.h#L115) | `OnIceConnectionChange` | 声明 | `void OnIceConnectionChange( webrtc::PeerConnectionInterface::IceConnectionState state) override` | 接收并处理 on ice connection change 相关逻辑。 |
+| [L117](../src/webrtc/LibWebRtcSession.h#L117) | `OnTrack` | 声明 | `void OnTrack( webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver) override` | 接收并处理 on track 相关逻辑。 |
+| [L123](../src/webrtc/LibWebRtcSession.h#L123) | `NextOperationId` | 声明 | `OperationId NextOperationId()` | 实现 next operation id 对应的业务或工具逻辑。 |
+| [L125](../src/webrtc/LibWebRtcSession.h#L125) | `PeerConnection` | 声明 | `PeerConnection() const` | 实现 peer connection 对应的业务或工具逻辑。 |
+| [L126](../src/webrtc/LibWebRtcSession.h#L126) | `UpdatePeerConnectionState` | 声明 | `void UpdatePeerConnectionState( webrtc::PeerConnectionInterface::PeerConnectionState state)` | 更新或应用 update peer connection state 相关逻辑。 |
+| [L128](../src/webrtc/LibWebRtcSession.h#L128) | `UpdateIceConnectionState` | 声明 | `void UpdateIceConnectionState( webrtc::PeerConnectionInterface::IceConnectionState state)` | 更新或应用 update ice connection state 相关逻辑。 |
+| [L130](../src/webrtc/LibWebRtcSession.h#L130) | `ApplyPendingVideoStartBitrateBootstrap` | 声明 | `void ApplyPendingVideoStartBitrateBootstrap()` | 更新或应用 apply pending video start bitrate bootstrap 相关逻辑。 |
+| [L131](../src/webrtc/LibWebRtcSession.h#L131) | `HandleCompletedStatsSample` | 声明 | `void HandleCompletedStatsSample()` | 接收并处理 handle completed stats sample 相关逻辑。 |
+| [L132](../src/webrtc/LibWebRtcSession.h#L132) | `ApplyProgressiveBitrateCeilingDecision` | 声明 | `webrtc::RTCError ApplyProgressiveBitrateCeilingDecision( const ProgressiveBitrateCeilingDecision& decision, std::uint64_t decisionRevision, const ProgressiveBitrateCeilingState& previousState)` | 更新或应用 apply progressive bitrate ceiling decision 相关逻辑。 |
+| [L136](../src/webrtc/LibWebRtcSession.h#L136) | `ApplyAdaptiveScreenFrameRateDecision` | 声明 | `webrtc::RTCError ApplyAdaptiveScreenFrameRateDecision( const AdaptiveScreenFrameRateDecision& decision, std::uint64_t decisionRevision, const AdaptiveScreenFrameRateState& previousState, webrtc::scoped_refptr<webrtc::...` | 更新或应用 apply adaptive screen frame rate decision 相关逻辑。 |
+| [L141](../src/webrtc/LibWebRtcSession.h#L141) | `PulseVideoSlotAllocationProbe` | 声明 | `bool PulseVideoSlotAllocationProbe( webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver, std::uint64_t startBitrate, std::uint64_t maxBitrate, std::string* error)` | 实现 pulse video slot allocation probe 对应的业务或工具逻辑。 |
+| [L146](../src/webrtc/LibWebRtcSession.h#L146) | `CombinedConnectionStateLocked` | 声明 | `WebRtcSessionState CombinedConnectionStateLocked() const` | 实现 combined connection state locked 对应的业务或工具逻辑。 |
+| [L147](../src/webrtc/LibWebRtcSession.h#L147) | `ChangeState` | 声明 | `void ChangeState(WebRtcSessionState state)` | 实现 change state 对应的业务或工具逻辑。 |
+| [L148](../src/webrtc/LibWebRtcSession.h#L148) | `CompleteOperation` | 声明 | `void CompleteOperation(OperationId operationId)` | 实现 complete operation 对应的业务或工具逻辑。 |
+| [L149](../src/webrtc/LibWebRtcSession.h#L149) | `FailOperation` | 声明 | `void FailOperation(OperationId operationId, std::string code, std::string message)` | 实现 fail operation 对应的业务或工具逻辑。 |
+| [L152](../src/webrtc/LibWebRtcSession.h#L152) | `Observer` | 声明 | `IWebRtcSessionObserver* Observer() const` | 实现 observer 对应的业务或工具逻辑。 |
+| [L153](../src/webrtc/LibWebRtcSession.h#L153) | `DetachRemoteVideoSink` | 声明 | `void DetachRemoteVideoSink()` | 实现 detach remote video sink 对应的业务或工具逻辑。 |
 
-## `src/webrtc/LibWebRtcSession.Lifecycle.inc`
+## `src/webrtc/LibWebRtcSession.Internal.h`
 
-[打开源码](../src/webrtc/LibWebRtcSession.Lifecycle.inc) · **文件作用：** `LibWebRtcSession` 的实现切片，集中实现 lifecycle 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/webrtc/LibWebRtcSession.Lifecycle.inc#L4) | `LibWebRtcSession::LibWebRtcSession` | 定义 | `LibWebRtcSession::LibWebRtcSession( webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> factory) : callbackGate_(std::make_shared<CallbackGate>(this)), factory_(std::move(factory)), statsCollector_( std::mak...` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L12](../src/webrtc/LibWebRtcSession.Lifecycle.inc#L12) | `LibWebRtcSession::~LibWebRtcSession` | 定义 | `LibWebRtcSession::~LibWebRtcSession()` | 停止相关活动并释放 LibWebRtcSession 实例拥有的资源。 |
-| [L19](../src/webrtc/LibWebRtcSession.Lifecycle.inc#L19) | `LibWebRtcSession::SetObserver` | 定义 | `void LibWebRtcSession::SetObserver(IWebRtcSessionObserver* observer)` | 更新或应用 set observer 相关逻辑。 |
-| [L25](../src/webrtc/LibWebRtcSession.Lifecycle.inc#L25) | `LibWebRtcSession::Start` | 定义 | `OperationId LibWebRtcSession::Start(const WebRtcSessionConfig& config)` | 启动 start 相关逻辑。 |
-
-## `src/webrtc/LibWebRtcSession.Negotiation.inc`
-
-[打开源码](../src/webrtc/LibWebRtcSession.Negotiation.inc) · **文件作用：** `LibWebRtcSession` 的实现切片，集中实现 negotiation 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/webrtc/LibWebRtcSession.Negotiation.inc#L4) | `LibWebRtcSession::CreateOffer` | 定义 | `OperationId LibWebRtcSession::CreateOffer()` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L11](../src/webrtc/LibWebRtcSession.Negotiation.inc#L11) | `LibWebRtcSession::CreateIceRestartOffer` | 定义 | `OperationId LibWebRtcSession::CreateIceRestartOffer()` | 创建或初始化 create ice restart offer 相关逻辑。 |
-| [L19](../src/webrtc/LibWebRtcSession.Negotiation.inc#L19) | `LibWebRtcSession::CreateAnswer` | 定义 | `OperationId LibWebRtcSession::CreateAnswer()` | 创建或初始化 create answer 相关逻辑。 |
-| [L26](../src/webrtc/LibWebRtcSession.Negotiation.inc#L26) | `LibWebRtcSession::ApplyRemoteDescription` | 定义 | `OperationId LibWebRtcSession::ApplyRemoteDescription( const SessionDescription& description)` | 更新或应用 apply remote description 相关逻辑。 |
-| [L66](../src/webrtc/LibWebRtcSession.Negotiation.inc#L66) | `LibWebRtcSession::AddRemoteIceCandidate` | 定义 | `OperationId LibWebRtcSession::AddRemoteIceCandidate( const IceCandidate& candidate)` | 实现 add remote ice candidate 对应的业务或工具逻辑。 |
-
-## `src/webrtc/LibWebRtcSession.NegotiationInternals.inc`
-
-[打开源码](../src/webrtc/LibWebRtcSession.NegotiationInternals.inc) · **文件作用：** `LibWebRtcSession` 的实现切片，集中实现 negotiation internals 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/webrtc/LibWebRtcSession.NegotiationInternals.inc#L4) | `LibWebRtcSession::NextOperationId` | 定义 | `OperationId LibWebRtcSession::NextOperationId()` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L10](../src/webrtc/LibWebRtcSession.NegotiationInternals.inc#L10) | `LibWebRtcSession::PeerConnection` | 定义 | `LibWebRtcSession::PeerConnection() const` | 实现 peer connection 对应的业务或工具逻辑。 |
-| [L16](../src/webrtc/LibWebRtcSession.NegotiationInternals.inc#L16) | `LibWebRtcSession::CreateLocalDescription` | 定义 | `void LibWebRtcSession::CreateLocalDescription( OperationId operationId, SessionDescriptionType type, bool iceRestart)` | 创建或初始化 create local description 相关逻辑。 |
-| [L67](../src/webrtc/LibWebRtcSession.NegotiationInternals.inc#L67) | `LibWebRtcSession::SetLocalDescription` | 定义 | `void LibWebRtcSession::SetLocalDescription( OperationId operationId, SessionDescription description, std::unique_ptr<webrtc::SessionDescriptionInterface> nativeDescription)` | 更新或应用 set local description 相关逻辑。 |
-
-## `src/webrtc/LibWebRtcSession.Observers.inc`
-
-[打开源码](../src/webrtc/LibWebRtcSession.Observers.inc) · **文件作用：** `LibWebRtcSession` 的实现切片，集中实现 observers 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/webrtc/LibWebRtcSession.Observers.inc#L4) | `LibWebRtcSession::OnSignalingChange` | 定义 | `void LibWebRtcSession::OnSignalingChange( webrtc::PeerConnectionInterface::SignalingState) {}` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L8](../src/webrtc/LibWebRtcSession.Observers.inc#L8) | `LibWebRtcSession::OnDataChannel` | 定义 | `void LibWebRtcSession::OnDataChannel( webrtc::scoped_refptr<webrtc::DataChannelInterface> channel)` | 接收并处理 on data channel 相关逻辑。 |
-| [L14](../src/webrtc/LibWebRtcSession.Observers.inc#L14) | `LibWebRtcSession::OnIceGatheringChange` | 定义 | `void LibWebRtcSession::OnIceGatheringChange( webrtc::PeerConnectionInterface::IceGatheringState state)` | 接收并处理 on ice gathering change 相关逻辑。 |
-| [L23](../src/webrtc/LibWebRtcSession.Observers.inc#L23) | `LibWebRtcSession::OnIceCandidate` | 定义 | `void LibWebRtcSession::OnIceCandidate(const webrtc::IceCandidate* candidate)` | 接收并处理 on ice candidate 相关逻辑。 |
-| [L37](../src/webrtc/LibWebRtcSession.Observers.inc#L37) | `LibWebRtcSession::OnConnectionChange` | 定义 | `void LibWebRtcSession::OnConnectionChange( webrtc::PeerConnectionInterface::PeerConnectionState state)` | 接收并处理 on connection change 相关逻辑。 |
-| [L43](../src/webrtc/LibWebRtcSession.Observers.inc#L43) | `LibWebRtcSession::OnIceConnectionChange` | 定义 | `void LibWebRtcSession::OnIceConnectionChange( webrtc::PeerConnectionInterface::IceConnectionState state)` | 接收并处理 on ice connection change 相关逻辑。 |
-| [L49](../src/webrtc/LibWebRtcSession.Observers.inc#L49) | `LibWebRtcSession::OnTrack` | 定义 | `void LibWebRtcSession::OnTrack( webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver)` | 接收并处理 on track 相关逻辑。 |
-
-## `src/webrtc/LibWebRtcSession.State.inc`
-
-[打开源码](../src/webrtc/LibWebRtcSession.State.inc) · **文件作用：** `LibWebRtcSession` 的实现切片，集中实现 state 相关逻辑；成员状态仍定义在所属头文件中。
-
-### 函数
-
-| 行 | 函数 | 类型 | 签名 | 作用 |
-|---:|---|---|---|---|
-| [L4](../src/webrtc/LibWebRtcSession.State.inc#L4) | `LibWebRtcSession::UpdatePeerConnectionState` | 定义 | `void LibWebRtcSession::UpdatePeerConnectionState( webrtc::PeerConnectionInterface::PeerConnectionState state)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L29](../src/webrtc/LibWebRtcSession.State.inc#L29) | `LibWebRtcSession::UpdateIceConnectionState` | 定义 | `void LibWebRtcSession::UpdateIceConnectionState( webrtc::PeerConnectionInterface::IceConnectionState state)` | 更新或应用 update ice connection state 相关逻辑。 |
-| [L57](../src/webrtc/LibWebRtcSession.State.inc#L57) | `LibWebRtcSession::CombinedConnectionStateLocked` | 定义 | `WebRtcSessionState LibWebRtcSession::CombinedConnectionStateLocked() const` | 实现 combined connection state locked 对应的业务或工具逻辑。 |
-| [L111](../src/webrtc/LibWebRtcSession.State.inc#L111) | `LibWebRtcSession::ChangeState` | 定义 | `void LibWebRtcSession::ChangeState(WebRtcSessionState state)` | 实现 change state 对应的业务或工具逻辑。 |
-| [L127](../src/webrtc/LibWebRtcSession.State.inc#L127) | `LibWebRtcSession::CompleteOperation` | 定义 | `void LibWebRtcSession::CompleteOperation(OperationId operationId)` | 实现 complete operation 对应的业务或工具逻辑。 |
-| [L134](../src/webrtc/LibWebRtcSession.State.inc#L134) | `LibWebRtcSession::FailOperation` | 定义 | `void LibWebRtcSession::FailOperation(OperationId operationId, std::string code, std::string message)` | 实现 fail operation 对应的业务或工具逻辑。 |
-| [L144](../src/webrtc/LibWebRtcSession.State.inc#L144) | `LibWebRtcSession::Observer` | 定义 | `IWebRtcSessionObserver* LibWebRtcSession::Observer() const` | 实现 observer 对应的业务或工具逻辑。 |
-
-## `src/webrtc/LibWebRtcSession.StatsClose.inc`
-
-[打开源码](../src/webrtc/LibWebRtcSession.StatsClose.inc) · **文件作用：** `LibWebRtcSession` 的实现切片，集中实现 stats close 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/webrtc/LibWebRtcSession.Internal.h) · **文件作用：** 声明 lib web rtc session internal 相关类型、接口、配置和成员状态。
 
 ### 类型
 
 | 行 | 类型 | 种类 | 作用 |
 |---:|---|---|---|
-| [L216](../src/webrtc/LibWebRtcSession.StatsClose.inc#L216) | `EncodingPolicy` | struct | 定义 EncodingPolicy 的 struct 类型和相关状态。 |
+| [L125](../src/webrtc/LibWebRtcSession.Internal.h#L125) | `LibWebRtcSession::CallbackGate` | class | 定义 LibWebRtcSession::CallbackGate 的 class 类型和相关状态。 |
+| [L127](../src/webrtc/LibWebRtcSession.Internal.h#L127) | `Lease` | class | 定义 Lease 的 class 类型和相关状态。 |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L24](../src/webrtc/LibWebRtcSession.Internal.h#L24) | `kMaximumScreenBitrateBps` | `inline constexpr int kMaximumScreenBitrateBps = 100'000'000;` | 定义 maximum screen bitrate bps 的编译期常量或产品边界。 |
+| [L25](../src/webrtc/LibWebRtcSession.Internal.h#L25) | `kDesktopStartupProbeFloorBps` | `inline constexpr int kDesktopStartupProbeFloorBps = 2'000'000;` | 定义 desktop startup probe floor bps 的编译期常量或产品边界。 |
+| [L26](../src/webrtc/LibWebRtcSession.Internal.h#L26) | `kDefaultWebRtcMinimumBitrateBps` | `inline constexpr int kDefaultWebRtcMinimumBitrateBps = 30'000;` | 定义 default web rtc minimum bitrate bps 的编译期常量或产品边界。 |
+| [L149](../src/webrtc/LibWebRtcSession.Internal.h#L149) | `gate_` | `CallbackGate* gate_ = nullptr;` | 保存 gate 相关配置或运行状态。 |
+| [L150](../src/webrtc/LibWebRtcSession.Internal.h#L150) | `owner_` | `LibWebRtcSession* owner_ = nullptr;` | 保存 owner 相关配置或运行状态。 |
+| [L182](../src/webrtc/LibWebRtcSession.Internal.h#L182) | `mutex_` | `std::mutex mutex_;` | 保护跨线程共享状态：mutex。 |
+| [L183](../src/webrtc/LibWebRtcSession.Internal.h#L183) | `condition_` | `std::condition_variable condition_;` | 保存 condition 相关配置或运行状态。 |
+| [L184](../src/webrtc/LibWebRtcSession.Internal.h#L184) | `owner_` | `LibWebRtcSession* owner_ = nullptr;` | 保存 owner 相关配置或运行状态。 |
+| [L185](../src/webrtc/LibWebRtcSession.Internal.h#L185) | `activeCallbacks_` | `int activeCallbacks_ = 0;` | 保存 active callbacks 相关配置或运行状态。 |
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/webrtc/LibWebRtcSession.StatsClose.inc#L4) | `LibWebRtcSession::RequestStats` | 定义 | `void LibWebRtcSession::RequestStats()` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L20](../src/webrtc/LibWebRtcSession.StatsClose.inc#L20) | `LibWebRtcSession::HandleCompletedStatsSample` | 定义 | `void LibWebRtcSession::HandleCompletedStatsSample()` | 接收并处理 handle completed stats sample 相关逻辑。 |
-| [L103](../src/webrtc/LibWebRtcSession.StatsClose.inc#L103) | `LibWebRtcSession::ApplyProgressiveBitrateCeilingDecision` | 定义 | `webrtc::RTCError LibWebRtcSession::ApplyProgressiveBitrateCeilingDecision( const ProgressiveBitrateCeilingDecision& decision, std::uint64_t decisionRevision, const ProgressiveBitrateCeilingState& previousState)` | 更新或应用 apply progressive bitrate ceiling decision 相关逻辑。 |
-| [L152](../src/webrtc/LibWebRtcSession.StatsClose.inc#L152) | `LibWebRtcSession::ApplyAdaptiveScreenFrameRateDecision` | 定义 | `webrtc::RTCError LibWebRtcSession::ApplyAdaptiveScreenFrameRateDecision( const AdaptiveScreenFrameRateDecision& decision, std::uint64_t decisionRevision, const AdaptiveScreenFrameRateState& previousState, webrtc::scop...` | 更新或应用 apply adaptive screen frame rate decision 相关逻辑。 |
-| [L208](../src/webrtc/LibWebRtcSession.StatsClose.inc#L208) | `LibWebRtcSession::StatsSnapshot` | 定义 | `WebRtcSessionStatsSnapshot LibWebRtcSession::StatsSnapshot() const` | 实现 stats snapshot 对应的业务或工具逻辑。 |
-| [L379](../src/webrtc/LibWebRtcSession.StatsClose.inc#L379) | `LibWebRtcSession::Close` | 定义 | `void LibWebRtcSession::Close()` | 关闭并清理 close 相关逻辑。 |
-| [L432](../src/webrtc/LibWebRtcSession.StatsClose.inc#L432) | `LibWebRtcSession::AddVideoTrack` | 定义 | `LibWebRtcSession::AddVideoTrack( webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track)` | 实现 add video track 对应的业务或工具逻辑。 |
-| [L458](../src/webrtc/LibWebRtcSession.StatsClose.inc#L458) | `LibWebRtcSession::AddVideoReceiveTransceiver` | 定义 | `LibWebRtcSession::AddVideoReceiveTransceiver()` | 实现 add video receive transceiver 对应的业务或工具逻辑。 |
+| [L28](../src/webrtc/LibWebRtcSession.Internal.h#L28) | `SteadyNowMs` | 定义 | `inline std::uint64_t SteadyNowMs()` | 实现 steady now ms 对应的业务或工具逻辑。 |
+| [L35](../src/webrtc/LibWebRtcSession.Internal.h#L35) | `ProgressiveBitrateCeilingStatusName` | 定义 | `inline const char* ProgressiveBitrateCeilingStatusName( ProgressiveBitrateCeilingStatus status)` | 实现 progressive bitrate ceiling status name 对应的业务或工具逻辑。 |
+| [L55](../src/webrtc/LibWebRtcSession.Internal.h#L55) | `AdaptiveScreenFrameRateStatusName` | 定义 | `inline const char* AdaptiveScreenFrameRateStatusName( AdaptiveScreenFrameRateStatus status)` | 实现 adaptive screen frame rate status name 对应的业务或工具逻辑。 |
+| [L79](../src/webrtc/LibWebRtcSession.Internal.h#L79) | `ToPublicIceGatheringState` | 定义 | `inline WebRtcIceGatheringState ToPublicIceGatheringState( webrtc::PeerConnectionInterface::IceGatheringState state)` | 实现 to public ice gathering state 对应的业务或工具逻辑。 |
+| [L93](../src/webrtc/LibWebRtcSession.Internal.h#L93) | `EqualsIgnoreCase` | 定义 | `inline bool EqualsIgnoreCase(const std::string& left, const char* right)` | 判断 equals ignore case 相关逻辑。 |
+| [L108](../src/webrtc/LibWebRtcSession.Internal.h#L108) | `H264CodecPreferences` | 定义 | `inline std::vector<webrtc::RtpCodecCapability> H264CodecPreferences( webrtc::PeerConnectionFactoryInterface* factory)` | 实现 h264 codec preferences 对应的业务或工具逻辑。 |
+| [L129](../src/webrtc/LibWebRtcSession.Internal.h#L129) | `Lease` | 声明 | `Lease() = default` | 实现 lease 对应的业务或工具逻辑。 |
+| [L130](../src/webrtc/LibWebRtcSession.Internal.h#L130) | `Lease` | 定义 | `Lease(CallbackGate* gate, LibWebRtcSession* owner) : gate_(gate), owner_(owner) {}` | 实现 lease 对应的业务或工具逻辑。 |
+| [L133](../src/webrtc/LibWebRtcSession.Internal.h#L133) | `Lease` | 声明 | `Lease(const Lease&) = delete` | 实现 lease 对应的业务或工具逻辑。 |
+| [L135](../src/webrtc/LibWebRtcSession.Internal.h#L135) | `Lease` | 定义 | `Lease(Lease&& other) noexcept : gate_(std::exchange(other.gate_, nullptr)), owner_(std::exchange(other.owner_, nullptr)) {}` | 实现 lease 对应的业务或工具逻辑。 |
+| [L139](../src/webrtc/LibWebRtcSession.Internal.h#L139) | `~Lease` | 定义 | `~Lease()` | 停止相关活动并释放 Lease 实例拥有的资源。 |
+| [L146](../src/webrtc/LibWebRtcSession.Internal.h#L146) | `Owner` | 定义 | `LibWebRtcSession* Owner() const { return owner_; }` | 实现 owner 对应的业务或工具逻辑。 |
+| [L153](../src/webrtc/LibWebRtcSession.Internal.h#L153) | `CallbackGate` | 定义 | `explicit CallbackGate(LibWebRtcSession* owner) : owner_(owner) {}` | 实现 callback gate 对应的业务或工具逻辑。 |
+| [L155](../src/webrtc/LibWebRtcSession.Internal.h#L155) | `Enter` | 定义 | `Lease Enter()` | 实现 enter 对应的业务或工具逻辑。 |
+| [L165](../src/webrtc/LibWebRtcSession.Internal.h#L165) | `DetachAndWait` | 定义 | `void DetachAndWait()` | 实现 detach and wait 对应的业务或工具逻辑。 |
+| [L173](../src/webrtc/LibWebRtcSession.Internal.h#L173) | `Leave` | 定义 | `void Leave()` | 实现 leave 对应的业务或工具逻辑。 |
 
-## `src/webrtc/LibWebRtcSession.VideoSlots.inc`
+## `src/webrtc/LibWebRtcSession.Lifecycle.cpp`
 
-[打开源码](../src/webrtc/LibWebRtcSession.VideoSlots.inc) · **文件作用：** `LibWebRtcSession` 的实现切片，集中实现 video slots 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/webrtc/LibWebRtcSession.Lifecycle.cpp) · **文件作用：** 实现 lib web rtc session lifecycle 相关函数与文件级辅助逻辑。
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L4](../src/webrtc/LibWebRtcSession.VideoSlots.inc#L4) | `LibWebRtcSession::PrepareVideoTransceiverSlot` | 定义 | `webrtc::RTCError LibWebRtcSession::PrepareVideoTransceiverSlot( const std::string& slot)` | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L60](../src/webrtc/LibWebRtcSession.VideoSlots.inc#L60) | `LibWebRtcSession::BindNegotiatedVideoTransceiverSlots` | 定义 | `webrtc::RTCError LibWebRtcSession::BindNegotiatedVideoTransceiverSlots( const std::vector<std::string>& slots)` | 实现 bind negotiated video transceiver slots 对应的业务或工具逻辑。 |
-| [L146](../src/webrtc/LibWebRtcSession.VideoSlots.inc#L146) | `LibWebRtcSession::SetVideoSlotTrack` | 定义 | `webrtc::RTCError LibWebRtcSession::SetVideoSlotTrack( const std::string& slot, webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track)` | 更新或应用 set video slot track 相关逻辑。 |
-| [L173](../src/webrtc/LibWebRtcSession.VideoSlots.inc#L173) | `LibWebRtcSession::SetVideoSlotSendingActive` | 定义 | `webrtc::RTCError LibWebRtcSession::SetVideoSlotSendingActive( const std::string& slot, bool active)` | 更新或应用 set video slot sending active 相关逻辑。 |
-| [L254](../src/webrtc/LibWebRtcSession.VideoSlots.inc#L254) | `LibWebRtcSession::SetFastDesktopBweStartupEnabled` | 定义 | `void LibWebRtcSession::SetFastDesktopBweStartupEnabled(bool enabled)` | 更新或应用 set fast desktop bwe startup enabled 相关逻辑。 |
-| [L265](../src/webrtc/LibWebRtcSession.VideoSlots.inc#L265) | `LibWebRtcSession::SetAdaptiveDesktopNetworkFrameRateEnabled` | 定义 | `void LibWebRtcSession::SetAdaptiveDesktopNetworkFrameRateEnabled( bool enabled)` | 更新或应用 set adaptive desktop network frame rate enabled 相关逻辑。 |
-| [L284](../src/webrtc/LibWebRtcSession.VideoSlots.inc#L284) | `LibWebRtcSession::SetScreenContentActivity` | 定义 | `void LibWebRtcSession::SetScreenContentActivity( ScreenContentActivity activity)` | 更新或应用 set screen content activity 相关逻辑。 |
-| [L291](../src/webrtc/LibWebRtcSession.VideoSlots.inc#L291) | `LibWebRtcSession::RestartVideoSlotBandwidthEstimation` | 定义 | `void LibWebRtcSession::RestartVideoSlotBandwidthEstimation( const std::string& slot)` | 实现 restart video slot bandwidth estimation 对应的业务或工具逻辑。 |
-| [L380](../src/webrtc/LibWebRtcSession.VideoSlots.inc#L380) | `LibWebRtcSession::FinishVideoSlotBandwidthBootstrap` | 定义 | `void LibWebRtcSession::FinishVideoSlotBandwidthBootstrap( const std::string& slot)` | 停止 finish video slot bandwidth bootstrap 相关逻辑。 |
-| [L443](../src/webrtc/LibWebRtcSession.VideoSlots.inc#L443) | `LibWebRtcSession::PulseVideoSlotAllocationProbe` | 定义 | `bool LibWebRtcSession::PulseVideoSlotAllocationProbe( webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver, std::uint64_t startBitrate, std::uint64_t maxBitrate, std::string* error)` | 实现 pulse video slot allocation probe 对应的业务或工具逻辑。 |
-| [L490](../src/webrtc/LibWebRtcSession.VideoSlots.inc#L490) | `LibWebRtcSession::SetVideoSlotEncodingPolicy` | 定义 | `webrtc::RTCError LibWebRtcSession::SetVideoSlotEncodingPolicy( const std::string& slot, std::uint32_t framesPerSecond, std::uint32_t width, std::uint32_t height)` | 更新或应用 set video slot encoding policy 相关逻辑。 |
-| [L690](../src/webrtc/LibWebRtcSession.VideoSlots.inc#L690) | `LibWebRtcSession::ApplyPendingVideoStartBitrateBootstrap` | 定义 | `void LibWebRtcSession::ApplyPendingVideoStartBitrateBootstrap()` | 更新或应用 apply pending video start bitrate bootstrap 相关逻辑。 |
+| [L12](../src/webrtc/LibWebRtcSession.Lifecycle.cpp#L12) | `LibWebRtcSession::LibWebRtcSession` | 定义 | `LibWebRtcSession::LibWebRtcSession( webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> factory) : callbackGate_(std::make_shared<CallbackGate>(this)), factory_(std::move(factory)), statsCollector_( std::mak...` | 构造并初始化 LibWebRtcSession 实例。 |
+| [L73](../src/webrtc/LibWebRtcSession.Lifecycle.cpp#L73) | `mediaSlots_` | 定义 | `mediaSlots_(std::make_unique<MediaSlotManager>()) {}` | 实现 media slots 对应的业务或工具逻辑。 |
+| [L76](../src/webrtc/LibWebRtcSession.Lifecycle.cpp#L76) | `LibWebRtcSession::~LibWebRtcSession` | 定义 | `LibWebRtcSession::~LibWebRtcSession()` | 停止相关活动并释放 LibWebRtcSession 实例拥有的资源。 |
+| [L83](../src/webrtc/LibWebRtcSession.Lifecycle.cpp#L83) | `LibWebRtcSession::SetObserver` | 定义 | `void LibWebRtcSession::SetObserver(IWebRtcSessionObserver* observer)` | 更新或应用 set observer 相关逻辑。 |
+| [L89](../src/webrtc/LibWebRtcSession.Lifecycle.cpp#L89) | `LibWebRtcSession::Start` | 定义 | `OperationId LibWebRtcSession::Start(const WebRtcSessionConfig& config)` | 启动 start 相关逻辑。 |
 
-## `src/webrtc/LibWebRtcSessionInternal.inc`
+## `src/webrtc/LibWebRtcSession.Negotiation.cpp`
 
-[打开源码](../src/webrtc/LibWebRtcSessionInternal.inc) · **文件作用：** `LibWebRtcSessionInternal` 的实现切片，集中实现 lib web rtc session internal 相关逻辑；成员状态仍定义在所属头文件中。
+[打开源码](../src/webrtc/LibWebRtcSession.Negotiation.cpp) · **文件作用：** 实现 lib web rtc session negotiation 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L10](../src/webrtc/LibWebRtcSession.Negotiation.cpp#L10) | `LibWebRtcSession::CreateOffer` | 定义 | `OperationId LibWebRtcSession::CreateOffer()` | 创建或初始化 create offer 相关逻辑。 |
+| [L18](../src/webrtc/LibWebRtcSession.Negotiation.cpp#L18) | `LibWebRtcSession::CreateIceRestartOffer` | 定义 | `OperationId LibWebRtcSession::CreateIceRestartOffer()` | 创建或初始化 create ice restart offer 相关逻辑。 |
+| [L26](../src/webrtc/LibWebRtcSession.Negotiation.cpp#L26) | `LibWebRtcSession::CreateAnswer` | 定义 | `OperationId LibWebRtcSession::CreateAnswer()` | 创建或初始化 create answer 相关逻辑。 |
+| [L34](../src/webrtc/LibWebRtcSession.Negotiation.cpp#L34) | `LibWebRtcSession::ApplyRemoteDescription` | 定义 | `OperationId LibWebRtcSession::ApplyRemoteDescription( const SessionDescription& description)` | 更新或应用 apply remote description 相关逻辑。 |
+| [L43](../src/webrtc/LibWebRtcSession.Negotiation.cpp#L43) | `LibWebRtcSession::AddRemoteIceCandidate` | 定义 | `OperationId LibWebRtcSession::AddRemoteIceCandidate( const IceCandidate& candidate)` | 实现 add remote ice candidate 对应的业务或工具逻辑。 |
+
+## `src/webrtc/LibWebRtcSession.NegotiationInternals.cpp`
+
+[打开源码](../src/webrtc/LibWebRtcSession.NegotiationInternals.cpp) · **文件作用：** 实现 lib web rtc session negotiation internals 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L9](../src/webrtc/LibWebRtcSession.NegotiationInternals.cpp#L9) | `LibWebRtcSession::NextOperationId` | 定义 | `OperationId LibWebRtcSession::NextOperationId()` | 实现 next operation id 对应的业务或工具逻辑。 |
+| [L15](../src/webrtc/LibWebRtcSession.NegotiationInternals.cpp#L15) | `LibWebRtcSession::PeerConnection` | 定义 | `LibWebRtcSession::PeerConnection() const` | 实现 peer connection 对应的业务或工具逻辑。 |
+
+## `src/webrtc/LibWebRtcSession.Observers.cpp`
+
+[打开源码](../src/webrtc/LibWebRtcSession.Observers.cpp) · **文件作用：** 实现 lib web rtc session observers 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L11](../src/webrtc/LibWebRtcSession.Observers.cpp#L11) | `LibWebRtcSession::OnSignalingChange` | 定义 | `void LibWebRtcSession::OnSignalingChange( webrtc::PeerConnectionInterface::SignalingState) {}` | 接收并处理 on signaling change 相关逻辑。 |
+| [L15](../src/webrtc/LibWebRtcSession.Observers.cpp#L15) | `LibWebRtcSession::OnDataChannel` | 定义 | `void LibWebRtcSession::OnDataChannel( webrtc::scoped_refptr<webrtc::DataChannelInterface> channel)` | 接收并处理 on data channel 相关逻辑。 |
+| [L21](../src/webrtc/LibWebRtcSession.Observers.cpp#L21) | `LibWebRtcSession::OnIceGatheringChange` | 定义 | `void LibWebRtcSession::OnIceGatheringChange( webrtc::PeerConnectionInterface::IceGatheringState state)` | 接收并处理 on ice gathering change 相关逻辑。 |
+| [L30](../src/webrtc/LibWebRtcSession.Observers.cpp#L30) | `LibWebRtcSession::OnIceCandidate` | 定义 | `void LibWebRtcSession::OnIceCandidate(const webrtc::IceCandidate* candidate)` | 接收并处理 on ice candidate 相关逻辑。 |
+| [L44](../src/webrtc/LibWebRtcSession.Observers.cpp#L44) | `LibWebRtcSession::OnConnectionChange` | 定义 | `void LibWebRtcSession::OnConnectionChange( webrtc::PeerConnectionInterface::PeerConnectionState state)` | 接收并处理 on connection change 相关逻辑。 |
+| [L50](../src/webrtc/LibWebRtcSession.Observers.cpp#L50) | `LibWebRtcSession::OnIceConnectionChange` | 定义 | `void LibWebRtcSession::OnIceConnectionChange( webrtc::PeerConnectionInterface::IceConnectionState state)` | 接收并处理 on ice connection change 相关逻辑。 |
+| [L56](../src/webrtc/LibWebRtcSession.Observers.cpp#L56) | `LibWebRtcSession::OnTrack` | 定义 | `void LibWebRtcSession::OnTrack( webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver)` | 接收并处理 on track 相关逻辑。 |
+
+## `src/webrtc/LibWebRtcSession.State.cpp`
+
+[打开源码](../src/webrtc/LibWebRtcSession.State.cpp) · **文件作用：** 实现 lib web rtc session state 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L9](../src/webrtc/LibWebRtcSession.State.cpp#L9) | `LibWebRtcSession::UpdatePeerConnectionState` | 定义 | `void LibWebRtcSession::UpdatePeerConnectionState( webrtc::PeerConnectionInterface::PeerConnectionState state)` | 更新或应用 update peer connection state 相关逻辑。 |
+| [L34](../src/webrtc/LibWebRtcSession.State.cpp#L34) | `LibWebRtcSession::UpdateIceConnectionState` | 定义 | `void LibWebRtcSession::UpdateIceConnectionState( webrtc::PeerConnectionInterface::IceConnectionState state)` | 更新或应用 update ice connection state 相关逻辑。 |
+| [L62](../src/webrtc/LibWebRtcSession.State.cpp#L62) | `LibWebRtcSession::CombinedConnectionStateLocked` | 定义 | `WebRtcSessionState LibWebRtcSession::CombinedConnectionStateLocked() const` | 实现 combined connection state locked 对应的业务或工具逻辑。 |
+| [L116](../src/webrtc/LibWebRtcSession.State.cpp#L116) | `LibWebRtcSession::ChangeState` | 定义 | `void LibWebRtcSession::ChangeState(WebRtcSessionState state)` | 实现 change state 对应的业务或工具逻辑。 |
+| [L132](../src/webrtc/LibWebRtcSession.State.cpp#L132) | `LibWebRtcSession::CompleteOperation` | 定义 | `void LibWebRtcSession::CompleteOperation(OperationId operationId)` | 实现 complete operation 对应的业务或工具逻辑。 |
+| [L139](../src/webrtc/LibWebRtcSession.State.cpp#L139) | `LibWebRtcSession::FailOperation` | 定义 | `void LibWebRtcSession::FailOperation(OperationId operationId, std::string code, std::string message)` | 实现 fail operation 对应的业务或工具逻辑。 |
+| [L149](../src/webrtc/LibWebRtcSession.State.cpp#L149) | `LibWebRtcSession::Observer` | 定义 | `IWebRtcSessionObserver* LibWebRtcSession::Observer() const` | 实现 observer 对应的业务或工具逻辑。 |
+
+## `src/webrtc/LibWebRtcSession.StatsClose.cpp`
+
+[打开源码](../src/webrtc/LibWebRtcSession.StatsClose.cpp) · **文件作用：** 实现 lib web rtc session stats close 相关函数与文件级辅助逻辑。
 
 ### 类型
 
 | 行 | 类型 | 种类 | 作用 |
 |---:|---|---|---|
-| [L4](../src/webrtc/LibWebRtcSessionInternal.inc#L4) | `LibWebRtcSession::CallbackGate` | class | SPDX-License-Identifier: GPL-3.0-only Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd) |
-| [L6](../src/webrtc/LibWebRtcSessionInternal.inc#L6) | `Lease` | class | 定义 Lease 的 class 类型和相关状态。 |
-| [L67](../src/webrtc/LibWebRtcSessionInternal.inc#L67) | `LibWebRtcSession::DataChannelBinding` | class | 定义 LibWebRtcSession::DataChannelBinding 的 class 类型和相关状态。 |
+| [L223](../src/webrtc/LibWebRtcSession.StatsClose.cpp#L223) | `EncodingPolicy` | struct | 定义 EncodingPolicy 的 struct 类型和相关状态。 |
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L9](../src/webrtc/LibWebRtcSessionInternal.inc#L9) | `Lease` | 定义 | `Lease(CallbackGate* gate, LibWebRtcSession* owner) : gate_(gate), owner_(owner) {}` | 实现 lease 对应的业务或工具逻辑。 |
-| [L14](../src/webrtc/LibWebRtcSessionInternal.inc#L14) | `Lease` | 定义 | `Lease(Lease&& other) noexcept : gate_(std::exchange(other.gate_, nullptr)), owner_(std::exchange(other.owner_, nullptr)) {}` | 实现 lease 对应的业务或工具逻辑。 |
-| [L18](../src/webrtc/LibWebRtcSessionInternal.inc#L18) | `~Lease` | 定义 | `~Lease()` | 停止相关活动并释放 Lease 实例拥有的资源。 |
-| [L25](../src/webrtc/LibWebRtcSessionInternal.inc#L25) | `Owner` | 定义 | `LibWebRtcSession* Owner() const { return owner_; }` | 实现 owner 对应的业务或工具逻辑。 |
-| [L32](../src/webrtc/LibWebRtcSessionInternal.inc#L32) | `CallbackGate` | 定义 | `explicit CallbackGate(LibWebRtcSession* owner) : owner_(owner) {}` | 实现 callback gate 对应的业务或工具逻辑。 |
-| [L34](../src/webrtc/LibWebRtcSessionInternal.inc#L34) | `Enter` | 定义 | `Lease Enter()` | 实现 enter 对应的业务或工具逻辑。 |
-| [L44](../src/webrtc/LibWebRtcSessionInternal.inc#L44) | `DetachAndWait` | 定义 | `void DetachAndWait()` | 实现 detach and wait 对应的业务或工具逻辑。 |
-| [L52](../src/webrtc/LibWebRtcSessionInternal.inc#L52) | `Leave` | 定义 | `void Leave()` | 实现 leave 对应的业务或工具逻辑。 |
-| [L70](../src/webrtc/LibWebRtcSessionInternal.inc#L70) | `DataChannelBinding` | 定义 | `DataChannelBinding( LibWebRtcSession* owner, webrtc::scoped_refptr<webrtc::DataChannelInterface> channel) : owner_(owner), channel_(std::move(channel))` | 实现 data channel binding 对应的业务或工具逻辑。 |
-| [L78](../src/webrtc/LibWebRtcSessionInternal.inc#L78) | `~DataChannelBinding` | 定义 | `~DataChannelBinding() override { channel_->UnregisterObserver(); }` | 停止相关活动并释放 DataChannelBinding 实例拥有的资源。 |
-| [L80](../src/webrtc/LibWebRtcSessionInternal.inc#L80) | `Channel` | 定义 | `webrtc::scoped_refptr<webrtc::DataChannelInterface> Channel() const` | 实现 channel 对应的业务或工具逻辑。 |
-| [L85](../src/webrtc/LibWebRtcSessionInternal.inc#L85) | `Close` | 定义 | `void Close() { channel_->Close(); }` | 关闭并清理 close 相关逻辑。 |
-| [L87](../src/webrtc/LibWebRtcSessionInternal.inc#L87) | `OnStateChange` | 定义 | `void OnStateChange() override` | 接收并处理 on state change 相关逻辑。 |
-| [L92](../src/webrtc/LibWebRtcSessionInternal.inc#L92) | `OnMessage` | 定义 | `void OnMessage(const webrtc::DataBuffer& buffer) override` | 接收并处理 on message 相关逻辑。 |
+| [L11](../src/webrtc/LibWebRtcSession.StatsClose.cpp#L11) | `LibWebRtcSession::RequestStats` | 定义 | `void LibWebRtcSession::RequestStats()` | 发起请求或查询 request stats 相关逻辑。 |
+| [L27](../src/webrtc/LibWebRtcSession.StatsClose.cpp#L27) | `LibWebRtcSession::HandleCompletedStatsSample` | 定义 | `void LibWebRtcSession::HandleCompletedStatsSample()` | 接收并处理 handle completed stats sample 相关逻辑。 |
+| [L110](../src/webrtc/LibWebRtcSession.StatsClose.cpp#L110) | `LibWebRtcSession::ApplyProgressiveBitrateCeilingDecision` | 定义 | `webrtc::RTCError LibWebRtcSession::ApplyProgressiveBitrateCeilingDecision( const ProgressiveBitrateCeilingDecision& decision, std::uint64_t decisionRevision, const ProgressiveBitrateCeilingState& previousState)` | 更新或应用 apply progressive bitrate ceiling decision 相关逻辑。 |
+| [L159](../src/webrtc/LibWebRtcSession.StatsClose.cpp#L159) | `LibWebRtcSession::ApplyAdaptiveScreenFrameRateDecision` | 定义 | `webrtc::RTCError LibWebRtcSession::ApplyAdaptiveScreenFrameRateDecision( const AdaptiveScreenFrameRateDecision& decision, std::uint64_t decisionRevision, const AdaptiveScreenFrameRateState& previousState, webrtc::scop...` | 更新或应用 apply adaptive screen frame rate decision 相关逻辑。 |
+| [L215](../src/webrtc/LibWebRtcSession.StatsClose.cpp#L215) | `LibWebRtcSession::StatsSnapshot` | 定义 | `WebRtcSessionStatsSnapshot LibWebRtcSession::StatsSnapshot() const` | 实现 stats snapshot 对应的业务或工具逻辑。 |
+| [L386](../src/webrtc/LibWebRtcSession.StatsClose.cpp#L386) | `LibWebRtcSession::Close` | 定义 | `void LibWebRtcSession::Close()` | 关闭并清理 close 相关逻辑。 |
+| [L433](../src/webrtc/LibWebRtcSession.StatsClose.cpp#L433) | `LibWebRtcSession::AddVideoTrack` | 定义 | `LibWebRtcSession::AddVideoTrack( webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track)` | 实现 add video track 对应的业务或工具逻辑。 |
+| [L459](../src/webrtc/LibWebRtcSession.StatsClose.cpp#L459) | `LibWebRtcSession::AddVideoReceiveTransceiver` | 定义 | `LibWebRtcSession::AddVideoReceiveTransceiver()` | 实现 add video receive transceiver 对应的业务或工具逻辑。 |
+
+## `src/webrtc/LibWebRtcSession.VideoSlots.cpp`
+
+[打开源码](../src/webrtc/LibWebRtcSession.VideoSlots.cpp) · **文件作用：** 实现 lib web rtc session video slots 相关函数与文件级辅助逻辑。
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L10](../src/webrtc/LibWebRtcSession.VideoSlots.cpp#L10) | `LibWebRtcSession::PrepareVideoTransceiverSlot` | 定义 | `webrtc::RTCError LibWebRtcSession::PrepareVideoTransceiverSlot( const std::string& slot)` | 实现 prepare video transceiver slot 对应的业务或工具逻辑。 |
+| [L66](../src/webrtc/LibWebRtcSession.VideoSlots.cpp#L66) | `LibWebRtcSession::BindNegotiatedVideoTransceiverSlots` | 定义 | `webrtc::RTCError LibWebRtcSession::BindNegotiatedVideoTransceiverSlots( const std::vector<std::string>& slots)` | 实现 bind negotiated video transceiver slots 对应的业务或工具逻辑。 |
+| [L152](../src/webrtc/LibWebRtcSession.VideoSlots.cpp#L152) | `LibWebRtcSession::SetVideoSlotTrack` | 定义 | `webrtc::RTCError LibWebRtcSession::SetVideoSlotTrack( const std::string& slot, webrtc::scoped_refptr<webrtc::MediaStreamTrackInterface> track)` | 更新或应用 set video slot track 相关逻辑。 |
+| [L179](../src/webrtc/LibWebRtcSession.VideoSlots.cpp#L179) | `LibWebRtcSession::SetVideoSlotSendingActive` | 定义 | `webrtc::RTCError LibWebRtcSession::SetVideoSlotSendingActive( const std::string& slot, bool active)` | 更新或应用 set video slot sending active 相关逻辑。 |
+| [L260](../src/webrtc/LibWebRtcSession.VideoSlots.cpp#L260) | `LibWebRtcSession::SetFastDesktopBweStartupEnabled` | 定义 | `void LibWebRtcSession::SetFastDesktopBweStartupEnabled(bool enabled)` | 更新或应用 set fast desktop bwe startup enabled 相关逻辑。 |
+| [L271](../src/webrtc/LibWebRtcSession.VideoSlots.cpp#L271) | `LibWebRtcSession::SetAdaptiveDesktopNetworkFrameRateEnabled` | 定义 | `void LibWebRtcSession::SetAdaptiveDesktopNetworkFrameRateEnabled( bool enabled)` | 更新或应用 set adaptive desktop network frame rate enabled 相关逻辑。 |
+| [L290](../src/webrtc/LibWebRtcSession.VideoSlots.cpp#L290) | `LibWebRtcSession::SetScreenContentActivity` | 定义 | `void LibWebRtcSession::SetScreenContentActivity( ScreenContentActivity activity)` | 更新或应用 set screen content activity 相关逻辑。 |
+| [L297](../src/webrtc/LibWebRtcSession.VideoSlots.cpp#L297) | `LibWebRtcSession::RestartVideoSlotBandwidthEstimation` | 定义 | `void LibWebRtcSession::RestartVideoSlotBandwidthEstimation( const std::string& slot)` | 实现 restart video slot bandwidth estimation 对应的业务或工具逻辑。 |
+| [L386](../src/webrtc/LibWebRtcSession.VideoSlots.cpp#L386) | `LibWebRtcSession::FinishVideoSlotBandwidthBootstrap` | 定义 | `void LibWebRtcSession::FinishVideoSlotBandwidthBootstrap( const std::string& slot)` | 停止 finish video slot bandwidth bootstrap 相关逻辑。 |
+| [L449](../src/webrtc/LibWebRtcSession.VideoSlots.cpp#L449) | `LibWebRtcSession::PulseVideoSlotAllocationProbe` | 定义 | `bool LibWebRtcSession::PulseVideoSlotAllocationProbe( webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver, std::uint64_t startBitrate, std::uint64_t maxBitrate, std::string* error)` | 实现 pulse video slot allocation probe 对应的业务或工具逻辑。 |
+| [L496](../src/webrtc/LibWebRtcSession.VideoSlots.cpp#L496) | `LibWebRtcSession::SetVideoSlotEncodingPolicy` | 定义 | `webrtc::RTCError LibWebRtcSession::SetVideoSlotEncodingPolicy( const std::string& slot, std::uint32_t framesPerSecond, std::uint32_t width, std::uint32_t height)` | 更新或应用 set video slot encoding policy 相关逻辑。 |
+| [L696](../src/webrtc/LibWebRtcSession.VideoSlots.cpp#L696) | `LibWebRtcSession::ApplyPendingVideoStartBitrateBootstrap` | 定义 | `void LibWebRtcSession::ApplyPendingVideoStartBitrateBootstrap()` | 更新或应用 apply pending video start bitrate bootstrap 相关逻辑。 |
 
 ## `src/webrtc/LocalPeerConnectionH264SelfTest.cpp`
 
@@ -555,6 +570,54 @@ PeerConnection、RTP sender、DataChannel、统计、编解码工厂与运行时
 |---:|---|---|---|---|
 | [L22](../src/webrtc/LocalPeerConnectionH264SelfTest.h#L22) | `RunLocalPeerConnectionH264SelfTest` | 定义 | `LocalPeerConnectionH264SelfTestResult RunLocalPeerConnectionH264SelfTest( webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> factory, std::function<bool()> reconfigureEncoder = {})` | Builds two PeerConnections in one process and sends synthetic I420 frames through the complete H264/RTP/ICE/decode pipeline. The receiver must observe D3D11NativeFrameBuffer out... |
 
+## `src/webrtc/MediaSlotManager.h`
+
+[打开源码](../src/webrtc/MediaSlotManager.h) · **文件作用：** 声明 media slot manager 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L20](../src/webrtc/MediaSlotManager.h#L20) | `LibWebRtcSession` | class | 定义 LibWebRtcSession 的 class 类型和相关状态。 |
+| [L22](../src/webrtc/MediaSlotManager.h#L22) | `MediaSlotManager` | class | 定义 MediaSlotManager 的 class 类型和相关状态。 |
+| [L26](../src/webrtc/MediaSlotManager.h#L26) | `VideoSlotBinding` | struct | 定义 VideoSlotBinding 的 struct 类型和相关状态。 |
+| [L49](../src/webrtc/MediaSlotManager.h#L49) | `AudioSlotBinding` | struct | 定义 AudioSlotBinding 的 struct 类型和相关状态。 |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L20](../src/webrtc/MediaSlotManager.h#L20) | `LibWebRtcSession` | `class LibWebRtcSession;` | 保存 lib web rtc session 相关配置或运行状态。 |
+| [L27](../src/webrtc/MediaSlotManager.h#L27) | `transceiver` | `webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver;` | 保存 transceiver 相关配置或运行状态。 |
+| [L28](../src/webrtc/MediaSlotManager.h#L28) | `remoteTrack` | `webrtc::scoped_refptr<webrtc::VideoTrackInterface> remoteTrack;` | 保存 remote track 相关配置或运行状态。 |
+| [L29](../src/webrtc/MediaSlotManager.h#L29) | `remoteSink` | `webrtc::VideoSinkInterface<webrtc::VideoFrame>* remoteSink = nullptr;` | 保存回调或观察者入口：remote sink。 |
+| [L30](../src/webrtc/MediaSlotManager.h#L30) | `configuredMaxFrameRate` | `std::uint32_t configuredMaxFrameRate = 0;` | 保存计数、尺寸或速率指标：configured max frame rate。 |
+| [L31](../src/webrtc/MediaSlotManager.h#L31) | `configuredOutputWidth` | `std::uint32_t configuredOutputWidth = 0;` | 保存计数、尺寸或速率指标：configured output width。 |
+| [L32](../src/webrtc/MediaSlotManager.h#L32) | `configuredOutputHeight` | `std::uint32_t configuredOutputHeight = 0;` | 保存计数、尺寸或速率指标：configured output height。 |
+| [L33](../src/webrtc/MediaSlotManager.h#L33) | `configuredStartBitrateBps` | `std::uint64_t configuredStartBitrateBps = 0;` | 保存计数、尺寸或速率指标：configured start bitrate bps。 |
+| [L34](../src/webrtc/MediaSlotManager.h#L34) | `configuredMaxBitrateBps` | `std::uint64_t configuredMaxBitrateBps = 0;` | 保存计数、尺寸或速率指标：configured max bitrate bps。 |
+| [L35](../src/webrtc/MediaSlotManager.h#L35) | `adaptiveFrameRate` | `AdaptiveScreenFrameRateState adaptiveFrameRate;` | 保存计数、尺寸或速率指标：adaptive frame rate。 |
+| [L36](../src/webrtc/MediaSlotManager.h#L36) | `adaptiveFrameRateRevision` | `std::uint64_t adaptiveFrameRateRevision = 0;` | 标记当前世代，用于拒绝过期异步结果：adaptive frame rate revision。 |
+| [L37](../src/webrtc/MediaSlotManager.h#L37) | `adaptiveFrameRateError` | `std::string adaptiveFrameRateError;` | 保存最近错误或失败原因：adaptive frame rate error。 |
+| [L38](../src/webrtc/MediaSlotManager.h#L38) | `sendingActive` | `bool sendingActive = false;` | 保存能力或开关状态：sending active。 |
+| [L39](../src/webrtc/MediaSlotManager.h#L39) | `startBitrateBootstrapPending` | `bool startBitrateBootstrapPending = true;` | 保存待处理队列或请求：start bitrate bootstrap pending。 |
+| [L40](../src/webrtc/MediaSlotManager.h#L40) | `bitrateBootstrapAttempts` | `std::uint32_t bitrateBootstrapAttempts = 0;` | 保存 bitrate bootstrap attempts 相关配置或运行状态。 |
+| [L41](../src/webrtc/MediaSlotManager.h#L41) | `bitrateBootstrapSuccesses` | `std::uint32_t bitrateBootstrapSuccesses = 0;` | 保存 bitrate bootstrap successes 相关配置或运行状态。 |
+| [L42](../src/webrtc/MediaSlotManager.h#L42) | `mediaReadyBitrateRestarts` | `std::uint32_t mediaReadyBitrateRestarts = 0;` | 保存 media ready bitrate restarts 相关配置或运行状态。 |
+| [L43](../src/webrtc/MediaSlotManager.h#L43) | `allocationProbePulses` | `std::uint32_t allocationProbePulses = 0;` | 保存 allocation probe pulses 相关配置或运行状态。 |
+| [L44](../src/webrtc/MediaSlotManager.h#L44) | `bitrateProbeFloorReleases` | `std::uint32_t bitrateProbeFloorReleases = 0;` | 保存 bitrate probe floor releases 相关配置或运行状态。 |
+| [L45](../src/webrtc/MediaSlotManager.h#L45) | `bitrateProbeFloorActive` | `bool bitrateProbeFloorActive = false;` | 保存能力或开关状态：bitrate probe floor active。 |
+| [L46](../src/webrtc/MediaSlotManager.h#L46) | `bitrateBootstrapError` | `std::string bitrateBootstrapError;` | 保存最近错误或失败原因：bitrate bootstrap error。 |
+| [L50](../src/webrtc/MediaSlotManager.h#L50) | `name` | `std::string name;` | 保存路径、地址或显示名称：name。 |
+| [L51](../src/webrtc/MediaSlotManager.h#L51) | `transceiver` | `webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver;` | 保存 transceiver 相关配置或运行状态。 |
+| [L52](../src/webrtc/MediaSlotManager.h#L52) | `remoteTrack` | `webrtc::scoped_refptr<webrtc::AudioTrackInterface> remoteTrack;` | 保存 remote track 相关配置或运行状态。 |
+| [L53](../src/webrtc/MediaSlotManager.h#L53) | `remotePlaybackEnabled` | `bool remotePlaybackEnabled = true;` | 保存能力或开关状态：remote playback enabled。 |
+| [L56](../src/webrtc/MediaSlotManager.h#L56) | `videoSlots_` | `std::unordered_map<std::string, VideoSlotBinding> videoSlots_;` | 保存 video slots 相关配置或运行状态。 |
+| [L57](../src/webrtc/MediaSlotManager.h#L57) | `videoSlotOrder_` | `std::vector<std::string> videoSlotOrder_;` | 保存 video slot order 相关配置或运行状态。 |
+| [L58](../src/webrtc/MediaSlotManager.h#L58) | `audioSlot_` | `AudioSlotBinding audioSlot_;` | 保存 audio slot 相关配置或运行状态。 |
+| [L59](../src/webrtc/MediaSlotManager.h#L59) | `remoteVideoSink_` | `webrtc::VideoSinkInterface<webrtc::VideoFrame>* remoteVideoSink_ = nullptr;` | 保存回调或观察者入口：remote video sink。 |
+| [L60](../src/webrtc/MediaSlotManager.h#L60) | `remoteVideoTrack_` | `webrtc::scoped_refptr<webrtc::VideoTrackInterface> remoteVideoTrack_;` | 保存 remote video track 相关配置或运行状态。 |
+
 ## `src/webrtc/PeerConnectionStatsCollector.cpp`
 
 [打开源码](../src/webrtc/PeerConnectionStatsCollector.cpp) · **文件作用：** 实现 peer connection stats collector 相关函数与文件级辅助逻辑。
@@ -619,6 +682,62 @@ PeerConnection、RTP sender、DataChannel、统计、编解码工厂与运行时
 | [L29](../src/webrtc/PeerConnectionStatsCollector.h#L29) | `PeerConnectionStatsCollector` | 声明 | `PeerConnectionStatsCollector( const PeerConnectionStatsCollector&) = delete` | 实现 peer connection stats collector 对应的业务或工具逻辑。 |
 | [L37](../src/webrtc/PeerConnectionStatsCollector.h#L37) | `Snapshot` | 声明 | `WebRtcSessionStatsSnapshot Snapshot() const` | 查询并返回 snapshot 相关逻辑。 |
 | [L43](../src/webrtc/PeerConnectionStatsCollector.h#L43) | `ProcessReport` | 声明 | `static void ProcessReport( const std::shared_ptr<State>& state, const webrtc::scoped_refptr<const webrtc::RTCStatsReport>& report)` | 接收并处理 process report 相关逻辑。 |
+
+## `src/webrtc/PeerNegotiator.cpp`
+
+[打开源码](../src/webrtc/PeerNegotiator.cpp) · **文件作用：** 实现 peer negotiator 相关函数与文件级辅助逻辑。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L15](../src/webrtc/PeerNegotiator.cpp#L15) | `CreateDescriptionCallback` | class | 定义 CreateDescriptionCallback 的 class 类型和相关状态。 |
+| [L43](../src/webrtc/PeerNegotiator.cpp#L43) | `SetDescriptionCallback` | class | 定义 SetDescriptionCallback 的 class 类型和相关状态。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L22](../src/webrtc/PeerNegotiator.cpp#L22) | `CreateDescriptionCallback` | 定义 | `CreateDescriptionCallback(SuccessCallback success, FailureCallback failure) : success_(std::move(success)), failure_(std::move(failure)) {}` | 创建或初始化 create description callback 相关逻辑。 |
+| [L27](../src/webrtc/PeerNegotiator.cpp#L27) | `OnSuccess` | 定义 | `void OnSuccess(webrtc::SessionDescriptionInterface* description) override` | 接收并处理 on success 相关逻辑。 |
+| [L33](../src/webrtc/PeerNegotiator.cpp#L33) | `OnFailure` | 定义 | `void OnFailure(webrtc::RTCError error) override` | 接收并处理 on failure 相关逻辑。 |
+| [L49](../src/webrtc/PeerNegotiator.cpp#L49) | `SetDescriptionCallback` | 定义 | `SetDescriptionCallback(SuccessCallback success, FailureCallback failure) : success_(std::move(success)), failure_(std::move(failure)) {}` | 更新或应用 set description callback 相关逻辑。 |
+| [L53](../src/webrtc/PeerNegotiator.cpp#L53) | `OnSuccess` | 定义 | `void OnSuccess() override { success_(); }` | 接收并处理 on success 相关逻辑。 |
+| [L55](../src/webrtc/PeerNegotiator.cpp#L55) | `OnFailure` | 定义 | `void OnFailure(webrtc::RTCError error) override` | 接收并处理 on failure 相关逻辑。 |
+| [L65](../src/webrtc/PeerNegotiator.cpp#L65) | `ToNativeSdpType` | 定义 | `webrtc::SdpType ToNativeSdpType(SessionDescriptionType type)` | 实现 to native sdp type 对应的业务或工具逻辑。 |
+| [L71](../src/webrtc/PeerNegotiator.cpp#L71) | `SetLocalDescription` | 定义 | `void SetLocalDescription( const PeerNegotiatorCallbacks& callbacks, OperationId operationId, SessionDescription description, std::unique_ptr<webrtc::SessionDescriptionInterface> nativeDescription)` | 更新或应用 set local description 相关逻辑。 |
+| [L100](../src/webrtc/PeerNegotiator.cpp#L100) | `PeerNegotiator::PeerNegotiator` | 定义 | `PeerNegotiator::PeerNegotiator(PeerNegotiatorCallbacks callbacks) : callbacks_(std::move(callbacks)) {}` | 构造并初始化 PeerNegotiator 实例。 |
+| [L104](../src/webrtc/PeerNegotiator.cpp#L104) | `PeerNegotiator::CreateLocalDescription` | 定义 | `void PeerNegotiator::CreateLocalDescription( webrtc::scoped_refptr<webrtc::PeerConnectionInterface> peer, OperationId operationId, SessionDescriptionType type, bool iceRestart) const` | 创建或初始化 create local description 相关逻辑。 |
+| [L148](../src/webrtc/PeerNegotiator.cpp#L148) | `PeerNegotiator::ApplyRemoteDescription` | 定义 | `void PeerNegotiator::ApplyRemoteDescription( webrtc::scoped_refptr<webrtc::PeerConnectionInterface> peer, OperationId operationId, const SessionDescription& description) const` | 更新或应用 apply remote description 相关逻辑。 |
+| [L182](../src/webrtc/PeerNegotiator.cpp#L182) | `PeerNegotiator::AddRemoteIceCandidate` | 定义 | `void PeerNegotiator::AddRemoteIceCandidate( webrtc::scoped_refptr<webrtc::PeerConnectionInterface> peer, OperationId operationId, const IceCandidate& candidate) const` | 实现 add remote ice candidate 对应的业务或工具逻辑。 |
+
+## `src/webrtc/PeerNegotiator.h`
+
+[打开源码](../src/webrtc/PeerNegotiator.h) · **文件作用：** 声明 peer negotiator 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L15](../src/webrtc/PeerNegotiator.h#L15) | `PeerNegotiatorCallbacks` | struct | 定义 PeerNegotiatorCallbacks 的 struct 类型和相关状态。 |
+| [L26](../src/webrtc/PeerNegotiator.h#L26) | `PeerNegotiator` | class | 定义 PeerNegotiator 的 class 类型和相关状态。 |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L18](../src/webrtc/PeerNegotiator.h#L18) | `peerConnection` | `peerConnection;` | 保存 peer connection 相关配置或运行状态。 |
+| [L21](../src/webrtc/PeerNegotiator.h#L21) | `localDescriptionCompleted` | `localDescriptionCompleted;` | 保存 local description completed 相关配置或运行状态。 |
+| [L45](../src/webrtc/PeerNegotiator.h#L45) | `callbacks_` | `PeerNegotiatorCallbacks callbacks_;` | 保存 callbacks 相关配置或运行状态。 |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L28](../src/webrtc/PeerNegotiator.h#L28) | `PeerNegotiator` | 声明 | `explicit PeerNegotiator(PeerNegotiatorCallbacks callbacks)` | 实现 peer negotiator 对应的业务或工具逻辑。 |
+| [L30](../src/webrtc/PeerNegotiator.h#L30) | `CreateLocalDescription` | 声明 | `void CreateLocalDescription( webrtc::scoped_refptr<webrtc::PeerConnectionInterface> peer, OperationId operationId, SessionDescriptionType type, bool iceRestart = false) const` | 创建或初始化 create local description 相关逻辑。 |
+| [L35](../src/webrtc/PeerNegotiator.h#L35) | `ApplyRemoteDescription` | 声明 | `void ApplyRemoteDescription( webrtc::scoped_refptr<webrtc::PeerConnectionInterface> peer, OperationId operationId, const SessionDescription& description) const` | 更新或应用 apply remote description 相关逻辑。 |
+| [L39](../src/webrtc/PeerNegotiator.h#L39) | `AddRemoteIceCandidate` | 声明 | `void AddRemoteIceCandidate( webrtc::scoped_refptr<webrtc::PeerConnectionInterface> peer, OperationId operationId, const IceCandidate& candidate) const` | 实现 add remote ice candidate 对应的业务或工具逻辑。 |
 
 ## `src/webrtc/VideoCodecTimingTelemetry.h`
 

@@ -12,10 +12,6 @@ QLineEdit, QComboBox {
     border-radius: 10px;
 }
 QToolButton#profileUpdateButton {
-    background: #E97F5D;
-    border: none;
-    border-radius: 15px;
-    padding: 5px;
+    border-radius: 10px;
+    padding: 6px;
 }
-QToolButton#profileUpdateButton:hover { background: #F08A66; }
-QToolButton#profileUpdateButton:pressed { background: #D86E4D; }

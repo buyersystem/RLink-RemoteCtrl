@@ -1,6 +1,6 @@
 # Windows 平台能力
 
-> 自动生成于 2026-09-06，源码树 `1ae783c8db12-dirty`。请运行 `tools/Generate-SourceSymbolReference.ps1` 刷新。
+> 自动生成于 2026-09-28，源码树 `f12aea4209d9-dirty`。请运行 `tools/Generate-SourceSymbolReference.ps1` 刷新。
 
 DXGI/D3D11、Windows 输入、剪贴板、文件、摄像头、MFT/FFmpeg 编解码和硬件探测。
 
@@ -253,22 +253,22 @@ DXGI/D3D11、Windows 输入、剪贴板、文件、摄像头、MFT/FFmpeg 编解
 
 | 行 | 类型 | 种类 | 作用 |
 |---:|---|---|---|
-| [L41](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L41) | `DxgiNativeDesktopCapturer::Impl` | class | 定义 DxgiNativeDesktopCapturer::Impl 的 class 类型和相关状态。 |
+| [L42](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L42) | `DxgiNativeDesktopCapturer::Impl` | class | 定义 DxgiNativeDesktopCapturer::Impl 的 class 类型和相关状态。 |
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L23](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L23) | `HResultText` | 定义 | `std::string HResultText(const char* operation, HRESULT result)` | 实现 h result text 对应的业务或工具逻辑。 |
-| [L32](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L32) | `IsPrimaryOutput` | 定义 | `bool IsPrimaryOutput(const DXGI_OUTPUT_DESC& description)` | 判断 is primary output 相关逻辑。 |
-| [L43](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L43) | `~Impl` | 定义 | `~Impl()` | 停止相关活动并释放 Impl 实例拥有的资源。 |
-| [L48](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L48) | `Reset` | 定义 | `void Reset()` | 重置或移除 reset 相关逻辑。 |
-| [L59](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L59) | `Initialize` | 定义 | `bool Initialize(const DisplayDescriptor& target)` | 创建或初始化 initialize 相关逻辑。 |
-| [L194](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L194) | `Capture` | 定义 | `Result Capture( std::uint32_t timeoutMs, webrtc::scoped_refptr<D3D11DesktopFrameBuffer>* resultFrame)` | 采集 capture 相关逻辑。 |
-| [L272](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L272) | `DxgiNativeDesktopCapturer::DxgiNativeDesktopCapturer` | 定义 | `DxgiNativeDesktopCapturer::DxgiNativeDesktopCapturer() : impl_(std::make_unique<Impl>()) {}` | 构造并初始化 DxgiNativeDesktopCapturer 实例。 |
-| [L278](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L278) | `DxgiNativeDesktopCapturer::Initialize` | 定义 | `bool DxgiNativeDesktopCapturer::Initialize( const DisplayDescriptor& target)` | 创建或初始化 initialize 相关逻辑。 |
-| [L285](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L285) | `DxgiNativeDesktopCapturer::Capture` | 定义 | `DxgiNativeDesktopCapturer::Capture( std::uint32_t timeoutMs, webrtc::scoped_refptr<D3D11DesktopFrameBuffer>* frame)` | 采集 capture 相关逻辑。 |
-| [L292](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L292) | `DxgiNativeDesktopCapturer::LastError` | 定义 | `std::string DxgiNativeDesktopCapturer::LastError() const` | 实现 last error 对应的业务或工具逻辑。 |
+| [L24](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L24) | `HResultText` | 定义 | `std::string HResultText(const char* operation, HRESULT result)` | 实现 h result text 对应的业务或工具逻辑。 |
+| [L33](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L33) | `IsPrimaryOutput` | 定义 | `bool IsPrimaryOutput(const DXGI_OUTPUT_DESC& description)` | 判断 is primary output 相关逻辑。 |
+| [L44](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L44) | `~Impl` | 定义 | `~Impl()` | 停止相关活动并释放 Impl 实例拥有的资源。 |
+| [L49](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L49) | `Reset` | 定义 | `void Reset()` | 重置或移除 reset 相关逻辑。 |
+| [L60](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L60) | `Initialize` | 定义 | `bool Initialize(const DisplayDescriptor& target)` | 创建或初始化 initialize 相关逻辑。 |
+| [L217](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L217) | `Capture` | 定义 | `Result Capture( std::uint32_t timeoutMs, webrtc::scoped_refptr<D3D11DesktopFrameBuffer>* resultFrame)` | 采集 capture 相关逻辑。 |
+| [L300](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L300) | `DxgiNativeDesktopCapturer::DxgiNativeDesktopCapturer` | 定义 | `DxgiNativeDesktopCapturer::DxgiNativeDesktopCapturer() : impl_(std::make_unique<Impl>()) {}` | 构造并初始化 DxgiNativeDesktopCapturer 实例。 |
+| [L306](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L306) | `DxgiNativeDesktopCapturer::Initialize` | 定义 | `bool DxgiNativeDesktopCapturer::Initialize( const DisplayDescriptor& target)` | 创建或初始化 initialize 相关逻辑。 |
+| [L313](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L313) | `DxgiNativeDesktopCapturer::Capture` | 定义 | `DxgiNativeDesktopCapturer::Capture( std::uint32_t timeoutMs, webrtc::scoped_refptr<D3D11DesktopFrameBuffer>* frame)` | 采集 capture 相关逻辑。 |
+| [L320](../src/platform/win/DxgiNativeDesktopCapturer.cpp#L320) | `DxgiNativeDesktopCapturer::LastError` | 定义 | `std::string DxgiNativeDesktopCapturer::LastError() const` | 实现 last error 对应的业务或工具逻辑。 |
 
 ## `src/platform/win/DxgiNativeDesktopCapturer.h`
 
@@ -1802,113 +1802,112 @@ DXGI/D3D11、Windows 输入、剪贴板、文件、摄像头、MFT/FFmpeg 编解
 
 | 行 | 类型 | 种类 | 作用 |
 |---:|---|---|---|
-| [L24](../src/platform/win/WindowsDesktopCaptureSource.h#L24) | `DesktopCaptureImplementation` | enum class | 定义 DesktopCaptureImplementation 的 enum class 类型和相关状态。 |
-| [L32](../src/platform/win/WindowsDesktopCaptureSource.h#L32) | `WindowsDesktopCaptureSource` | class | Captures one Windows display on a dedicated thread. WebRTC selects DXGI Desktop Duplication once when the capturer is created and keeps GDI as the permanent-error fallback; ther... |
-| [L36](../src/platform/win/WindowsDesktopCaptureSource.h#L36) | `CaptureActivityState` | enum class | 定义 CaptureActivityState 的 enum class 类型和相关状态。 |
-| [L42](../src/platform/win/WindowsDesktopCaptureSource.h#L42) | `RuntimeStats` | struct | 定义 RuntimeStats 的 struct 类型和相关状态。 |
-| [L64](../src/platform/win/WindowsDesktopCaptureSource.h#L64) | `CaptureBackend` | enum class | 定义 CaptureBackend 的 enum class 类型和相关状态。 |
-| [L112](../src/platform/win/WindowsDesktopCaptureSource.h#L112) | `FrameDeliveryReason` | enum class | 定义 FrameDeliveryReason 的 enum class 类型和相关状态。 |
-| [L121](../src/platform/win/WindowsDesktopCaptureSource.h#L121) | `FrameUpdateRegion` | struct | 定义 FrameUpdateRegion 的 struct 类型和相关状态。 |
+| [L28](../src/platform/win/WindowsDesktopCaptureSource.h#L28) | `WindowsDesktopCaptureSource` | class | Captures one Windows display on a dedicated thread. WebRTC selects DXGI Desktop Duplication once when the capturer is created and keeps GDI as the permanent-error fallback; ther... |
+| [L32](../src/platform/win/WindowsDesktopCaptureSource.h#L32) | `CaptureActivityState` | enum class | 定义 CaptureActivityState 的 enum class 类型和相关状态。 |
+| [L38](../src/platform/win/WindowsDesktopCaptureSource.h#L38) | `RuntimeStats` | struct | 定义 RuntimeStats 的 struct 类型和相关状态。 |
+| [L60](../src/platform/win/WindowsDesktopCaptureSource.h#L60) | `CaptureBackend` | enum class | 定义 CaptureBackend 的 enum class 类型和相关状态。 |
+| [L108](../src/platform/win/WindowsDesktopCaptureSource.h#L108) | `FrameDeliveryReason` | enum class | 定义 FrameDeliveryReason 的 enum class 类型和相关状态。 |
+| [L117](../src/platform/win/WindowsDesktopCaptureSource.h#L117) | `FrameUpdateRegion` | struct | 定义 FrameUpdateRegion 的 struct 类型和相关状态。 |
 
 ### 成员与文件级变量
 
 | 行 | 变量 | 声明 | 作用 |
 |---:|---|---|---|
-| [L43](../src/platform/win/WindowsDesktopCaptureSource.h#L43) | `targetFrameRate` | `std::uint32_t targetFrameRate = 0;` | 保存计数、尺寸或速率指标：target frame rate。 |
-| [L45](../src/platform/win/WindowsDesktopCaptureSource.h#L45) | `kStarting` | `CaptureActivityState::kStarting;` | 定义 starting 的编译期常量或产品边界。 |
-| [L46](../src/platform/win/WindowsDesktopCaptureSource.h#L46) | `adaptiveFrameDeliveryEnabled` | `bool adaptiveFrameDeliveryEnabled = false;` | 保存能力或开关状态：adaptive frame delivery enabled。 |
-| [L47](../src/platform/win/WindowsDesktopCaptureSource.h#L47) | `captureAttemptsPerSecond` | `double captureAttemptsPerSecond = 0.0;` | 保存 capture attempts per second 相关配置或运行状态。 |
-| [L48](../src/platform/win/WindowsDesktopCaptureSource.h#L48) | `deliveredFramesPerSecond` | `double deliveredFramesPerSecond = 0.0;` | 保存 delivered frames per second 相关配置或运行状态。 |
-| [L49](../src/platform/win/WindowsDesktopCaptureSource.h#L49) | `changedFramesPerSecond` | `double changedFramesPerSecond = 0.0;` | 保存 changed frames per second 相关配置或运行状态。 |
-| [L50](../src/platform/win/WindowsDesktopCaptureSource.h#L50) | `idleHeartbeatFramesPerSecond` | `double idleHeartbeatFramesPerSecond = 0.0;` | 保存 idle heartbeat frames per second 相关配置或运行状态。 |
-| [L51](../src/platform/win/WindowsDesktopCaptureSource.h#L51) | `totalCaptureAttempts` | `std::uint64_t totalCaptureAttempts = 0;` | 保存 total capture attempts 相关配置或运行状态。 |
-| [L52](../src/platform/win/WindowsDesktopCaptureSource.h#L52) | `totalDeliveredFrames` | `std::uint64_t totalDeliveredFrames = 0;` | 保存 total delivered frames 相关配置或运行状态。 |
-| [L53](../src/platform/win/WindowsDesktopCaptureSource.h#L53) | `totalChangedFrames` | `std::uint64_t totalChangedFrames = 0;` | 保存 total changed frames 相关配置或运行状态。 |
-| [L54](../src/platform/win/WindowsDesktopCaptureSource.h#L54) | `totalIdleHeartbeatFrames` | `std::uint64_t totalIdleHeartbeatFrames = 0;` | 保存 total idle heartbeat frames 相关配置或运行状态。 |
-| [L55](../src/platform/win/WindowsDesktopCaptureSource.h#L55) | `totalSuppressedUnchangedFrames` | `std::uint64_t totalSuppressedUnchangedFrames = 0;` | 保存 total suppressed unchanged frames 相关配置或运行状态。 |
-| [L56](../src/platform/win/WindowsDesktopCaptureSource.h#L56) | `totalActivityTransitions` | `std::uint64_t totalActivityTransitions = 0;` | 保存 total activity transitions 相关配置或运行状态。 |
-| [L57](../src/platform/win/WindowsDesktopCaptureSource.h#L57) | `totalFailedCaptures` | `std::uint64_t totalFailedCaptures = 0;` | 保存 total failed captures 相关配置或运行状态。 |
-| [L58](../src/platform/win/WindowsDesktopCaptureSource.h#L58) | `inputBoostActive` | `bool inputBoostActive = false;` | 保存能力或开关状态：input boost active。 |
-| [L59](../src/platform/win/WindowsDesktopCaptureSource.h#L59) | `totalInputBoosts` | `std::uint64_t totalInputBoosts = 0;` | 保存 total input boosts 相关配置或运行状态。 |
-| [L60](../src/platform/win/WindowsDesktopCaptureSource.h#L60) | `totalForcedRefreshFrames` | `std::uint64_t totalForcedRefreshFrames = 0;` | 保存 total forced refresh frames 相关配置或运行状态。 |
-| [L61](../src/platform/win/WindowsDesktopCaptureSource.h#L61) | `latestCaptureCallMs` | `double latestCaptureCallMs = 0.0;` | 保存 latest capture call ms 相关配置或运行状态。 |
-| [L122](../src/platform/win/WindowsDesktopCaptureSource.h#L122) | `offsetX` | `int offsetX = 0;` | 保存 offset x 相关配置或运行状态。 |
-| [L123](../src/platform/win/WindowsDesktopCaptureSource.h#L123) | `offsetY` | `int offsetY = 0;` | 保存 offset y 相关配置或运行状态。 |
-| [L124](../src/platform/win/WindowsDesktopCaptureSource.h#L124) | `width` | `int width = 0;` | 保存计数、尺寸或速率指标：width。 |
-| [L125](../src/platform/win/WindowsDesktopCaptureSource.h#L125) | `height` | `int height = 0;` | 保存计数、尺寸或速率指标：height。 |
-| [L156](../src/platform/win/WindowsDesktopCaptureSource.h#L156) | `mutex_` | `mutable std::mutex mutex_;` | 保护跨线程共享状态：mutex。 |
-| [L157](../src/platform/win/WindowsDesktopCaptureSource.h#L157) | `firstFrameCondition_` | `std::condition_variable firstFrameCondition_;` | 保存 first frame condition 相关配置或运行状态。 |
-| [L158](../src/platform/win/WindowsDesktopCaptureSource.h#L158) | `captureThread_` | `std::jthread captureThread_;` | 拥有后台执行线程或工作器：capture thread。 |
-| [L159](../src/platform/win/WindowsDesktopCaptureSource.h#L159) | `configuredImplementation_` | `const DesktopCaptureImplementation configuredImplementation_;` | 保存 configured implementation 相关配置或运行状态。 |
-| [L160](../src/platform/win/WindowsDesktopCaptureSource.h#L160) | `captureTarget_` | `const DisplayDescriptor captureTarget_;` | 保存 capture target 相关配置或运行状态。 |
-| [L161](../src/platform/win/WindowsDesktopCaptureSource.h#L161) | `backend_` | `CaptureBackend backend_ = CaptureBackend::kGdi;` | 保存 backend 相关配置或运行状态。 |
-| [L162](../src/platform/win/WindowsDesktopCaptureSource.h#L162) | `initializationFinished_` | `bool initializationFinished_ = false;` | 保存 initialization finished 相关配置或运行状态。 |
-| [L163](../src/platform/win/WindowsDesktopCaptureSource.h#L163) | `firstFrameReady_` | `bool firstFrameReady_ = false;` | 保存能力或开关状态：first frame ready。 |
-| [L164](../src/platform/win/WindowsDesktopCaptureSource.h#L164) | `running_` | `bool running_ = false;` | 保存 running 相关配置或运行状态。 |
-| [L165](../src/platform/win/WindowsDesktopCaptureSource.h#L165) | `fallbackReason_` | `std::string fallbackReason_;` | 保存 fallback reason 相关配置或运行状态。 |
-| [L166](../src/platform/win/WindowsDesktopCaptureSource.h#L166) | `lastError_` | `std::string lastError_;` | 保存最近错误或失败原因：last error。 |
-| [L167](../src/platform/win/WindowsDesktopCaptureSource.h#L167) | `targetFrameRate_` | `std::atomic<std::uint32_t> targetFrameRate_{60};` | 保存计数、尺寸或速率指标：target frame rate。 |
-| [L170](../src/platform/win/WindowsDesktopCaptureSource.h#L170) | `adaptiveFrameDeliveryEnabled_` | `std::atomic<bool> adaptiveFrameDeliveryEnabled_{false};` | 保存能力或开关状态：adaptive frame delivery enabled。 |
-| [L171](../src/platform/win/WindowsDesktopCaptureSource.h#L171) | `capturedWidth_` | `std::atomic<std::uint32_t> capturedWidth_{0};` | 保存计数、尺寸或速率指标：captured width。 |
-| [L172](../src/platform/win/WindowsDesktopCaptureSource.h#L172) | `capturedHeight_` | `std::atomic<std::uint32_t> capturedHeight_{0};` | 保存计数、尺寸或速率指标：captured height。 |
-| [L173](../src/platform/win/WindowsDesktopCaptureSource.h#L173) | `totalCaptureAttempts_` | `std::atomic<std::uint64_t> totalCaptureAttempts_{0};` | 保存 total capture attempts 相关配置或运行状态。 |
-| [L174](../src/platform/win/WindowsDesktopCaptureSource.h#L174) | `totalDeliveredFrames_` | `std::atomic<std::uint64_t> totalDeliveredFrames_{0};` | 保存 total delivered frames 相关配置或运行状态。 |
-| [L175](../src/platform/win/WindowsDesktopCaptureSource.h#L175) | `totalChangedFrames_` | `std::atomic<std::uint64_t> totalChangedFrames_{0};` | 保存 total changed frames 相关配置或运行状态。 |
-| [L176](../src/platform/win/WindowsDesktopCaptureSource.h#L176) | `totalIdleHeartbeatFrames_` | `std::atomic<std::uint64_t> totalIdleHeartbeatFrames_{0};` | 保存 total idle heartbeat frames 相关配置或运行状态。 |
-| [L177](../src/platform/win/WindowsDesktopCaptureSource.h#L177) | `totalSuppressedUnchangedFrames_` | `std::atomic<std::uint64_t> totalSuppressedUnchangedFrames_{0};` | 保存 total suppressed unchanged frames 相关配置或运行状态。 |
-| [L178](../src/platform/win/WindowsDesktopCaptureSource.h#L178) | `totalActivityTransitions_` | `std::atomic<std::uint64_t> totalActivityTransitions_{0};` | 保存 total activity transitions 相关配置或运行状态。 |
-| [L179](../src/platform/win/WindowsDesktopCaptureSource.h#L179) | `totalFailedCaptures_` | `std::atomic<std::uint64_t> totalFailedCaptures_{0};` | 保存 total failed captures 相关配置或运行状态。 |
-| [L180](../src/platform/win/WindowsDesktopCaptureSource.h#L180) | `totalInputBoosts_` | `std::atomic<std::uint64_t> totalInputBoosts_{0};` | 保存 total input boosts 相关配置或运行状态。 |
-| [L181](../src/platform/win/WindowsDesktopCaptureSource.h#L181) | `totalForcedRefreshFrames_` | `std::atomic<std::uint64_t> totalForcedRefreshFrames_{0};` | 保存 total forced refresh frames 相关配置或运行状态。 |
-| [L182](../src/platform/win/WindowsDesktopCaptureSource.h#L182) | `captureAttemptsPerSecondMilli_` | `std::atomic<std::uint64_t> captureAttemptsPerSecondMilli_{0};` | 保存 capture attempts per second milli 相关配置或运行状态。 |
-| [L183](../src/platform/win/WindowsDesktopCaptureSource.h#L183) | `deliveredFramesPerSecondMilli_` | `std::atomic<std::uint64_t> deliveredFramesPerSecondMilli_{0};` | 保存 delivered frames per second milli 相关配置或运行状态。 |
-| [L184](../src/platform/win/WindowsDesktopCaptureSource.h#L184) | `changedFramesPerSecondMilli_` | `std::atomic<std::uint64_t> changedFramesPerSecondMilli_{0};` | 保存 changed frames per second milli 相关配置或运行状态。 |
-| [L185](../src/platform/win/WindowsDesktopCaptureSource.h#L185) | `idleHeartbeatFramesPerSecondMilli_` | `std::atomic<std::uint64_t> idleHeartbeatFramesPerSecondMilli_{0};` | 保存 idle heartbeat frames per second milli 相关配置或运行状态。 |
-| [L186](../src/platform/win/WindowsDesktopCaptureSource.h#L186) | `latestCaptureCallUs_` | `std::atomic<std::uint64_t> latestCaptureCallUs_{0};` | 保存 latest capture call us 相关配置或运行状态。 |
-| [L187](../src/platform/win/WindowsDesktopCaptureSource.h#L187) | `inputBoostUntilSteadyUs_` | `std::atomic<std::int64_t> inputBoostUntilSteadyUs_{0};` | 保存 input boost until steady us 相关配置或运行状态。 |
-| [L188](../src/platform/win/WindowsDesktopCaptureSource.h#L188) | `startupPrimeUntilSteadyUs_` | `std::atomic<std::int64_t> startupPrimeUntilSteadyUs_{0};` | 保存 startup prime until steady us 相关配置或运行状态。 |
-| [L189](../src/platform/win/WindowsDesktopCaptureSource.h#L189) | `forcedRefreshFramesRemaining_` | `std::atomic<std::uint32_t> forcedRefreshFramesRemaining_{0};` | 保存 forced refresh frames remaining 相关配置或运行状态。 |
-| [L192](../src/platform/win/WindowsDesktopCaptureSource.h#L192) | `captureScheduleWakeEvent_` | `void* captureScheduleWakeEvent_ = nullptr;` | HANDLE is kept opaque in the header. It is created and destroyed by the active capture thread while mutex_ protects publication/lifetime. |
-| [L193](../src/platform/win/WindowsDesktopCaptureSource.h#L193) | `activityHasDeliveredFrame_` | `bool activityHasDeliveredFrame_ = false;` | 保存媒体帧、图像或缓冲资源：activity has delivered frame。 |
-| [L194](../src/platform/win/WindowsDesktopCaptureSource.h#L194) | `activityLastChangedAt_` | `std::chrono::steady_clock::time_point activityLastChangedAt_{};` | 保存 activity last changed at 相关配置或运行状态。 |
-| [L195](../src/platform/win/WindowsDesktopCaptureSource.h#L195) | `activityLastDeliveredAt_` | `std::chrono::steady_clock::time_point activityLastDeliveredAt_{};` | 保存 activity last delivered at 相关配置或运行状态。 |
-| [L198](../src/platform/win/WindowsDesktopCaptureSource.h#L198) | `startupCallbackFramesRemaining_` | `std::uint32_t startupCallbackFramesRemaining_ = 0;` | 保存 startup callback frames remaining 相关配置或运行状态。 |
+| [L39](../src/platform/win/WindowsDesktopCaptureSource.h#L39) | `targetFrameRate` | `std::uint32_t targetFrameRate = 0;` | 保存计数、尺寸或速率指标：target frame rate。 |
+| [L41](../src/platform/win/WindowsDesktopCaptureSource.h#L41) | `kStarting` | `CaptureActivityState::kStarting;` | 定义 starting 的编译期常量或产品边界。 |
+| [L42](../src/platform/win/WindowsDesktopCaptureSource.h#L42) | `adaptiveFrameDeliveryEnabled` | `bool adaptiveFrameDeliveryEnabled = false;` | 保存能力或开关状态：adaptive frame delivery enabled。 |
+| [L43](../src/platform/win/WindowsDesktopCaptureSource.h#L43) | `captureAttemptsPerSecond` | `double captureAttemptsPerSecond = 0.0;` | 保存 capture attempts per second 相关配置或运行状态。 |
+| [L44](../src/platform/win/WindowsDesktopCaptureSource.h#L44) | `deliveredFramesPerSecond` | `double deliveredFramesPerSecond = 0.0;` | 保存 delivered frames per second 相关配置或运行状态。 |
+| [L45](../src/platform/win/WindowsDesktopCaptureSource.h#L45) | `changedFramesPerSecond` | `double changedFramesPerSecond = 0.0;` | 保存 changed frames per second 相关配置或运行状态。 |
+| [L46](../src/platform/win/WindowsDesktopCaptureSource.h#L46) | `idleHeartbeatFramesPerSecond` | `double idleHeartbeatFramesPerSecond = 0.0;` | 保存 idle heartbeat frames per second 相关配置或运行状态。 |
+| [L47](../src/platform/win/WindowsDesktopCaptureSource.h#L47) | `totalCaptureAttempts` | `std::uint64_t totalCaptureAttempts = 0;` | 保存 total capture attempts 相关配置或运行状态。 |
+| [L48](../src/platform/win/WindowsDesktopCaptureSource.h#L48) | `totalDeliveredFrames` | `std::uint64_t totalDeliveredFrames = 0;` | 保存 total delivered frames 相关配置或运行状态。 |
+| [L49](../src/platform/win/WindowsDesktopCaptureSource.h#L49) | `totalChangedFrames` | `std::uint64_t totalChangedFrames = 0;` | 保存 total changed frames 相关配置或运行状态。 |
+| [L50](../src/platform/win/WindowsDesktopCaptureSource.h#L50) | `totalIdleHeartbeatFrames` | `std::uint64_t totalIdleHeartbeatFrames = 0;` | 保存 total idle heartbeat frames 相关配置或运行状态。 |
+| [L51](../src/platform/win/WindowsDesktopCaptureSource.h#L51) | `totalSuppressedUnchangedFrames` | `std::uint64_t totalSuppressedUnchangedFrames = 0;` | 保存 total suppressed unchanged frames 相关配置或运行状态。 |
+| [L52](../src/platform/win/WindowsDesktopCaptureSource.h#L52) | `totalActivityTransitions` | `std::uint64_t totalActivityTransitions = 0;` | 保存 total activity transitions 相关配置或运行状态。 |
+| [L53](../src/platform/win/WindowsDesktopCaptureSource.h#L53) | `totalFailedCaptures` | `std::uint64_t totalFailedCaptures = 0;` | 保存 total failed captures 相关配置或运行状态。 |
+| [L54](../src/platform/win/WindowsDesktopCaptureSource.h#L54) | `inputBoostActive` | `bool inputBoostActive = false;` | 保存能力或开关状态：input boost active。 |
+| [L55](../src/platform/win/WindowsDesktopCaptureSource.h#L55) | `totalInputBoosts` | `std::uint64_t totalInputBoosts = 0;` | 保存 total input boosts 相关配置或运行状态。 |
+| [L56](../src/platform/win/WindowsDesktopCaptureSource.h#L56) | `totalForcedRefreshFrames` | `std::uint64_t totalForcedRefreshFrames = 0;` | 保存 total forced refresh frames 相关配置或运行状态。 |
+| [L57](../src/platform/win/WindowsDesktopCaptureSource.h#L57) | `latestCaptureCallMs` | `double latestCaptureCallMs = 0.0;` | 保存 latest capture call ms 相关配置或运行状态。 |
+| [L118](../src/platform/win/WindowsDesktopCaptureSource.h#L118) | `offsetX` | `int offsetX = 0;` | 保存 offset x 相关配置或运行状态。 |
+| [L119](../src/platform/win/WindowsDesktopCaptureSource.h#L119) | `offsetY` | `int offsetY = 0;` | 保存 offset y 相关配置或运行状态。 |
+| [L120](../src/platform/win/WindowsDesktopCaptureSource.h#L120) | `width` | `int width = 0;` | 保存计数、尺寸或速率指标：width。 |
+| [L121](../src/platform/win/WindowsDesktopCaptureSource.h#L121) | `height` | `int height = 0;` | 保存计数、尺寸或速率指标：height。 |
+| [L152](../src/platform/win/WindowsDesktopCaptureSource.h#L152) | `mutex_` | `mutable std::mutex mutex_;` | 保护跨线程共享状态：mutex。 |
+| [L153](../src/platform/win/WindowsDesktopCaptureSource.h#L153) | `firstFrameCondition_` | `std::condition_variable firstFrameCondition_;` | 保存 first frame condition 相关配置或运行状态。 |
+| [L154](../src/platform/win/WindowsDesktopCaptureSource.h#L154) | `captureThread_` | `std::jthread captureThread_;` | 拥有后台执行线程或工作器：capture thread。 |
+| [L155](../src/platform/win/WindowsDesktopCaptureSource.h#L155) | `configuredImplementation_` | `const DesktopCaptureImplementation configuredImplementation_;` | 保存 configured implementation 相关配置或运行状态。 |
+| [L156](../src/platform/win/WindowsDesktopCaptureSource.h#L156) | `captureTarget_` | `const DisplayDescriptor captureTarget_;` | 保存 capture target 相关配置或运行状态。 |
+| [L157](../src/platform/win/WindowsDesktopCaptureSource.h#L157) | `backend_` | `CaptureBackend backend_ = CaptureBackend::kGdi;` | 保存 backend 相关配置或运行状态。 |
+| [L158](../src/platform/win/WindowsDesktopCaptureSource.h#L158) | `initializationFinished_` | `bool initializationFinished_ = false;` | 保存 initialization finished 相关配置或运行状态。 |
+| [L159](../src/platform/win/WindowsDesktopCaptureSource.h#L159) | `firstFrameReady_` | `bool firstFrameReady_ = false;` | 保存能力或开关状态：first frame ready。 |
+| [L160](../src/platform/win/WindowsDesktopCaptureSource.h#L160) | `running_` | `bool running_ = false;` | 保存 running 相关配置或运行状态。 |
+| [L161](../src/platform/win/WindowsDesktopCaptureSource.h#L161) | `fallbackReason_` | `std::string fallbackReason_;` | 保存 fallback reason 相关配置或运行状态。 |
+| [L162](../src/platform/win/WindowsDesktopCaptureSource.h#L162) | `lastError_` | `std::string lastError_;` | 保存最近错误或失败原因：last error。 |
+| [L163](../src/platform/win/WindowsDesktopCaptureSource.h#L163) | `targetFrameRate_` | `std::atomic<std::uint32_t> targetFrameRate_{60};` | 保存计数、尺寸或速率指标：target frame rate。 |
+| [L166](../src/platform/win/WindowsDesktopCaptureSource.h#L166) | `adaptiveFrameDeliveryEnabled_` | `std::atomic<bool> adaptiveFrameDeliveryEnabled_{false};` | 保存能力或开关状态：adaptive frame delivery enabled。 |
+| [L167](../src/platform/win/WindowsDesktopCaptureSource.h#L167) | `capturedWidth_` | `std::atomic<std::uint32_t> capturedWidth_{0};` | 保存计数、尺寸或速率指标：captured width。 |
+| [L168](../src/platform/win/WindowsDesktopCaptureSource.h#L168) | `capturedHeight_` | `std::atomic<std::uint32_t> capturedHeight_{0};` | 保存计数、尺寸或速率指标：captured height。 |
+| [L169](../src/platform/win/WindowsDesktopCaptureSource.h#L169) | `totalCaptureAttempts_` | `std::atomic<std::uint64_t> totalCaptureAttempts_{0};` | 保存 total capture attempts 相关配置或运行状态。 |
+| [L170](../src/platform/win/WindowsDesktopCaptureSource.h#L170) | `totalDeliveredFrames_` | `std::atomic<std::uint64_t> totalDeliveredFrames_{0};` | 保存 total delivered frames 相关配置或运行状态。 |
+| [L171](../src/platform/win/WindowsDesktopCaptureSource.h#L171) | `totalChangedFrames_` | `std::atomic<std::uint64_t> totalChangedFrames_{0};` | 保存 total changed frames 相关配置或运行状态。 |
+| [L172](../src/platform/win/WindowsDesktopCaptureSource.h#L172) | `totalIdleHeartbeatFrames_` | `std::atomic<std::uint64_t> totalIdleHeartbeatFrames_{0};` | 保存 total idle heartbeat frames 相关配置或运行状态。 |
+| [L173](../src/platform/win/WindowsDesktopCaptureSource.h#L173) | `totalSuppressedUnchangedFrames_` | `std::atomic<std::uint64_t> totalSuppressedUnchangedFrames_{0};` | 保存 total suppressed unchanged frames 相关配置或运行状态。 |
+| [L174](../src/platform/win/WindowsDesktopCaptureSource.h#L174) | `totalActivityTransitions_` | `std::atomic<std::uint64_t> totalActivityTransitions_{0};` | 保存 total activity transitions 相关配置或运行状态。 |
+| [L175](../src/platform/win/WindowsDesktopCaptureSource.h#L175) | `totalFailedCaptures_` | `std::atomic<std::uint64_t> totalFailedCaptures_{0};` | 保存 total failed captures 相关配置或运行状态。 |
+| [L176](../src/platform/win/WindowsDesktopCaptureSource.h#L176) | `totalInputBoosts_` | `std::atomic<std::uint64_t> totalInputBoosts_{0};` | 保存 total input boosts 相关配置或运行状态。 |
+| [L177](../src/platform/win/WindowsDesktopCaptureSource.h#L177) | `totalForcedRefreshFrames_` | `std::atomic<std::uint64_t> totalForcedRefreshFrames_{0};` | 保存 total forced refresh frames 相关配置或运行状态。 |
+| [L178](../src/platform/win/WindowsDesktopCaptureSource.h#L178) | `captureAttemptsPerSecondMilli_` | `std::atomic<std::uint64_t> captureAttemptsPerSecondMilli_{0};` | 保存 capture attempts per second milli 相关配置或运行状态。 |
+| [L179](../src/platform/win/WindowsDesktopCaptureSource.h#L179) | `deliveredFramesPerSecondMilli_` | `std::atomic<std::uint64_t> deliveredFramesPerSecondMilli_{0};` | 保存 delivered frames per second milli 相关配置或运行状态。 |
+| [L180](../src/platform/win/WindowsDesktopCaptureSource.h#L180) | `changedFramesPerSecondMilli_` | `std::atomic<std::uint64_t> changedFramesPerSecondMilli_{0};` | 保存 changed frames per second milli 相关配置或运行状态。 |
+| [L181](../src/platform/win/WindowsDesktopCaptureSource.h#L181) | `idleHeartbeatFramesPerSecondMilli_` | `std::atomic<std::uint64_t> idleHeartbeatFramesPerSecondMilli_{0};` | 保存 idle heartbeat frames per second milli 相关配置或运行状态。 |
+| [L182](../src/platform/win/WindowsDesktopCaptureSource.h#L182) | `latestCaptureCallUs_` | `std::atomic<std::uint64_t> latestCaptureCallUs_{0};` | 保存 latest capture call us 相关配置或运行状态。 |
+| [L183](../src/platform/win/WindowsDesktopCaptureSource.h#L183) | `inputBoostUntilSteadyUs_` | `std::atomic<std::int64_t> inputBoostUntilSteadyUs_{0};` | 保存 input boost until steady us 相关配置或运行状态。 |
+| [L184](../src/platform/win/WindowsDesktopCaptureSource.h#L184) | `startupPrimeUntilSteadyUs_` | `std::atomic<std::int64_t> startupPrimeUntilSteadyUs_{0};` | 保存 startup prime until steady us 相关配置或运行状态。 |
+| [L185](../src/platform/win/WindowsDesktopCaptureSource.h#L185) | `forcedRefreshFramesRemaining_` | `std::atomic<std::uint32_t> forcedRefreshFramesRemaining_{0};` | 保存 forced refresh frames remaining 相关配置或运行状态。 |
+| [L188](../src/platform/win/WindowsDesktopCaptureSource.h#L188) | `captureScheduleWakeEvent_` | `void* captureScheduleWakeEvent_ = nullptr;` | HANDLE is kept opaque in the header. It is created and destroyed by the active capture thread while mutex_ protects publication/lifetime. |
+| [L189](../src/platform/win/WindowsDesktopCaptureSource.h#L189) | `activityHasDeliveredFrame_` | `bool activityHasDeliveredFrame_ = false;` | 保存媒体帧、图像或缓冲资源：activity has delivered frame。 |
+| [L190](../src/platform/win/WindowsDesktopCaptureSource.h#L190) | `activityLastChangedAt_` | `std::chrono::steady_clock::time_point activityLastChangedAt_{};` | 保存 activity last changed at 相关配置或运行状态。 |
+| [L191](../src/platform/win/WindowsDesktopCaptureSource.h#L191) | `activityLastDeliveredAt_` | `std::chrono::steady_clock::time_point activityLastDeliveredAt_{};` | 保存 activity last delivered at 相关配置或运行状态。 |
+| [L194](../src/platform/win/WindowsDesktopCaptureSource.h#L194) | `startupCallbackFramesRemaining_` | `std::uint32_t startupCallbackFramesRemaining_ = 0;` | 保存 startup callback frames remaining 相关配置或运行状态。 |
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L74](../src/platform/win/WindowsDesktopCaptureSource.h#L74) | `~WindowsDesktopCaptureSource` | 声明 | `~WindowsDesktopCaptureSource() override` | 停止相关活动并释放 WindowsDesktopCaptureSource 实例拥有的资源。 |
-| [L76](../src/platform/win/WindowsDesktopCaptureSource.h#L76) | `StartCapture` | 声明 | `bool StartCapture( std::chrono::milliseconds firstFrameTimeout = std::chrono::seconds(3))` | 启动 start capture 相关逻辑。 |
-| [L79](../src/platform/win/WindowsDesktopCaptureSource.h#L79) | `StopCapture` | 声明 | `void StopCapture()` | 停止 stop capture 相关逻辑。 |
-| [L80](../src/platform/win/WindowsDesktopCaptureSource.h#L80) | `SetTargetFrameRate` | 声明 | `bool SetTargetFrameRate(std::uint32_t framesPerSecond)` | 更新或应用 set target frame rate 相关逻辑。 |
-| [L83](../src/platform/win/WindowsDesktopCaptureSource.h#L83) | `NotifyRemoteInputActivity` | 声明 | `void NotifyRemoteInputActivity()` | Chrome Remote Desktop-style short capture boost. The caller invokes this only after the remote input has been injected into Windows. |
-| [L86](../src/platform/win/WindowsDesktopCaptureSource.h#L86) | `RequestRefreshFrame` | 声明 | `void RequestRefreshFrame()` | Forces the next successful capture to be delivered as a full update. Used after ICE recovery and sender/track reactivation. |
-| [L91](../src/platform/win/WindowsDesktopCaptureSource.h#L91) | `RequestStartupFrameBurst` | 定义 | `void RequestStartupFrameBurst( std::uint32_t frameCount = 6, std::function<void()> firstDeliveredFrameCallback = {},` | Delivers a short, bounded run of full frames after a new sender or sink becomes active. This gives WebRTC enough stable input for its first keyframe and startup bandwidth probe ... |
-| [L95](../src/platform/win/WindowsDesktopCaptureSource.h#L95) | `TargetFrameRate` | 声明 | `std::uint32_t TargetFrameRate() const noexcept` | 实现 target frame rate 对应的业务或工具逻辑。 |
-| [L96](../src/platform/win/WindowsDesktopCaptureSource.h#L96) | `CapturedWidth` | 声明 | `std::uint32_t CapturedWidth() const noexcept` | 采集 captured width 相关逻辑。 |
-| [L97](../src/platform/win/WindowsDesktopCaptureSource.h#L97) | `CapturedHeight` | 声明 | `std::uint32_t CapturedHeight() const noexcept` | 采集 captured height 相关逻辑。 |
-| [L98](../src/platform/win/WindowsDesktopCaptureSource.h#L98) | `CaptureRuntimeStats` | 声明 | `RuntimeStats CaptureRuntimeStats() const noexcept` | 采集 capture runtime stats 相关逻辑。 |
-| [L100](../src/platform/win/WindowsDesktopCaptureSource.h#L100) | `ConfiguredImplementation` | 声明 | `DesktopCaptureImplementation ConfiguredImplementation() const noexcept` | 更新或应用 configured implementation 相关逻辑。 |
-| [L101](../src/platform/win/WindowsDesktopCaptureSource.h#L101) | `Backend` | 声明 | `CaptureBackend Backend() const` | 实现 backend 对应的业务或工具逻辑。 |
-| [L102](../src/platform/win/WindowsDesktopCaptureSource.h#L102) | `FallbackReason` | 声明 | `std::string FallbackReason() const` | 实现 fallback reason 对应的业务或工具逻辑。 |
-| [L103](../src/platform/win/WindowsDesktopCaptureSource.h#L103) | `LastError` | 声明 | `std::string LastError() const` | 实现 last error 对应的业务或工具逻辑。 |
-| [L104](../src/platform/win/WindowsDesktopCaptureSource.h#L104) | `CaptureTarget` | 声明 | `const DisplayDescriptor& CaptureTarget() const noexcept` | 采集 capture target 相关逻辑。 |
-| [L106](../src/platform/win/WindowsDesktopCaptureSource.h#L106) | `state` | 声明 | `SourceState state() const override` | 实现 state 对应的业务或工具逻辑。 |
-| [L107](../src/platform/win/WindowsDesktopCaptureSource.h#L107) | `remote` | 声明 | `bool remote() const override` | 实现 remote 对应的业务或工具逻辑。 |
-| [L108](../src/platform/win/WindowsDesktopCaptureSource.h#L108) | `is_screencast` | 声明 | `bool is_screencast() const override` | 判断 is screencast 相关逻辑。 |
-| [L109](../src/platform/win/WindowsDesktopCaptureSource.h#L109) | `needs_denoising` | 声明 | `std::optional<bool> needs_denoising() const override` | 判断 needs denoising 相关逻辑。 |
-| [L128](../src/platform/win/WindowsDesktopCaptureSource.h#L128) | `CaptureLoop` | 声明 | `void CaptureLoop(std::stop_token stopToken)` | 采集 capture loop 相关逻辑。 |
-| [L129](../src/platform/win/WindowsDesktopCaptureSource.h#L129) | `OnCaptureResult` | 声明 | `void OnCaptureResult( webrtc::DesktopCapturer::Result result, std::unique_ptr<webrtc::DesktopFrame> frame) override` | 接收并处理 on capture result 相关逻辑。 |
-| [L132](../src/platform/win/WindowsDesktopCaptureSource.h#L132) | `SetInitializationFailure` | 声明 | `void SetInitializationFailure(std::string message)` | 更新或应用 set initialization failure 相关逻辑。 |
-| [L133](../src/platform/win/WindowsDesktopCaptureSource.h#L133) | `ResetActivityTracking` | 声明 | `void ResetActivityTracking()` | 重置或移除 reset activity tracking 相关逻辑。 |
-| [L134](../src/platform/win/WindowsDesktopCaptureSource.h#L134) | `ShouldDeliverFrame` | 声明 | `bool ShouldDeliverFrame( bool desktopChanged, bool forceRefresh, std::chrono::steady_clock::time_point now, FrameDeliveryReason* reason)` | 判断 should deliver frame 相关逻辑。 |
-| [L139](../src/platform/win/WindowsDesktopCaptureSource.h#L139) | `ShouldDeliverLibWebRtcFrame` | 声明 | `bool ShouldDeliverLibWebRtcFrame( bool desktopChanged, bool forceRefresh, std::chrono::steady_clock::time_point now, FrameDeliveryReason* reason)` | 判断 should deliver lib web rtc frame 相关逻辑。 |
-| [L144](../src/platform/win/WindowsDesktopCaptureSource.h#L144) | `DeliverFrame` | 声明 | `void DeliverFrame( webrtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer, FrameDeliveryReason reason)` | 实现 deliver frame 对应的业务或工具逻辑。 |
-| [L147](../src/platform/win/WindowsDesktopCaptureSource.h#L147) | `DeliverLibWebRtcFrame` | 声明 | `void DeliverLibWebRtcFrame( webrtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer, FrameDeliveryReason reason, const FrameUpdateRegion& updateRegion, bool repeatFrame)` | 实现 deliver lib web rtc frame 对应的业务或工具逻辑。 |
-| [L152](../src/platform/win/WindowsDesktopCaptureSource.h#L152) | `ConsumeForcedRefreshFrame` | 声明 | `bool ConsumeForcedRefreshFrame()` | 实现 consume forced refresh frame 对应的业务或工具逻辑。 |
-| [L153](../src/platform/win/WindowsDesktopCaptureSource.h#L153) | `ScheduleForcedRefreshFrames` | 声明 | `void ScheduleForcedRefreshFrames(std::uint32_t frameCount)` | 执行后台循环或调度 schedule forced refresh frames 相关逻辑。 |
-| [L154](../src/platform/win/WindowsDesktopCaptureSource.h#L154) | `SignalCaptureSchedule` | 声明 | `void SignalCaptureSchedule()` | 实现 signal capture schedule 对应的业务或工具逻辑。 |
+| [L70](../src/platform/win/WindowsDesktopCaptureSource.h#L70) | `~WindowsDesktopCaptureSource` | 声明 | `~WindowsDesktopCaptureSource() override` | 停止相关活动并释放 WindowsDesktopCaptureSource 实例拥有的资源。 |
+| [L72](../src/platform/win/WindowsDesktopCaptureSource.h#L72) | `StartCapture` | 声明 | `bool StartCapture( std::chrono::milliseconds firstFrameTimeout = std::chrono::seconds(3))` | 启动 start capture 相关逻辑。 |
+| [L75](../src/platform/win/WindowsDesktopCaptureSource.h#L75) | `StopCapture` | 声明 | `void StopCapture()` | 停止 stop capture 相关逻辑。 |
+| [L76](../src/platform/win/WindowsDesktopCaptureSource.h#L76) | `SetTargetFrameRate` | 声明 | `bool SetTargetFrameRate(std::uint32_t framesPerSecond)` | 更新或应用 set target frame rate 相关逻辑。 |
+| [L79](../src/platform/win/WindowsDesktopCaptureSource.h#L79) | `NotifyRemoteInputActivity` | 声明 | `void NotifyRemoteInputActivity()` | Chrome Remote Desktop-style short capture boost. The caller invokes this only after the remote input has been injected into Windows. |
+| [L82](../src/platform/win/WindowsDesktopCaptureSource.h#L82) | `RequestRefreshFrame` | 声明 | `void RequestRefreshFrame()` | Forces the next successful capture to be delivered as a full update. Used after ICE recovery and sender/track reactivation. |
+| [L87](../src/platform/win/WindowsDesktopCaptureSource.h#L87) | `RequestStartupFrameBurst` | 定义 | `void RequestStartupFrameBurst( std::uint32_t frameCount = 6, std::function<void()> firstDeliveredFrameCallback = {},` | Delivers a short, bounded run of full frames after a new sender or sink becomes active. This gives WebRTC enough stable input for its first keyframe and startup bandwidth probe ... |
+| [L91](../src/platform/win/WindowsDesktopCaptureSource.h#L91) | `TargetFrameRate` | 声明 | `std::uint32_t TargetFrameRate() const noexcept` | 实现 target frame rate 对应的业务或工具逻辑。 |
+| [L92](../src/platform/win/WindowsDesktopCaptureSource.h#L92) | `CapturedWidth` | 声明 | `std::uint32_t CapturedWidth() const noexcept` | 采集 captured width 相关逻辑。 |
+| [L93](../src/platform/win/WindowsDesktopCaptureSource.h#L93) | `CapturedHeight` | 声明 | `std::uint32_t CapturedHeight() const noexcept` | 采集 captured height 相关逻辑。 |
+| [L94](../src/platform/win/WindowsDesktopCaptureSource.h#L94) | `CaptureRuntimeStats` | 声明 | `RuntimeStats CaptureRuntimeStats() const noexcept` | 采集 capture runtime stats 相关逻辑。 |
+| [L96](../src/platform/win/WindowsDesktopCaptureSource.h#L96) | `ConfiguredImplementation` | 声明 | `DesktopCaptureImplementation ConfiguredImplementation() const noexcept` | 更新或应用 configured implementation 相关逻辑。 |
+| [L97](../src/platform/win/WindowsDesktopCaptureSource.h#L97) | `Backend` | 声明 | `CaptureBackend Backend() const` | 实现 backend 对应的业务或工具逻辑。 |
+| [L98](../src/platform/win/WindowsDesktopCaptureSource.h#L98) | `FallbackReason` | 声明 | `std::string FallbackReason() const` | 实现 fallback reason 对应的业务或工具逻辑。 |
+| [L99](../src/platform/win/WindowsDesktopCaptureSource.h#L99) | `LastError` | 声明 | `std::string LastError() const` | 实现 last error 对应的业务或工具逻辑。 |
+| [L100](../src/platform/win/WindowsDesktopCaptureSource.h#L100) | `CaptureTarget` | 声明 | `const DisplayDescriptor& CaptureTarget() const noexcept` | 采集 capture target 相关逻辑。 |
+| [L102](../src/platform/win/WindowsDesktopCaptureSource.h#L102) | `state` | 声明 | `SourceState state() const override` | 实现 state 对应的业务或工具逻辑。 |
+| [L103](../src/platform/win/WindowsDesktopCaptureSource.h#L103) | `remote` | 声明 | `bool remote() const override` | 实现 remote 对应的业务或工具逻辑。 |
+| [L104](../src/platform/win/WindowsDesktopCaptureSource.h#L104) | `is_screencast` | 声明 | `bool is_screencast() const override` | 判断 is screencast 相关逻辑。 |
+| [L105](../src/platform/win/WindowsDesktopCaptureSource.h#L105) | `needs_denoising` | 声明 | `std::optional<bool> needs_denoising() const override` | 判断 needs denoising 相关逻辑。 |
+| [L124](../src/platform/win/WindowsDesktopCaptureSource.h#L124) | `CaptureLoop` | 声明 | `void CaptureLoop(std::stop_token stopToken)` | 采集 capture loop 相关逻辑。 |
+| [L125](../src/platform/win/WindowsDesktopCaptureSource.h#L125) | `OnCaptureResult` | 声明 | `void OnCaptureResult( webrtc::DesktopCapturer::Result result, std::unique_ptr<webrtc::DesktopFrame> frame) override` | 接收并处理 on capture result 相关逻辑。 |
+| [L128](../src/platform/win/WindowsDesktopCaptureSource.h#L128) | `SetInitializationFailure` | 声明 | `void SetInitializationFailure(std::string message)` | 更新或应用 set initialization failure 相关逻辑。 |
+| [L129](../src/platform/win/WindowsDesktopCaptureSource.h#L129) | `ResetActivityTracking` | 声明 | `void ResetActivityTracking()` | 重置或移除 reset activity tracking 相关逻辑。 |
+| [L130](../src/platform/win/WindowsDesktopCaptureSource.h#L130) | `ShouldDeliverFrame` | 声明 | `bool ShouldDeliverFrame( bool desktopChanged, bool forceRefresh, std::chrono::steady_clock::time_point now, FrameDeliveryReason* reason)` | 判断 should deliver frame 相关逻辑。 |
+| [L135](../src/platform/win/WindowsDesktopCaptureSource.h#L135) | `ShouldDeliverLibWebRtcFrame` | 声明 | `bool ShouldDeliverLibWebRtcFrame( bool desktopChanged, bool forceRefresh, std::chrono::steady_clock::time_point now, FrameDeliveryReason* reason)` | 判断 should deliver lib web rtc frame 相关逻辑。 |
+| [L140](../src/platform/win/WindowsDesktopCaptureSource.h#L140) | `DeliverFrame` | 声明 | `void DeliverFrame( webrtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer, FrameDeliveryReason reason)` | 实现 deliver frame 对应的业务或工具逻辑。 |
+| [L143](../src/platform/win/WindowsDesktopCaptureSource.h#L143) | `DeliverLibWebRtcFrame` | 声明 | `void DeliverLibWebRtcFrame( webrtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer, FrameDeliveryReason reason, const FrameUpdateRegion& updateRegion, bool repeatFrame)` | 实现 deliver lib web rtc frame 对应的业务或工具逻辑。 |
+| [L148](../src/platform/win/WindowsDesktopCaptureSource.h#L148) | `ConsumeForcedRefreshFrame` | 声明 | `bool ConsumeForcedRefreshFrame()` | 实现 consume forced refresh frame 对应的业务或工具逻辑。 |
+| [L149](../src/platform/win/WindowsDesktopCaptureSource.h#L149) | `ScheduleForcedRefreshFrames` | 声明 | `void ScheduleForcedRefreshFrames(std::uint32_t frameCount)` | 执行后台循环或调度 schedule forced refresh frames 相关逻辑。 |
+| [L150](../src/platform/win/WindowsDesktopCaptureSource.h#L150) | `SignalCaptureSchedule` | 声明 | `void SignalCaptureSchedule()` | 实现 signal capture schedule 对应的业务或工具逻辑。 |
 
 ## `src/platform/win/WindowsDisplayTopology.cpp`
 

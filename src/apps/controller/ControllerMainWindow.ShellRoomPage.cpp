@@ -153,12 +153,13 @@ void ControllerMainWindow::BuildShellAndRoomPage()
         QStringLiteral("profileUpdateButton"));
     profileUpdateButton_->setCursor(Qt::PointingHandCursor);
     profileUpdateButton_->setToolTip(QStringLiteral("有新版本可用"));
-    profileUpdateButton_->setFixedSize(30, 30);
+    profileUpdateButton_->setAccessibleName(QStringLiteral("下载软件更新"));
+    profileUpdateButton_->setFixedSize(32, 32);
     profileUpdateButton_->setIconSize(QSize(18, 18));
     ui::RemoteCTheme::SetIcon(
         profileUpdateButton_,
         QStringLiteral(":/ui/icons/lucide/base/download.svg"),
-        ui::ThemeIconTone::kOnDark);
+        ui::ThemeIconTone::kPrimary);
     profileUpdateButton_->hide();
     profileRow->addWidget(profileUpdateButton_, 0, Qt::AlignVCenter);
     connect(profileUpdateButton_, &QToolButton::clicked,

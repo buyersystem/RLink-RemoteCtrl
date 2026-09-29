@@ -127,25 +127,23 @@ int RunAuthStorageSelfTest()
         !otherOwner.registered() ||
         !IsNineDigitPublicId(firstDevice.publicDeviceId) ||
         sameOwner.publicDeviceId != firstDevice.publicDeviceId ||
-        !IsNineDigitPublicId(otherOwner.publicDeviceId) ||
-        otherOwner.publicDeviceId == firstDevice.publicDeviceId) {
-        return Fail(QStringLiteral("Account-scoped device self-test failed."));
+        otherOwner.publicDeviceId != firstDevice.publicDeviceId) {
+        return Fail(QStringLiteral(
+            "Installation-stable device self-test failed."));
     }
     const auto firstOwnedDevices = store.ListDevicesForUser(
         firstUser.id, &error);
     const auto secondOwnedDevices = store.ListDevicesForUser(
         secondUser.id, &error);
-    if (firstOwnedDevices.size() != 1 ||
+    if (!firstOwnedDevices.isEmpty() ||
         secondOwnedDevices.size() != 1 ||
-        firstOwnedDevices.front().publicDeviceId !=
-            firstDevice.publicDeviceId ||
-        firstOwnedDevices.front().deviceName !=
-            QStringLiteral("Renamed device") ||
         secondOwnedDevices.front().publicDeviceId !=
-            otherOwner.publicDeviceId) {
+            firstDevice.publicDeviceId ||
+        secondOwnedDevices.front().deviceName !=
+            QStringLiteral("Shared computer")) {
         return Fail(error.isEmpty()
                         ? QStringLiteral(
-                              "Owned-device isolation self-test failed.")
+                              "Owned-device transfer self-test failed.")
                         : error);
     }
     bool deletedUserExisted = false;
@@ -157,6 +155,17 @@ int RunAuthStorageSelfTest()
         deletedUserExisted) {
         return Fail(error.isEmpty()
                         ? QStringLiteral("Idempotent account deletion self-test failed.")
+                        : error);
+    }
+    const auto recreatedSecondUser = store.UpsertUser(secondClaims, &error);
+    const auto reclaimedDevice = store.RegisterDevice(
+        recreatedSecondUser.id, QStringLiteral("device-self-test"),
+        QStringLiteral("Reclaimed computer"));
+    if (!recreatedSecondUser.isValid() || !reclaimedDevice.registered() ||
+        reclaimedDevice.publicDeviceId != firstDevice.publicDeviceId) {
+        return Fail(error.isEmpty()
+                        ? QStringLiteral(
+                              "Device identity did not survive account deletion.")
                         : error);
     }
     const QByteArray webhookBody = QByteArrayLiteral(
@@ -233,11 +242,83 @@ int RunAuthStorageSelfTest()
                         : error);
     }
 
+    const QString accountScopedDatabaseFile = directory.filePath(
+        QStringLiteral("account-scoped-identity.sqlite"));
+    const QString accountScopedConnection = QStringLiteral(
+        "remotec-account-scoped-schema-self-test");
+    {
+        QSqlDatabase accountScoped = QSqlDatabase::addDatabase(
+            QStringLiteral("QSQLITE"), accountScopedConnection);
+        accountScoped.setDatabaseName(accountScopedDatabaseFile);
+        if (!accountScoped.open()) {
+            return Fail(QStringLiteral(
+                "Cannot create the account-scoped migration database."));
+        }
+        QSqlQuery query(accountScoped);
+        const QStringList accountScopedStatements = {
+            QStringLiteral(
+                "PRAGMA foreign_keys = ON"),
+            QStringLiteral(
+                "CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "logto_subject TEXT NOT NULL UNIQUE, username TEXT NOT NULL "
+                "DEFAULT '', display_name TEXT NOT NULL DEFAULT '', "
+                "email TEXT NOT NULL DEFAULT '', created_at INTEGER NOT NULL, "
+                "last_login_at INTEGER NOT NULL)"),
+            QStringLiteral(
+                "CREATE TABLE devices (id INTEGER PRIMARY KEY AUTOINCREMENT, "
+                "public_id TEXT NOT NULL, public_code TEXT NOT NULL UNIQUE, "
+                "owner_user_id INTEGER NOT NULL, device_name TEXT NOT NULL, "
+                "created_at INTEGER NOT NULL, last_seen_at INTEGER NOT NULL, "
+                "revoked INTEGER NOT NULL DEFAULT 0, "
+                "FOREIGN KEY(owner_user_id) REFERENCES users(id) "
+                "ON DELETE CASCADE, UNIQUE(owner_user_id, public_id))"),
+            QStringLiteral(
+                "INSERT INTO users(id, logto_subject, username, display_name, "
+                "email, created_at, last_login_at) VALUES"
+                "(1, 'old-owner', 'old', 'Old', '', 1, 1),"
+                "(2, 'new-owner', 'new', 'New', '', 2, 2)"),
+            QStringLiteral(
+                "INSERT INTO devices(public_id, public_code, owner_user_id, "
+                "device_name, created_at, last_seen_at, revoked) VALUES"
+                "('shared-installation', '123456789', 1, 'Original', 10, 10, 0),"
+                "('shared-installation', '987654321', 2, 'Duplicate', 20, 20, 0)"),
+        };
+        for (const QString& statement : accountScopedStatements) {
+            if (!query.exec(statement)) {
+                return Fail(QStringLiteral(
+                    "Cannot prepare the account-scoped migration schema."));
+            }
+        }
+        accountScoped.close();
+    }
+    QSqlDatabase::removeDatabase(accountScopedConnection);
+    IdentityStore accountScopedStore;
+    if (!accountScopedStore.Open(accountScopedDatabaseFile, &error)) {
+        return Fail(error);
+    }
+    remote::server_auth::UserInfoClaims migratedOwnerClaims;
+    migratedOwnerClaims.subject = QStringLiteral("new-owner");
+    migratedOwnerClaims.username = QStringLiteral("new");
+    migratedOwnerClaims.displayName = QStringLiteral("New");
+    const auto migratedOwner = accountScopedStore.UpsertUser(
+        migratedOwnerClaims, &error);
+    const auto stableMigratedDevice = accountScopedStore.RegisterDevice(
+        migratedOwner.id, QStringLiteral("shared-installation"),
+        QStringLiteral("Migrated stable device"));
+    if (!migratedOwner.isValid() || !stableMigratedDevice.registered() ||
+        stableMigratedDevice.publicDeviceId != QStringLiteral("123456789")) {
+        return Fail(error.isEmpty()
+                        ? QStringLiteral(
+                              "Account-scoped device migration failed.")
+                        : error);
+    }
+
     QTextStream(stdout) << "USERINFO_CLASSIFICATION=PASS" << Qt::endl
                         << "IDENTITY_STORE=PASS" << Qt::endl
-                        << "DEVICE_ACCOUNT_SCOPING=PASS" << Qt::endl
-                        << "OWNED_DEVICE_ISOLATION=PASS" << Qt::endl
+                        << "DEVICE_INSTALLATION_STABILITY=PASS" << Qt::endl
+                        << "OWNED_DEVICE_TRANSFER=PASS" << Qt::endl
                         << "DEVICE_PUBLIC_ID_MIGRATION=PASS" << Qt::endl
+                        << "DEVICE_ACCOUNT_SCOPE_MIGRATION=PASS" << Qt::endl
                         << "ACCOUNT_DELETION=PASS" << Qt::endl
                         << "WEBHOOK_SIGNATURE=PASS" << Qt::endl
                         << "AUTH_STORAGE_SELF_TEST=PASS" << Qt::endl;

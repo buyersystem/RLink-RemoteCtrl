@@ -70,15 +70,14 @@ QString DeviceTableSql(const QString& tableName) {
     return QStringLiteral(
         "CREATE TABLE %1 ("
         "id INTEGER PRIMARY KEY AUTOINCREMENT,"
-        "public_id TEXT NOT NULL,"
+        "public_id TEXT NOT NULL UNIQUE,"
         "public_code TEXT NOT NULL UNIQUE,"
-        "owner_user_id INTEGER NOT NULL,"
+        "owner_user_id INTEGER,"
         "device_name TEXT NOT NULL,"
         "created_at INTEGER NOT NULL,"
         "last_seen_at INTEGER NOT NULL,"
         "revoked INTEGER NOT NULL DEFAULT 0 CHECK(revoked IN (0, 1)),"
-        "FOREIGN KEY(owner_user_id) REFERENCES users(id) ON DELETE CASCADE,"
-        "UNIQUE(owner_user_id, public_id))")
+        "FOREIGN KEY(owner_user_id) REFERENCES users(id) ON DELETE SET NULL)")
         .arg(tableName);
 }
 
@@ -123,28 +122,81 @@ bool HasUniqueDeviceIndex(QSqlDatabase database,
     return true;
 }
 
-bool RebuildDeviceTableForAccountScope(QSqlDatabase database,
+bool HasStableInstallationDeviceSchema(QSqlDatabase database,
+                                       bool* found,
                                        QString* errorMessage) {
+    *found = false;
+    bool ownerIsNullable = false;
+    QSqlQuery columns(database);
+    if (!columns.exec(QStringLiteral("PRAGMA table_info(devices)"))) {
+        SetError(errorMessage,
+                 QueryError(QStringLiteral("Inspect device columns"),
+                            columns));
+        return false;
+    }
+    while (columns.next()) {
+        if (columns.value(1).toString() ==
+            QStringLiteral("owner_user_id")) {
+            ownerIsNullable = !columns.value(3).toBool();
+            break;
+        }
+    }
+    columns.finish();
+
+    bool ownerSurvivesAccountDeletion = false;
+    QSqlQuery foreignKeys(database);
+    if (!foreignKeys.exec(
+            QStringLiteral("PRAGMA foreign_key_list(devices)"))) {
+        SetError(errorMessage,
+                 QueryError(QStringLiteral("Inspect device foreign keys"),
+                            foreignKeys));
+        return false;
+    }
+    while (foreignKeys.next()) {
+        if (foreignKeys.value(2).toString() == QStringLiteral("users") &&
+            foreignKeys.value(3).toString() ==
+                QStringLiteral("owner_user_id") &&
+            foreignKeys.value(6).toString().compare(
+                QStringLiteral("SET NULL"), Qt::CaseInsensitive) == 0) {
+            ownerSurvivesAccountDeletion = true;
+            break;
+        }
+    }
+    foreignKeys.finish();
+    *found = ownerIsNullable && ownerSurvivesAccountDeletion;
+    return true;
+}
+
+bool RebuildDeviceTableForStableInstallation(QSqlDatabase database,
+                                             QString* errorMessage) {
     QSqlQuery query(database);
     const QStringList statements = {
         QStringLiteral("DROP INDEX IF EXISTS idx_devices_owner"),
         QStringLiteral("DROP INDEX IF EXISTS idx_devices_public_code"),
         QStringLiteral(
-            "ALTER TABLE devices RENAME TO devices_account_scope_legacy"),
+            "ALTER TABLE devices RENAME TO devices_identity_legacy"),
         DeviceTableSql(QStringLiteral("devices")),
         QStringLiteral(
             "INSERT INTO devices(id, public_id, public_code, owner_user_id, "
             "device_name, created_at, last_seen_at, revoked) "
-            "SELECT id, public_id, public_code, owner_user_id, device_name, "
-            "created_at, last_seen_at, revoked "
-            "FROM devices_account_scope_legacy"),
-        QStringLiteral("DROP TABLE devices_account_scope_legacy"),
+            "SELECT device.id, device.public_id, device.public_code, "
+            "device.owner_user_id, device.device_name, device.created_at, "
+            "device.last_seen_at, device.revoked "
+            "FROM devices_identity_legacy AS device "
+            "WHERE device.id=("
+            "SELECT candidate.id FROM devices_identity_legacy AS candidate "
+            "WHERE candidate.public_id=device.public_id "
+            "ORDER BY candidate.revoked ASC, candidate.created_at ASC, "
+            "candidate.id ASC LIMIT 1)"),
+        QStringLiteral("DROP TABLE devices_identity_legacy"),
     };
     for (const QString& statement : statements) {
         if (!query.exec(statement)) {
             SetError(errorMessage,
-                     QueryError(QStringLiteral("Migrate account-scoped devices"),
-                                query));
+                     QueryError(
+                         QStringLiteral(
+                             "Migrate installation-stable devices"),
+                         query));
             return false;
         }
     }
@@ -295,6 +347,7 @@ bool IdentityStore::EnsureSchema(QString* errorMessage) {
 
     bool hasGlobalInstallationUnique = false;
     bool hasAccountInstallationUnique = false;
+    bool hasStableInstallationSchema = false;
     if (!HasUniqueDeviceIndex(
             database, {QStringLiteral("public_id")},
             &hasGlobalInstallationUnique, errorMessage) ||
@@ -302,6 +355,10 @@ bool IdentityStore::EnsureSchema(QString* errorMessage) {
             database,
             {QStringLiteral("owner_user_id"), QStringLiteral("public_id")},
             &hasAccountInstallationUnique, errorMessage)) {
+        return false;
+    }
+    if (!HasStableInstallationDeviceSchema(
+            database, &hasStableInstallationSchema, errorMessage)) {
         return false;
     }
 
@@ -370,8 +427,10 @@ bool IdentityStore::EnsureSchema(QString* errorMessage) {
         }
     }
 
-    if (hasGlobalInstallationUnique || !hasAccountInstallationUnique) {
-        if (!RebuildDeviceTableForAccountScope(database, errorMessage)) {
+    if (!hasGlobalInstallationUnique || hasAccountInstallationUnique ||
+        !hasStableInstallationSchema) {
+        if (!RebuildDeviceTableForStableInstallation(
+                database, errorMessage)) {
             database.rollback();
             return false;
         }
@@ -479,9 +538,7 @@ DeviceRegistrationResult IdentityStore::RegisterDevice(
     QSqlQuery existing(database);
     existing.prepare(QStringLiteral(
         "SELECT revoked, public_code "
-        "FROM devices WHERE owner_user_id=:owner_user_id "
-        "AND public_id=:installation_id"));
-    existing.bindValue(QStringLiteral(":owner_user_id"), ownerUserId);
+        "FROM devices WHERE public_id=:installation_id"));
     existing.bindValue(QStringLiteral(":installation_id"), installationId);
     if (!existing.exec()) {
         result.errorMessage = QueryError(QStringLiteral("Load device"), existing);
@@ -503,15 +560,15 @@ DeviceRegistrationResult IdentityStore::RegisterDevice(
         }
         QSqlQuery update(database);
         update.prepare(QStringLiteral(
-            "UPDATE devices SET device_name=:name, last_seen_at=:now, "
+            "UPDATE devices SET owner_user_id=:owner_user_id, "
+            "device_name=:name, last_seen_at=:now, "
             "public_code=:public_code "
-            "WHERE public_id=:installation_id "
-            "AND owner_user_id=:owner_user_id"));
+            "WHERE public_id=:installation_id"));
+        update.bindValue(QStringLiteral(":owner_user_id"), ownerUserId);
         update.bindValue(QStringLiteral(":name"), deviceName);
         update.bindValue(QStringLiteral(":now"), now);
         update.bindValue(QStringLiteral(":public_code"), publicCode);
         update.bindValue(QStringLiteral(":installation_id"), installationId);
-        update.bindValue(QStringLiteral(":owner_user_id"), ownerUserId);
         if (!update.exec()) {
             result.errorMessage = QueryError(QStringLiteral("Update device"), update);
             return result;

@@ -1,10 +1,20 @@
 # 核心接口与二进制协议
 
-> 自动生成于 2026-09-06，源码树 `1ae783c8db12-dirty`。请运行 `tools/Generate-SourceSymbolReference.ps1` 刷新。
+> 自动生成于 2026-09-28，源码树 `f12aea4209d9-dirty`。请运行 `tools/Generate-SourceSymbolReference.ps1` 刷新。
 
 引擎抽象、快照、策略、控制器执行器以及输入、光标、屏幕、文件和剪贴板协议。
 
-本册共收录 30 个源码文件。函数与变量的中文作用优先采用源码紧邻注释；无注释时根据符号命名生成阅读提示，最终语义仍以源码为准。
+本册共收录 33 个源码文件。函数与变量的中文作用优先采用源码紧邻注释；无注释时根据符号命名生成阅读提示，最终语义仍以源码为准。
+
+## `src/core/DesktopCaptureTypes.h`
+
+[打开源码](../src/core/DesktopCaptureTypes.h) · **文件作用：** 声明 desktop capture types 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L10](../src/core/DesktopCaptureTypes.h#L10) | `DesktopCaptureImplementation` | enum class | 定义 DesktopCaptureImplementation 的 enum class 类型和相关状态。 |
 
 ## `src/core/DirectSessionRequest.h`
 
@@ -69,6 +79,34 @@
 | [L54](../src/core/DisplayTopology.h#L54) | `FindDisplayBySessionId` | 定义 | `inline const DisplayDescriptor* FindDisplayBySessionId( const DisplayTopologySnapshot& topology, std::uint32_t sessionDisplayId)` | 查询并返回 find display by session id 相关逻辑。 |
 | [L66](../src/core/DisplayTopology.h#L66) | `FindPrimaryDisplay` | 定义 | `inline const DisplayDescriptor* FindPrimaryDisplay( const DisplayTopologySnapshot& topology)` | 查询并返回 find primary display 相关逻辑。 |
 
+## `src/core/IRemoteSessionControl.h`
+
+[打开源码](../src/core/IRemoteSessionControl.h) · **文件作用：** 声明 i remote session control 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L13](../src/core/IRemoteSessionControl.h#L13) | `IRemoteSessionControl` | class | Commands and state required by the focused remote-session window. Keeping this surface separate prevents that view from depending on engine startup, room membership, owned-devic... |
+
+### 函数
+
+| 行 | 函数 | 类型 | 签名 | 作用 |
+|---:|---|---|---|---|
+| [L15](../src/core/IRemoteSessionControl.h#L15) | `~IRemoteSessionControl` | 声明 | `virtual ~IRemoteSessionControl() = default` | 停止相关活动并释放 IRemoteSessionControl 实例拥有的资源。 |
+| [L17](../src/core/IRemoteSessionControl.h#L17) | `Snapshot` | 声明 | `virtual SessionEngineSnapshot Snapshot() const = 0` | 查询并返回 snapshot 相关逻辑。 |
+| [L18](../src/core/IRemoteSessionControl.h#L18) | `Disconnect` | 声明 | `virtual SessionCommandResult Disconnect() = 0` | 断开连接 disconnect 相关逻辑。 |
+| [L19](../src/core/IRemoteSessionControl.h#L19) | `ExitRoomAfterRecoveryFailure` | 声明 | `virtual SessionCommandResult ExitRoomAfterRecoveryFailure() = 0` | 实现 exit room after recovery failure 对应的业务或工具逻辑。 |
+| [L20](../src/core/IRemoteSessionControl.h#L20) | `RequestRoomControl` | 声明 | `virtual SessionCommandResult RequestRoomControl() = 0` | 发起请求或查询 request room control 相关逻辑。 |
+| [L21](../src/core/IRemoteSessionControl.h#L21) | `ReleaseRoomControl` | 声明 | `virtual SessionCommandResult ReleaseRoomControl() = 0` | 释放或取消 release room control 相关逻辑。 |
+| [L22](../src/core/IRemoteSessionControl.h#L22) | `SetRoomScreenStreamPreference` | 声明 | `virtual SessionCommandResult SetRoomScreenStreamPreference( const std::string& pairId, const ScreenStreamPreferenceRequest& preference) = 0` | 更新或应用 set room screen stream preference 相关逻辑。 |
+| [L25](../src/core/IRemoteSessionControl.h#L25) | `RequestRemoteSharedDisplaySwitch` | 声明 | `virtual SessionCommandResult RequestRemoteSharedDisplaySwitch( const std::string& pairId, const std::string& stableDisplayKey) = 0` | 发起请求或查询 request remote shared display switch 相关逻辑。 |
+| [L28](../src/core/IRemoteSessionControl.h#L28) | `SetLocalMicrophoneEnabled` | 声明 | `virtual SessionCommandResult SetLocalMicrophoneEnabled(bool enabled) = 0` | 更新或应用 set local microphone enabled 相关逻辑。 |
+| [L29](../src/core/IRemoteSessionControl.h#L29) | `RefreshLocalMediaDevices` | 声明 | `virtual SessionCommandResult RefreshLocalMediaDevices() = 0` | 刷新 refresh local media devices 相关逻辑。 |
+| [L30](../src/core/IRemoteSessionControl.h#L30) | `SelectLocalCameraDevice` | 声明 | `virtual SessionCommandResult SelectLocalCameraDevice( const std::string& deviceId) = 0` | 查询并返回 select local camera device 相关逻辑。 |
+| [L32](../src/core/IRemoteSessionControl.h#L32) | `SelectLocalMicrophoneDevice` | 声明 | `virtual SessionCommandResult SelectLocalMicrophoneDevice( const std::string& deviceId) = 0` | 查询并返回 select local microphone device 相关逻辑。 |
+| [L34](../src/core/IRemoteSessionControl.h#L34) | `SelectLocalSpeakerDevice` | 声明 | `virtual SessionCommandResult SelectLocalSpeakerDevice( const std::string& deviceId) = 0` | 查询并返回 select local speaker device 相关逻辑。 |
+
 ## `src/core/ISessionEngine.h`
 
 [打开源码](../src/core/ISessionEngine.h) · **文件作用：** 声明 i session engine 相关类型、接口、配置和成员状态。
@@ -77,187 +115,48 @@
 
 | 行 | 类型 | 种类 | 作用 |
 |---:|---|---|---|
-| [L22](../src/core/ISessionEngine.h#L22) | `RemoteControlRole` | enum class | 定义 RemoteControlRole 的 enum class 类型和相关状态。 |
-| [L28](../src/core/ISessionEngine.h#L28) | `SessionOrigin` | enum class | 定义 SessionOrigin 的 enum class 类型和相关状态。 |
-| [L36](../src/core/ISessionEngine.h#L36) | `OwnedDeviceSnapshot` | struct | 定义 OwnedDeviceSnapshot 的 struct 类型和相关状态。 |
-| [L45](../src/core/ISessionEngine.h#L45) | `SessionEngineState` | enum class | 定义 SessionEngineState 的 enum class 类型和相关状态。 |
-| [L56](../src/core/ISessionEngine.h#L56) | `SessionConnectivityState` | enum class | 定义 SessionConnectivityState 的 enum class 类型和相关状态。 |
-| [L64](../src/core/ISessionEngine.h#L64) | `LocalCameraState` | enum class | 定义 LocalCameraState 的 enum class 类型和相关状态。 |
-| [L72](../src/core/ISessionEngine.h#L72) | `LocalMicrophoneState` | enum class | 定义 LocalMicrophoneState 的 enum class 类型和相关状态。 |
-| [L80](../src/core/ISessionEngine.h#L80) | `SessionEngineCapabilities` | struct | 定义 SessionEngineCapabilities 的 struct 类型和相关状态。 |
-| [L125](../src/core/ISessionEngine.h#L125) | `SessionEngineSnapshot` | struct | 定义 SessionEngineSnapshot 的 struct 类型和相关状态。 |
-| [L199](../src/core/ISessionEngine.h#L199) | `SessionCommandResult` | struct | 定义 SessionCommandResult 的 struct 类型和相关状态。 |
-| [L205](../src/core/ISessionEngine.h#L205) | `ISessionEngineObserver` | class | 定义 ISessionEngineObserver 的 class 类型和相关状态。 |
-| [L217](../src/core/ISessionEngine.h#L217) | `ISessionEngine` | class | 定义 ISessionEngine 的 class 类型和相关状态。 |
-
-### 成员与文件级变量
-
-| 行 | 变量 | 声明 | 作用 |
-|---:|---|---|---|
-| [L37](../src/core/ISessionEngine.h#L37) | `deviceId` | `std::string deviceId;` | 保存身份或作用域标识：device id。 |
-| [L38](../src/core/ISessionEngine.h#L38) | `deviceName` | `std::string deviceName;` | 保存路径、地址或显示名称：device name。 |
-| [L39](../src/core/ISessionEngine.h#L39) | `online` | `bool online = false;` | 保存 online 相关配置或运行状态。 |
-| [L40](../src/core/ISessionEngine.h#L40) | `current` | `bool current = false;` | 保存 current 相关配置或运行状态。 |
-| [L41](../src/core/ISessionEngine.h#L41) | `createdAt` | `std::int64_t createdAt = 0;` | 保存 created at 相关配置或运行状态。 |
-| [L42](../src/core/ISessionEngine.h#L42) | `lastSeenAt` | `std::int64_t lastSeenAt = 0;` | 保存 last seen at 相关配置或运行状态。 |
-| [L81](../src/core/ISessionEngine.h#L81) | `webRtcReady` | `bool webRtcReady = false;` | 保存能力或开关状态：web rtc ready。 |
-| [L82](../src/core/ISessionEngine.h#L82) | `hasH264Encoder` | `bool hasH264Encoder = false;` | 保存 has h264 encoder 相关配置或运行状态。 |
-| [L83](../src/core/ISessionEngine.h#L83) | `hasH264Decoder` | `bool hasH264Decoder = false;` | 保存 has h264 decoder 相关配置或运行状态。 |
-| [L84](../src/core/ISessionEngine.h#L84) | `h264HardwareEncoderAvailable` | `bool h264HardwareEncoderAvailable = false;` | 保存能力或开关状态：h264 hardware encoder available。 |
-| [L85](../src/core/ISessionEngine.h#L85) | `h264HardwareEncoderCpuNv12InputSupported` | `bool h264HardwareEncoderCpuNv12InputSupported = false;` | 保存 h264 hardware encoder cpu nv12 input supported 相关配置或运行状态。 |
-| [L86](../src/core/ISessionEngine.h#L86) | `h264HardwareEncoderD3D11InputCandidate` | `bool h264HardwareEncoderD3D11InputCandidate = false;` | 保存 h264 hardware encoder d3 d11 input candidate 相关配置或运行状态。 |
-| [L87](../src/core/ISessionEngine.h#L87) | `h264HardwareEncoderCount` | `uint32_t h264HardwareEncoderCount = 0;` | 保存计数、尺寸或速率指标：h264 hardware encoder count。 |
-| [L88](../src/core/ISessionEngine.h#L88) | `h264HardwareEncoderWired` | `bool h264HardwareEncoderWired = false;` | 保存 h264 hardware encoder wired 相关配置或运行状态。 |
-| [L89](../src/core/ISessionEngine.h#L89) | `h264SoftwareEncoderWired` | `bool h264SoftwareEncoderWired = false;` | 保存 h264 software encoder wired 相关配置或运行状态。 |
-| [L90](../src/core/ISessionEngine.h#L90) | `ffmpegX264EncoderWired` | `bool ffmpegX264EncoderWired = false;` | 保存 ffmpeg x264 encoder wired 相关配置或运行状态。 |
-| [L91](../src/core/ISessionEngine.h#L91) | `ffmpegX264EncoderError` | `std::string ffmpegX264EncoderError;` | 保存最近错误或失败原因：ffmpeg x264 encoder error。 |
-| [L92](../src/core/ISessionEngine.h#L92) | `ffmpegHardwareEncoderAvailable` | `bool ffmpegHardwareEncoderAvailable = false;` | 保存能力或开关状态：ffmpeg hardware encoder available。 |
-| [L93](../src/core/ISessionEngine.h#L93) | `ffmpegHardwareEncoderWired` | `bool ffmpegHardwareEncoderWired = false;` | 保存 ffmpeg hardware encoder wired 相关配置或运行状态。 |
-| [L94](../src/core/ISessionEngine.h#L94) | `ffmpegHardwareEncoderError` | `std::string ffmpegHardwareEncoderError;` | 保存最近错误或失败原因：ffmpeg hardware encoder error。 |
-| [L95](../src/core/ISessionEngine.h#L95) | `ffmpegHardwareEncoderDescriptions` | `std::vector<std::string> ffmpegHardwareEncoderDescriptions;` | 保存 ffmpeg hardware encoder descriptions 相关配置或运行状态。 |
-| [L96](../src/core/ISessionEngine.h#L96) | `h264SoftwareEncoderFallback` | `bool h264SoftwareEncoderFallback = false;` | 保存 h264 software encoder fallback 相关配置或运行状态。 |
-| [L97](../src/core/ISessionEngine.h#L97) | `desktopCapturePreference` | `std::string desktopCapturePreference;` | 保存 desktop capture preference 相关配置或运行状态。 |
-| [L98](../src/core/ISessionEngine.h#L98) | `videoEncoderPreference` | `std::string videoEncoderPreference;` | 保存 video encoder preference 相关配置或运行状态。 |
-| [L99](../src/core/ISessionEngine.h#L99) | `videoDecoderPreference` | `std::string videoDecoderPreference;` | 保存 video decoder preference 相关配置或运行状态。 |
-| [L100](../src/core/ISessionEngine.h#L100) | `videoEncoderRuntimeDetails` | `std::vector<std::string> videoEncoderRuntimeDetails;` | 保存 video encoder runtime details 相关配置或运行状态。 |
-| [L101](../src/core/ISessionEngine.h#L101) | `videoEncoderLastFallbackReason` | `std::string videoEncoderLastFallbackReason;` | 保存 video encoder last fallback reason 相关配置或运行状态。 |
-| [L102](../src/core/ISessionEngine.h#L102) | `h264HardwareEncoderDescriptions` | `std::vector<std::string> h264HardwareEncoderDescriptions;` | 保存 h264 hardware encoder descriptions 相关配置或运行状态。 |
-| [L103](../src/core/ISessionEngine.h#L103) | `h264HardwareEncoderWarnings` | `std::vector<std::string> h264HardwareEncoderWarnings;` | 保存 h264 hardware encoder warnings 相关配置或运行状态。 |
-| [L104](../src/core/ISessionEngine.h#L104) | `mfD3D11DecoderConfigured` | `bool mfD3D11DecoderConfigured = false;` | 保存 mf d3 d11 decoder configured 相关配置或运行状态。 |
-| [L105](../src/core/ISessionEngine.h#L105) | `mfD3D11DecoderHardware` | `bool mfD3D11DecoderHardware = false;` | 保存 mf d3 d11 decoder hardware 相关配置或运行状态。 |
-| [L106](../src/core/ISessionEngine.h#L106) | `mfD3D11DecoderSoftware` | `bool mfD3D11DecoderSoftware = false;` | 保存 mf d3 d11 decoder software 相关配置或运行状态。 |
-| [L107](../src/core/ISessionEngine.h#L107) | `d3d11NativeDecoderOutput` | `bool d3d11NativeDecoderOutput = false;` | 保存 d3d11 native decoder output 相关配置或运行状态。 |
-| [L108](../src/core/ISessionEngine.h#L108) | `mfD3D11DecoderAsynchronous` | `bool mfD3D11DecoderAsynchronous = false;` | 保存 mf d3 d11 decoder asynchronous 相关配置或运行状态。 |
-| [L109](../src/core/ISessionEngine.h#L109) | `ffmpegSoftwareH264Decoder` | `bool ffmpegSoftwareH264Decoder = false;` | 保存 ffmpeg software h264 decoder 相关配置或运行状态。 |
-| [L110](../src/core/ISessionEngine.h#L110) | `mfD3D11DecoderName` | `std::string mfD3D11DecoderName;` | 保存路径、地址或显示名称：mf d3 d11 decoder name。 |
-| [L111](../src/core/ISessionEngine.h#L111) | `mfD3D11DecoderError` | `std::string mfD3D11DecoderError;` | 保存最近错误或失败原因：mf d3 d11 decoder error。 |
-| [L112](../src/core/ISessionEngine.h#L112) | `hardwareFingerprint` | `std::string hardwareFingerprint;` | 保存 hardware fingerprint 相关配置或运行状态。 |
-| [L113](../src/core/ISessionEngine.h#L113) | `operatingSystemDescription` | `std::string operatingSystemDescription;` | 保存 operating system description 相关配置或运行状态。 |
-| [L114](../src/core/ISessionEngine.h#L114) | `nativeArchitecture` | `std::string nativeArchitecture;` | 保存 native architecture 相关配置或运行状态。 |
-| [L115](../src/core/ISessionEngine.h#L115) | `remoteSession` | `bool remoteSession = false;` | 保存 remote session 相关配置或运行状态。 |
-| [L116](../src/core/ISessionEngine.h#L116) | `graphicsAdapterDescriptions` | `std::vector<std::string> graphicsAdapterDescriptions;` | 保存 graphics adapter descriptions 相关配置或运行状态。 |
-| [L117](../src/core/ISessionEngine.h#L117) | `graphicsEnumerationError` | `std::string graphicsEnumerationError;` | 保存最近错误或失败原因：graphics enumeration error。 |
-| [L118](../src/core/ISessionEngine.h#L118) | `h264HardwareEncoderProbeSucceeded` | `bool h264HardwareEncoderProbeSucceeded = false;` | 保存 h264 hardware encoder probe succeeded 相关配置或运行状态。 |
-| [L119](../src/core/ISessionEngine.h#L119) | `h264HardwareEncoderProbeFromCache` | `bool h264HardwareEncoderProbeFromCache = false;` | 保存 h264 hardware encoder probe from cache 相关配置或运行状态。 |
-| [L120](../src/core/ISessionEngine.h#L120) | `audioDeviceModuleCreated` | `bool audioDeviceModuleCreated = false;` | 保存 audio device module created 相关配置或运行状态。 |
-| [L121](../src/core/ISessionEngine.h#L121) | `audioDeviceError` | `std::string audioDeviceError;` | 保存最近错误或失败原因：audio device error。 |
-| [L122](../src/core/ISessionEngine.h#L122) | `error` | `std::string error;` | 保存最近错误或失败原因：error。 |
-| [L126](../src/core/ISessionEngine.h#L126) | `state` | `SessionEngineState state = SessionEngineState::kStopped;` | 保存状态机当前状态：state。 |
-| [L128](../src/core/ISessionEngine.h#L128) | `kNotConfigured` | `SessionConnectivityState::kNotConfigured;` | 定义 not configured 的编译期常量或产品边界。 |
-| [L129](../src/core/ISessionEngine.h#L129) | `purpose` | `SessionPurpose purpose = SessionPurpose::kNone;` | 保存 purpose 相关配置或运行状态。 |
-| [L130](../src/core/ISessionEngine.h#L130) | `origin` | `SessionOrigin origin = SessionOrigin::kNone;` | 保存 origin 相关配置或运行状态。 |
-| [L131](../src/core/ISessionEngine.h#L131) | `remoteControlRole` | `RemoteControlRole remoteControlRole = RemoteControlRole::kNone;` | 保存 remote control role 相关配置或运行状态。 |
-| [L132](../src/core/ISessionEngine.h#L132) | `localCamera` | `LocalCameraState localCamera = LocalCameraState::kOff;` | 保存 local camera 相关配置或运行状态。 |
-| [L133](../src/core/ISessionEngine.h#L133) | `localMicrophone` | `LocalMicrophoneState localMicrophone = LocalMicrophoneState::kOff;` | 保存 local microphone 相关配置或运行状态。 |
-| [L134](../src/core/ISessionEngine.h#L134) | `roomAudioPlaybackMuted` | `bool roomAudioPlaybackMuted = false;` | 保存 room audio playback muted 相关配置或运行状态。 |
-| [L137](../src/core/ISessionEngine.h#L137) | `roomControlGrantActive` | `bool roomControlGrantActive = false;` | True only after the signaling server's control-grant event has supplied the lease token used to authenticate input and clipboard packets. |
-| [L138](../src/core/ISessionEngine.h#L138) | `remoteCameraPublishing` | `bool remoteCameraPublishing = false;` | 保存 remote camera publishing 相关配置或运行状态。 |
-| [L139](../src/core/ISessionEngine.h#L139) | `localDeviceId` | `std::string localDeviceId;` | 保存身份或作用域标识：local device id。 |
-| [L140](../src/core/ISessionEngine.h#L140) | `localVerificationCode` | `std::string localVerificationCode;` | 保存 local verification code 相关配置或运行状态。 |
-| [L141](../src/core/ISessionEngine.h#L141) | `sessionId` | `std::string sessionId;` | 保存身份或作用域标识：session id。 |
-| [L142](../src/core/ISessionEngine.h#L142) | `peerDeviceId` | `std::string peerDeviceId;` | 保存身份或作用域标识：peer device id。 |
-| [L145](../src/core/ISessionEngine.h#L145) | `directSignalingSessionReady` | `bool directSignalingSessionReady = false;` | True after signaling has accepted the direct-session authorization and issued session-ready data. WebRTC may still be negotiating. |
-| [L146](../src/core/ISessionEngine.h#L146) | `directMediaSlotsPrepared` | `bool directMediaSlotsPrepared = false;` | 保存 direct media slots prepared 相关配置或运行状态。 |
-| [L147](../src/core/ISessionEngine.h#L147) | `directControlReliableChannelOpen` | `bool directControlReliableChannelOpen = false;` | 保存能力或开关状态：direct control reliable channel open。 |
-| [L148](../src/core/ISessionEngine.h#L148) | `directInputFastChannelOpen` | `bool directInputFastChannelOpen = false;` | 保存能力或开关状态：direct input fast channel open。 |
-| [L149](../src/core/ISessionEngine.h#L149) | `directFileTransferChannelOpen` | `bool directFileTransferChannelOpen = false;` | 保存能力或开关状态：direct file transfer channel open。 |
-| [L150](../src/core/ISessionEngine.h#L150) | `directClipboardReliableChannelOpen` | `bool directClipboardReliableChannelOpen = false;` | 保存能力或开关状态：direct clipboard reliable channel open。 |
-| [L151](../src/core/ISessionEngine.h#L151) | `directClipboardTransferChannelOpen` | `bool directClipboardTransferChannelOpen = false;` | 保存能力或开关状态：direct clipboard transfer channel open。 |
-| [L154](../src/core/ISessionEngine.h#L154) | `directSessionEverActive` | `bool directSessionEverActive = false;` | Remains true across temporary signaling/P2P interruptions after this direct session has reached Connected at least once. |
-| [L158](../src/core/ISessionEngine.h#L158) | `directIceRestartAttempt` | `std::uint32_t directIceRestartAttempt = 0;` | Recovery telemetry for owned-device and verification-code sessions. Initial negotiation also uses kConnecting, so the UI combines this attempt count with its own "was active" la... |
-| [L159](../src/core/ISessionEngine.h#L159) | `directRemoteDisplay` | `DisplayDescriptor directRemoteDisplay;` | 保存 direct remote display 相关配置或运行状态。 |
-| [L160](../src/core/ISessionEngine.h#L160) | `directRemoteDisplayLayoutVersion` | `std::uint64_t directRemoteDisplayLayoutVersion = 0;` | 保存 direct remote display layout version 相关配置或运行状态。 |
-| [L161](../src/core/ISessionEngine.h#L161) | `directRemoteScreenShareGeneration` | `std::uint64_t directRemoteScreenShareGeneration = 0;` | 标记当前世代，用于拒绝过期异步结果：direct remote screen share generation。 |
-| [L162](../src/core/ISessionEngine.h#L162) | `directScreenPreferencePending` | `bool directScreenPreferencePending = false;` | 保存待处理队列或请求：direct screen preference pending。 |
-| [L163](../src/core/ISessionEngine.h#L163) | `directScreenPreferenceSequence` | `std::uint64_t directScreenPreferenceSequence = 0;` | 保存单调序号，用于排序或去重：direct screen preference sequence。 |
-| [L164](../src/core/ISessionEngine.h#L164) | `directScreenWidth` | `std::uint32_t directScreenWidth = 0;` | 保存计数、尺寸或速率指标：direct screen width。 |
-| [L165](../src/core/ISessionEngine.h#L165) | `directScreenHeight` | `std::uint32_t directScreenHeight = 0;` | 保存计数、尺寸或速率指标：direct screen height。 |
-| [L166](../src/core/ISessionEngine.h#L166) | `directScreenFramesPerSecond` | `std::uint32_t directScreenFramesPerSecond = kDefaultScreenFrameRate;` | 保存 direct screen frames per second 相关配置或运行状态。 |
-| [L167](../src/core/ISessionEngine.h#L167) | `directScreenMaximumFrameRate` | `std::uint32_t directScreenMaximumFrameRate = kMaximumScreenFrameRate;` | 保存计数、尺寸或速率指标：direct screen maximum frame rate。 |
-| [L168](../src/core/ISessionEngine.h#L168) | `directScreenMaxBitrateBps` | `std::uint32_t directScreenMaxBitrateBps = 0;` | 保存计数、尺寸或速率指标：direct screen max bitrate bps。 |
-| [L169](../src/core/ISessionEngine.h#L169) | `directRemoteDisplayCatalogReported` | `bool directRemoteDisplayCatalogReported = false;` | 保存 direct remote display catalog reported 相关配置或运行状态。 |
-| [L170](../src/core/ISessionEngine.h#L170) | `directRemoteDisplayCatalogLayoutVersion` | `std::uint64_t directRemoteDisplayCatalogLayoutVersion = 0;` | 保存 direct remote display catalog layout version 相关配置或运行状态。 |
-| [L171](../src/core/ISessionEngine.h#L171) | `directRemoteDisplays` | `std::vector<DisplayDescriptor> directRemoteDisplays;` | 保存 direct remote displays 相关配置或运行状态。 |
-| [L172](../src/core/ISessionEngine.h#L172) | `directRemoteDisplaySwitchPending` | `bool directRemoteDisplaySwitchPending = false;` | 保存待处理队列或请求：direct remote display switch pending。 |
-| [L173](../src/core/ISessionEngine.h#L173) | `directRemoteDisplaySwitchSequence` | `std::uint64_t directRemoteDisplaySwitchSequence = 0;` | 保存单调序号，用于排序或去重：direct remote display switch sequence。 |
-| [L174](../src/core/ISessionEngine.h#L174) | `directRemoteDisplaySwitchError` | `std::string directRemoteDisplaySwitchError;` | 保存最近错误或失败原因：direct remote display switch error。 |
-| [L175](../src/core/ISessionEngine.h#L175) | `errorCode` | `std::string errorCode;` | 保存 error code 相关配置或运行状态。 |
-| [L176](../src/core/ISessionEngine.h#L176) | `errorMessage` | `std::string errorMessage;` | 保存 error message 相关配置或运行状态。 |
-| [L177](../src/core/ISessionEngine.h#L177) | `screenShareGeneration` | `std::uint64_t screenShareGeneration = 0;` | 标记当前世代，用于拒绝过期异步结果：screen share generation。 |
-| [L178](../src/core/ISessionEngine.h#L178) | `localDisplayTopology` | `DisplayTopologySnapshot localDisplayTopology;` | 保存 local display topology 相关配置或运行状态。 |
-| [L179](../src/core/ISessionEngine.h#L179) | `localMediaDevices` | `MediaDeviceSnapshot localMediaDevices;` | 保存 local media devices 相关配置或运行状态。 |
-| [L180](../src/core/ISessionEngine.h#L180) | `selectedLocalDisplayKey` | `std::string selectedLocalDisplayKey;` | 保存 selected local display key 相关配置或运行状态。 |
-| [L181](../src/core/ISessionEngine.h#L181) | `activeSharedDisplay` | `DisplayDescriptor activeSharedDisplay;` | 保存 active shared display 相关配置或运行状态。 |
-| [L182](../src/core/ISessionEngine.h#L182) | `activeSharedDisplayLayoutVersion` | `std::uint64_t activeSharedDisplayLayoutVersion = 0;` | 保存 active shared display layout version 相关配置或运行状态。 |
-| [L183](../src/core/ISessionEngine.h#L183) | `room` | `RoomSnapshot room;` | 保存 room 相关配置或运行状态。 |
-| [L184](../src/core/ISessionEngine.h#L184) | `incomingRoomJoinRequests` | `std::vector<RoomJoinRequest> incomingRoomJoinRequests;` | 保存 incoming room join requests 相关配置或运行状态。 |
-| [L186](../src/core/ISessionEngine.h#L186) | `incomingRoomScreenShareSwitchRequests` | `incomingRoomScreenShareSwitchRequests;` | 保存 incoming room screen share switch requests 相关配置或运行状态。 |
-| [L187](../src/core/ISessionEngine.h#L187) | `incomingRoomControlRequests` | `std::vector<RoomControlRequest> incomingRoomControlRequests;` | 保存 incoming room control requests 相关配置或运行状态。 |
-| [L189](../src/core/ISessionEngine.h#L189) | `incomingRoomScreenShareViewRequests` | `incomingRoomScreenShareViewRequests;` | 保存 incoming room screen share view requests 相关配置或运行状态。 |
-| [L190](../src/core/ISessionEngine.h#L190) | `roomMemberActionResults` | `std::vector<RoomMemberActionResult> roomMemberActionResults;` | 保存 room member action results 相关配置或运行状态。 |
-| [L191](../src/core/ISessionEngine.h#L191) | `outgoingRoomScreenShareSwitchRequestId` | `std::string outgoingRoomScreenShareSwitchRequestId;` | 保存身份或作用域标识：outgoing room screen share switch request id。 |
-| [L192](../src/core/ISessionEngine.h#L192) | `roomPeerConnections` | `std::vector<RoomPeerConnectionSnapshot> roomPeerConnections;` | 保存 room peer connections 相关配置或运行状态。 |
-| [L193](../src/core/ISessionEngine.h#L193) | `roomAvailabilities` | `std::vector<RoomAvailabilitySnapshot> roomAvailabilities;` | 保存 room availabilities 相关配置或运行状态。 |
-| [L194](../src/core/ISessionEngine.h#L194) | `ownedDevicesRevision` | `std::uint64_t ownedDevicesRevision = 0;` | 标记当前世代，用于拒绝过期异步结果：owned devices revision。 |
-| [L195](../src/core/ISessionEngine.h#L195) | `ownedDevicesLoaded` | `bool ownedDevicesLoaded = false;` | 保存 owned devices loaded 相关配置或运行状态。 |
-| [L196](../src/core/ISessionEngine.h#L196) | `ownedDevices` | `std::vector<OwnedDeviceSnapshot> ownedDevices;` | 保存 owned devices 相关配置或运行状态。 |
-| [L200](../src/core/ISessionEngine.h#L200) | `accepted` | `bool accepted = false;` | 保存 accepted 相关配置或运行状态。 |
-| [L201](../src/core/ISessionEngine.h#L201) | `errorCode` | `std::string errorCode;` | 保存 error code 相关配置或运行状态。 |
-| [L202](../src/core/ISessionEngine.h#L202) | `errorMessage` | `std::string errorMessage;` | 保存 error message 相关配置或运行状态。 |
+| [L13](../src/core/ISessionEngine.h#L13) | `ISessionEngineObserver` | class | 定义 ISessionEngineObserver 的 class 类型和相关状态。 |
+| [L25](../src/core/ISessionEngine.h#L25) | `ISessionEngine` | class | 定义 ISessionEngine 的 class 类型和相关状态。 |
 
 ### 函数
 
 | 行 | 函数 | 类型 | 签名 | 作用 |
 |---:|---|---|---|---|
-| [L207](../src/core/ISessionEngine.h#L207) | `~ISessionEngineObserver` | 声明 | `virtual ~ISessionEngineObserver() = default` | 停止相关活动并释放 ISessionEngineObserver 实例拥有的资源。 |
-| [L213](../src/core/ISessionEngine.h#L213) | `OnSessionEngineSnapshot` | 声明 | `virtual void OnSessionEngineSnapshot( const SessionEngineSnapshot& snapshot) = 0` | V1 callbacks are synchronous on the thread that changes engine state. That may be the Qt signaling thread or the session controller executor; UI observers must marshal the immut... |
-| [L219](../src/core/ISessionEngine.h#L219) | `~ISessionEngine` | 声明 | `virtual ~ISessionEngine() = default` | 停止相关活动并释放 ISessionEngine 实例拥有的资源。 |
-| [L221](../src/core/ISessionEngine.h#L221) | `SetObserver` | 声明 | `virtual void SetObserver(ISessionEngineObserver* observer) = 0` | 更新或应用 set observer 相关逻辑。 |
-| [L222](../src/core/ISessionEngine.h#L222) | `Start` | 声明 | `virtual SessionCommandResult Start() = 0` | 启动 start 相关逻辑。 |
-| [L223](../src/core/ISessionEngine.h#L223) | `Stop` | 声明 | `virtual void Stop() = 0` | 停止 stop 相关逻辑。 |
-| [L225](../src/core/ISessionEngine.h#L225) | `Snapshot` | 声明 | `virtual SessionEngineSnapshot Snapshot() const = 0` | 查询并返回 snapshot 相关逻辑。 |
-| [L226](../src/core/ISessionEngine.h#L226) | `Capabilities` | 声明 | `virtual SessionEngineCapabilities Capabilities() const = 0` | 查询并返回 capabilities 相关逻辑。 |
-| [L227](../src/core/ISessionEngine.h#L227) | `Diagnostics` | 定义 | `virtual SessionDiagnosticsSnapshot Diagnostics() const { return {}; }` | 查询并返回 diagnostics 相关逻辑。 |
-| [L229](../src/core/ISessionEngine.h#L229) | `ConnectDirectDevice` | 声明 | `virtual SessionCommandResult ConnectDirectDevice( const DirectSessionConnectRequest& request) = 0` | 建立连接 connect direct device 相关逻辑。 |
-| [L234](../src/core/ISessionEngine.h#L234) | `ConnectDevice` | 声明 | `virtual SessionCommandResult ConnectDevice( const std::string& deviceId, SessionPurpose purpose) = 0` | Compatibility entry points. Implementations translate these to one validated DirectSessionConnectRequest so media setup has one path. |
-| [L237](../src/core/ISessionEngine.h#L237) | `ConnectOwnedDevice` | 声明 | `virtual SessionCommandResult ConnectOwnedDevice( const std::string& deviceId, SessionPurpose purpose) = 0` | 建立连接 connect owned device 相关逻辑。 |
-| [L240](../src/core/ISessionEngine.h#L240) | `ConnectAssistedDevice` | 声明 | `virtual SessionCommandResult ConnectAssistedDevice( const std::string& deviceId, const std::string& verificationCode) = 0` | 建立连接 connect assisted device 相关逻辑。 |
-| [L243](../src/core/ISessionEngine.h#L243) | `RefreshOwnedDevices` | 声明 | `virtual SessionCommandResult RefreshOwnedDevices() = 0` | 刷新 refresh owned devices 相关逻辑。 |
-| [L244](../src/core/ISessionEngine.h#L244) | `AcceptIncomingSession` | 声明 | `virtual SessionCommandResult AcceptIncomingSession( const std::string& sessionId) = 0` | 处理并回复 accept incoming session 相关逻辑。 |
-| [L246](../src/core/ISessionEngine.h#L246) | `RejectIncomingSession` | 声明 | `virtual SessionCommandResult RejectIncomingSession( const std::string& sessionId) = 0` | 处理并回复 reject incoming session 相关逻辑。 |
-| [L248](../src/core/ISessionEngine.h#L248) | `Disconnect` | 声明 | `virtual SessionCommandResult Disconnect() = 0` | 断开连接 disconnect 相关逻辑。 |
-| [L254](../src/core/ISessionEngine.h#L254) | `CreateRoom` | 声明 | `virtual SessionCommandResult CreateRoom(std::uint32_t capacity) = 0` | Room control-plane operations are intentionally independent from the legacy direct-session API during migration. Room membership and member-pair WebRTC connections use the same ... |
-| [L255](../src/core/ISessionEngine.h#L255) | `JoinRoom` | 声明 | `virtual SessionCommandResult JoinRoom(const std::string& roomId) = 0` | 实现 join room 对应的业务或工具逻辑。 |
-| [L256](../src/core/ISessionEngine.h#L256) | `QueryRoomAvailability` | 定义 | `virtual SessionCommandResult QueryRoomAvailability( const std::vector<std::string>& roomIds)` | 发起请求或查询 query room availability 相关逻辑。 |
-| [L263](../src/core/ISessionEngine.h#L263) | `RespondToRoomJoin` | 声明 | `virtual SessionCommandResult RespondToRoomJoin( const std::string& requestId, bool accepted) = 0` | 处理并回复 respond to room join 相关逻辑。 |
-| [L266](../src/core/ISessionEngine.h#L266) | `SetRoomCapacity` | 声明 | `virtual SessionCommandResult SetRoomCapacity( std::uint32_t capacity) = 0` | 更新或应用 set room capacity 相关逻辑。 |
-| [L268](../src/core/ISessionEngine.h#L268) | `LeaveRoom` | 声明 | `virtual SessionCommandResult LeaveRoom() = 0` | 实现 leave room 对应的业务或工具逻辑。 |
-| [L269](../src/core/ISessionEngine.h#L269) | `RefreshLocalDisplays` | 声明 | `virtual SessionCommandResult RefreshLocalDisplays() = 0` | 刷新 refresh local displays 相关逻辑。 |
-| [L270](../src/core/ISessionEngine.h#L270) | `SelectRoomScreenShareDisplay` | 声明 | `virtual SessionCommandResult SelectRoomScreenShareDisplay( const std::string& stableDisplayKey) = 0` | 查询并返回 select room screen share display 相关逻辑。 |
-| [L272](../src/core/ISessionEngine.h#L272) | `StartRoomScreenShare` | 声明 | `virtual SessionCommandResult StartRoomScreenShare() = 0` | 启动 start room screen share 相关逻辑。 |
-| [L273](../src/core/ISessionEngine.h#L273) | `StopRoomScreenShare` | 声明 | `virtual SessionCommandResult StopRoomScreenShare() = 0` | 停止 stop room screen share 相关逻辑。 |
-| [L274](../src/core/ISessionEngine.h#L274) | `RespondToRoomScreenShareSwitch` | 声明 | `virtual SessionCommandResult RespondToRoomScreenShareSwitch( const std::string& requestId, bool accepted) = 0` | 处理并回复 respond to room screen share switch 相关逻辑。 |
-| [L277](../src/core/ISessionEngine.h#L277) | `CancelRoomScreenShareSwitch` | 声明 | `virtual SessionCommandResult CancelRoomScreenShareSwitch() = 0` | 判断 cancel room screen share switch 相关逻辑。 |
-| [L278](../src/core/ISessionEngine.h#L278) | `RequestRoomControl` | 声明 | `virtual SessionCommandResult RequestRoomControl() = 0` | 发起请求或查询 request room control 相关逻辑。 |
-| [L279](../src/core/ISessionEngine.h#L279) | `RespondToRoomControl` | 声明 | `virtual SessionCommandResult RespondToRoomControl( const std::string& requestId, bool accepted) = 0` | 处理并回复 respond to room control 相关逻辑。 |
-| [L282](../src/core/ISessionEngine.h#L282) | `ReleaseRoomControl` | 声明 | `virtual SessionCommandResult ReleaseRoomControl() = 0` | 释放或取消 release room control 相关逻辑。 |
-| [L283](../src/core/ISessionEngine.h#L283) | `RequestRoomMemberScreenShare` | 声明 | `virtual SessionCommandResult RequestRoomMemberScreenShare( const std::string& peerDeviceId) = 0` | 发起请求或查询 request room member screen share 相关逻辑。 |
-| [L285](../src/core/ISessionEngine.h#L285) | `RespondToRoomMemberScreenShare` | 声明 | `virtual SessionCommandResult RespondToRoomMemberScreenShare( const std::string& requesterDeviceId, std::uint64_t sequence, bool accepted) = 0` | 处理并回复 respond to room member screen share 相关逻辑。 |
-| [L289](../src/core/ISessionEngine.h#L289) | `RequestRoomMemberMicrophoneMute` | 声明 | `virtual SessionCommandResult RequestRoomMemberMicrophoneMute( const std::string& peerDeviceId) = 0` | 发起请求或查询 request room member microphone mute 相关逻辑。 |
-| [L291](../src/core/ISessionEngine.h#L291) | `RequestRemoteRoomScreenShareStop` | 声明 | `virtual SessionCommandResult RequestRemoteRoomScreenShareStop( const std::string& peerDeviceId, std::uint64_t screenShareEpoch) = 0` | 发起请求或查询 request remote room screen share stop 相关逻辑。 |
-| [L294](../src/core/ISessionEngine.h#L294) | `SendRoomInput` | 声明 | `virtual SessionCommandResult SendRoomInput( const RemoteInputEvent& event) = 0` | 发送或发布 send room input 相关逻辑。 |
-| [L296](../src/core/ISessionEngine.h#L296) | `SetRoomScreenFrameRate` | 声明 | `virtual SessionCommandResult SetRoomScreenFrameRate( const std::string& pairId, std::uint32_t framesPerSecond) = 0` | 更新或应用 set room screen frame rate 相关逻辑。 |
-| [L299](../src/core/ISessionEngine.h#L299) | `SetRoomScreenStreamPreference` | 声明 | `virtual SessionCommandResult SetRoomScreenStreamPreference( const std::string& pairId, const ScreenStreamPreferenceRequest& preference) = 0` | 更新或应用 set room screen stream preference 相关逻辑。 |
-| [L302](../src/core/ISessionEngine.h#L302) | `RequestRemoteSharedDisplaySwitch` | 声明 | `virtual SessionCommandResult RequestRemoteSharedDisplaySwitch( const std::string& pairId, const std::string& stableDisplayKey) = 0` | 发起请求或查询 request remote shared display switch 相关逻辑。 |
-| [L305](../src/core/ISessionEngine.h#L305) | `SendRoomFileMessage` | 声明 | `virtual SessionCommandResult SendRoomFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message) = 0` | 发送或发布 send room file message 相关逻辑。 |
-| [L308](../src/core/ISessionEngine.h#L308) | `SendRoomClipboardMessage` | 声明 | `virtual SessionCommandResult SendRoomClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message) = 0` | 发送或发布 send room clipboard message 相关逻辑。 |
-| [L315](../src/core/ISessionEngine.h#L315) | `SetLocalCameraEnabled` | 声明 | `virtual SessionCommandResult SetLocalCameraEnabled(bool enabled) = 0` | A peer may only enable its own camera. Enabling starts local preview and publishes the local Camera Track; disabling stops capture and sending. |
-| [L316](../src/core/ISessionEngine.h#L316) | `SetLocalMicrophoneEnabled` | 声明 | `virtual SessionCommandResult SetLocalMicrophoneEnabled(bool enabled) = 0` | 更新或应用 set local microphone enabled 相关逻辑。 |
-| [L317](../src/core/ISessionEngine.h#L317) | `SetRoomAudioPlaybackMuted` | 声明 | `virtual SessionCommandResult SetRoomAudioPlaybackMuted(bool muted) = 0` | 更新或应用 set room audio playback muted 相关逻辑。 |
-| [L318](../src/core/ISessionEngine.h#L318) | `RefreshLocalMediaDevices` | 声明 | `virtual SessionCommandResult RefreshLocalMediaDevices() = 0` | 刷新 refresh local media devices 相关逻辑。 |
-| [L319](../src/core/ISessionEngine.h#L319) | `SelectLocalCameraDevice` | 声明 | `virtual SessionCommandResult SelectLocalCameraDevice( const std::string& deviceId) = 0` | 查询并返回 select local camera device 相关逻辑。 |
-| [L321](../src/core/ISessionEngine.h#L321) | `SelectLocalMicrophoneDevice` | 声明 | `virtual SessionCommandResult SelectLocalMicrophoneDevice( const std::string& deviceId) = 0` | 查询并返回 select local microphone device 相关逻辑。 |
-| [L323](../src/core/ISessionEngine.h#L323) | `SelectLocalSpeakerDevice` | 声明 | `virtual SessionCommandResult SelectLocalSpeakerDevice( const std::string& deviceId) = 0` | 查询并返回 select local speaker device 相关逻辑。 |
+| [L15](../src/core/ISessionEngine.h#L15) | `~ISessionEngineObserver` | 声明 | `virtual ~ISessionEngineObserver() = default` | 停止相关活动并释放 ISessionEngineObserver 实例拥有的资源。 |
+| [L21](../src/core/ISessionEngine.h#L21) | `OnSessionEngineSnapshot` | 声明 | `virtual void OnSessionEngineSnapshot( const SessionEngineSnapshot& snapshot) = 0` | V1 callbacks are synchronous on the thread that changes engine state. That may be the Qt signaling thread or the session controller executor; UI observers must marshal the immut... |
+| [L27](../src/core/ISessionEngine.h#L27) | `~ISessionEngine` | 声明 | `~ISessionEngine() override = default` | 停止相关活动并释放 ISessionEngine 实例拥有的资源。 |
+| [L29](../src/core/ISessionEngine.h#L29) | `SetObserver` | 声明 | `virtual void SetObserver(ISessionEngineObserver* observer) = 0` | 更新或应用 set observer 相关逻辑。 |
+| [L33](../src/core/ISessionEngine.h#L33) | `Start` | 声明 | `virtual SessionCommandResult Start() = 0` | Starts initialization without blocking the caller. A successful result means startup was accepted; observers receive kStarting followed by kReady or kFailed when initialization ... |
+| [L34](../src/core/ISessionEngine.h#L34) | `Stop` | 声明 | `virtual void Stop() = 0` | 停止 stop 相关逻辑。 |
+| [L36](../src/core/ISessionEngine.h#L36) | `Capabilities` | 声明 | `virtual SessionEngineCapabilities Capabilities() const = 0` | 查询并返回 capabilities 相关逻辑。 |
+| [L37](../src/core/ISessionEngine.h#L37) | `Diagnostics` | 定义 | `virtual SessionDiagnosticsSnapshot Diagnostics() const { return {}; }` | 查询并返回 diagnostics 相关逻辑。 |
+| [L39](../src/core/ISessionEngine.h#L39) | `ConnectDirectDevice` | 声明 | `virtual SessionCommandResult ConnectDirectDevice( const DirectSessionConnectRequest& request) = 0` | 建立连接 connect direct device 相关逻辑。 |
+| [L42](../src/core/ISessionEngine.h#L42) | `RefreshOwnedDevices` | 声明 | `virtual SessionCommandResult RefreshOwnedDevices() = 0` | 刷新 refresh owned devices 相关逻辑。 |
+| [L43](../src/core/ISessionEngine.h#L43) | `AcceptIncomingSession` | 声明 | `virtual SessionCommandResult AcceptIncomingSession( const std::string& sessionId) = 0` | 处理并回复 accept incoming session 相关逻辑。 |
+| [L45](../src/core/ISessionEngine.h#L45) | `RejectIncomingSession` | 声明 | `virtual SessionCommandResult RejectIncomingSession( const std::string& sessionId) = 0` | 处理并回复 reject incoming session 相关逻辑。 |
+| [L51](../src/core/ISessionEngine.h#L51) | `CreateRoom` | 声明 | `virtual SessionCommandResult CreateRoom(std::uint32_t capacity) = 0` | Room control-plane operations are independent from direct sessions. Room membership and member-pair WebRTC connections use the same engine snapshot without overwriting the verif... |
+| [L52](../src/core/ISessionEngine.h#L52) | `JoinRoom` | 声明 | `virtual SessionCommandResult JoinRoom(const std::string& roomId) = 0` | 实现 join room 对应的业务或工具逻辑。 |
+| [L53](../src/core/ISessionEngine.h#L53) | `QueryRoomAvailability` | 定义 | `virtual SessionCommandResult QueryRoomAvailability( const std::vector<std::string>& roomIds)` | 发起请求或查询 query room availability 相关逻辑。 |
+| [L60](../src/core/ISessionEngine.h#L60) | `RespondToRoomJoin` | 声明 | `virtual SessionCommandResult RespondToRoomJoin( const std::string& requestId, bool accepted) = 0` | 处理并回复 respond to room join 相关逻辑。 |
+| [L63](../src/core/ISessionEngine.h#L63) | `SetRoomCapacity` | 声明 | `virtual SessionCommandResult SetRoomCapacity( std::uint32_t capacity) = 0` | 更新或应用 set room capacity 相关逻辑。 |
+| [L65](../src/core/ISessionEngine.h#L65) | `LeaveRoom` | 声明 | `virtual SessionCommandResult LeaveRoom() = 0` | 实现 leave room 对应的业务或工具逻辑。 |
+| [L66](../src/core/ISessionEngine.h#L66) | `RefreshLocalDisplays` | 声明 | `virtual SessionCommandResult RefreshLocalDisplays() = 0` | 刷新 refresh local displays 相关逻辑。 |
+| [L67](../src/core/ISessionEngine.h#L67) | `SelectRoomScreenShareDisplay` | 声明 | `virtual SessionCommandResult SelectRoomScreenShareDisplay( const std::string& stableDisplayKey) = 0` | 查询并返回 select room screen share display 相关逻辑。 |
+| [L69](../src/core/ISessionEngine.h#L69) | `StartRoomScreenShare` | 声明 | `virtual SessionCommandResult StartRoomScreenShare() = 0` | 启动 start room screen share 相关逻辑。 |
+| [L70](../src/core/ISessionEngine.h#L70) | `StopRoomScreenShare` | 声明 | `virtual SessionCommandResult StopRoomScreenShare() = 0` | 停止 stop room screen share 相关逻辑。 |
+| [L71](../src/core/ISessionEngine.h#L71) | `RespondToRoomScreenShareSwitch` | 声明 | `virtual SessionCommandResult RespondToRoomScreenShareSwitch( const std::string& requestId, bool accepted) = 0` | 处理并回复 respond to room screen share switch 相关逻辑。 |
+| [L74](../src/core/ISessionEngine.h#L74) | `CancelRoomScreenShareSwitch` | 声明 | `virtual SessionCommandResult CancelRoomScreenShareSwitch() = 0` | 判断 cancel room screen share switch 相关逻辑。 |
+| [L75](../src/core/ISessionEngine.h#L75) | `RespondToRoomControl` | 声明 | `virtual SessionCommandResult RespondToRoomControl( const std::string& requestId, bool accepted) = 0` | 处理并回复 respond to room control 相关逻辑。 |
+| [L78](../src/core/ISessionEngine.h#L78) | `RequestRoomMemberScreenShare` | 声明 | `virtual SessionCommandResult RequestRoomMemberScreenShare( const std::string& peerDeviceId) = 0` | 发起请求或查询 request room member screen share 相关逻辑。 |
+| [L80](../src/core/ISessionEngine.h#L80) | `RespondToRoomMemberScreenShare` | 声明 | `virtual SessionCommandResult RespondToRoomMemberScreenShare( const std::string& requesterDeviceId, std::uint64_t sequence, bool accepted) = 0` | 处理并回复 respond to room member screen share 相关逻辑。 |
+| [L84](../src/core/ISessionEngine.h#L84) | `RequestRoomMemberMicrophoneMute` | 声明 | `virtual SessionCommandResult RequestRoomMemberMicrophoneMute( const std::string& peerDeviceId) = 0` | 发起请求或查询 request room member microphone mute 相关逻辑。 |
+| [L86](../src/core/ISessionEngine.h#L86) | `RequestRemoteRoomScreenShareStop` | 声明 | `virtual SessionCommandResult RequestRemoteRoomScreenShareStop( const std::string& peerDeviceId, std::uint64_t screenShareEpoch) = 0` | 发起请求或查询 request remote room screen share stop 相关逻辑。 |
+| [L89](../src/core/ISessionEngine.h#L89) | `SendRoomInput` | 声明 | `virtual SessionCommandResult SendRoomInput( const RemoteInputEvent& event) = 0` | 发送或发布 send room input 相关逻辑。 |
+| [L91](../src/core/ISessionEngine.h#L91) | `SetRoomScreenFrameRate` | 声明 | `virtual SessionCommandResult SetRoomScreenFrameRate( const std::string& pairId, std::uint32_t framesPerSecond) = 0` | 更新或应用 set room screen frame rate 相关逻辑。 |
+| [L94](../src/core/ISessionEngine.h#L94) | `SendRoomFileMessage` | 声明 | `virtual SessionCommandResult SendRoomFileMessage( const std::string& peerDeviceId, const FileTransferMessage& message) = 0` | 发送或发布 send room file message 相关逻辑。 |
+| [L97](../src/core/ISessionEngine.h#L97) | `SendRoomClipboardMessage` | 声明 | `virtual SessionCommandResult SendRoomClipboardMessage( const std::string& peerDeviceId, const std::string& clipboardSessionId, const ClipboardMessage& message) = 0` | 发送或发布 send room clipboard message 相关逻辑。 |
+| [L104](../src/core/ISessionEngine.h#L104) | `SetLocalCameraEnabled` | 声明 | `virtual SessionCommandResult SetLocalCameraEnabled(bool enabled) = 0` | A peer may only enable its own camera. Enabling starts local preview and publishes the local Camera Track; disabling stops capture and sending. |
+| [L105](../src/core/ISessionEngine.h#L105) | `SetRoomAudioPlaybackMuted` | 声明 | `virtual SessionCommandResult SetRoomAudioPlaybackMuted(bool muted) = 0` | 更新或应用 set room audio playback muted 相关逻辑。 |
 
 ## `src/core/MediaDevice.h`
 
@@ -1107,6 +1006,152 @@
 | [L265](../src/core/SessionDiagnostics.h#L265) | `videoEncoderLastFallbackReason` | `std::string videoEncoderLastFallbackReason;` | Most recent reason reported by a hardware video encoder before asking libwebrtc to use its software fallback. Keep this in the session diagnostics as well as the global capabili... |
 | [L266](../src/core/SessionDiagnostics.h#L266) | `peerConnections` | `std::vector<PeerConnectionDiagnosticsSnapshot> peerConnections;` | 保存 peer connections 相关配置或运行状态。 |
 | [L267](../src/core/SessionDiagnostics.h#L267) | `remoteInput` | `RemoteInputTelemetrySnapshot remoteInput;` | 保存 remote input 相关配置或运行状态。 |
+
+## `src/core/SessionEngineTypes.h`
+
+[打开源码](../src/core/SessionEngineTypes.h) · **文件作用：** 声明 session engine types 相关类型、接口、配置和成员状态。
+
+### 类型
+
+| 行 | 类型 | 种类 | 作用 |
+|---:|---|---|---|
+| [L19](../src/core/SessionEngineTypes.h#L19) | `RemoteControlRole` | enum class | 定义 RemoteControlRole 的 enum class 类型和相关状态。 |
+| [L25](../src/core/SessionEngineTypes.h#L25) | `SessionOrigin` | enum class | 定义 SessionOrigin 的 enum class 类型和相关状态。 |
+| [L33](../src/core/SessionEngineTypes.h#L33) | `OwnedDeviceSnapshot` | struct | 定义 OwnedDeviceSnapshot 的 struct 类型和相关状态。 |
+| [L42](../src/core/SessionEngineTypes.h#L42) | `OwnedDevicesSnapshot` | struct | 定义 OwnedDevicesSnapshot 的 struct 类型和相关状态。 |
+| [L48](../src/core/SessionEngineTypes.h#L48) | `RoomActivitySnapshot` | struct | 定义 RoomActivitySnapshot 的 struct 类型和相关状态。 |
+| [L60](../src/core/SessionEngineTypes.h#L60) | `SessionEngineState` | enum class | 定义 SessionEngineState 的 enum class 类型和相关状态。 |
+| [L71](../src/core/SessionEngineTypes.h#L71) | `SessionConnectivityState` | enum class | 定义 SessionConnectivityState 的 enum class 类型和相关状态。 |
+| [L79](../src/core/SessionEngineTypes.h#L79) | `LocalCameraState` | enum class | 定义 LocalCameraState 的 enum class 类型和相关状态。 |
+| [L87](../src/core/SessionEngineTypes.h#L87) | `LocalMicrophoneState` | enum class | 定义 LocalMicrophoneState 的 enum class 类型和相关状态。 |
+| [L95](../src/core/SessionEngineTypes.h#L95) | `SessionEngineCapabilities` | struct | 定义 SessionEngineCapabilities 的 struct 类型和相关状态。 |
+| [L140](../src/core/SessionEngineTypes.h#L140) | `DirectSessionSnapshot` | struct | 定义 DirectSessionSnapshot 的 struct 类型和相关状态。 |
+| [L174](../src/core/SessionEngineTypes.h#L174) | `LocalScreenShareSnapshot` | struct | 定义 LocalScreenShareSnapshot 的 struct 类型和相关状态。 |
+| [L182](../src/core/SessionEngineTypes.h#L182) | `SessionMediaSnapshot` | struct | 定义 SessionMediaSnapshot 的 struct 类型和相关状态。 |
+| [L190](../src/core/SessionEngineTypes.h#L190) | `SessionErrorSnapshot` | struct | 定义 SessionErrorSnapshot 的 struct 类型和相关状态。 |
+| [L195](../src/core/SessionEngineTypes.h#L195) | `SessionEngineSnapshot` | struct | 定义 SessionEngineSnapshot 的 struct 类型和相关状态。 |
+| [L218](../src/core/SessionEngineTypes.h#L218) | `SessionCommandResult` | struct | 定义 SessionCommandResult 的 struct 类型和相关状态。 |
+
+### 成员与文件级变量
+
+| 行 | 变量 | 声明 | 作用 |
+|---:|---|---|---|
+| [L34](../src/core/SessionEngineTypes.h#L34) | `deviceId` | `std::string deviceId;` | 保存身份或作用域标识：device id。 |
+| [L35](../src/core/SessionEngineTypes.h#L35) | `deviceName` | `std::string deviceName;` | 保存路径、地址或显示名称：device name。 |
+| [L36](../src/core/SessionEngineTypes.h#L36) | `online` | `bool online = false;` | 保存 online 相关配置或运行状态。 |
+| [L37](../src/core/SessionEngineTypes.h#L37) | `current` | `bool current = false;` | 保存 current 相关配置或运行状态。 |
+| [L38](../src/core/SessionEngineTypes.h#L38) | `createdAt` | `std::int64_t createdAt = 0;` | 保存 created at 相关配置或运行状态。 |
+| [L39](../src/core/SessionEngineTypes.h#L39) | `lastSeenAt` | `std::int64_t lastSeenAt = 0;` | 保存 last seen at 相关配置或运行状态。 |
+| [L43](../src/core/SessionEngineTypes.h#L43) | `revision` | `std::uint64_t revision = 0;` | 标记当前世代，用于拒绝过期异步结果：revision。 |
+| [L44](../src/core/SessionEngineTypes.h#L44) | `loaded` | `bool loaded = false;` | 保存 loaded 相关配置或运行状态。 |
+| [L45](../src/core/SessionEngineTypes.h#L45) | `devices` | `std::vector<OwnedDeviceSnapshot> devices;` | 保存 devices 相关配置或运行状态。 |
+| [L49](../src/core/SessionEngineTypes.h#L49) | `incomingJoinRequests` | `std::vector<RoomJoinRequest> incomingJoinRequests;` | 保存 incoming join requests 相关配置或运行状态。 |
+| [L51](../src/core/SessionEngineTypes.h#L51) | `incomingScreenShareSwitchRequests` | `incomingScreenShareSwitchRequests;` | 保存 incoming screen share switch requests 相关配置或运行状态。 |
+| [L52](../src/core/SessionEngineTypes.h#L52) | `incomingControlRequests` | `std::vector<RoomControlRequest> incomingControlRequests;` | 保存 incoming control requests 相关配置或运行状态。 |
+| [L53](../src/core/SessionEngineTypes.h#L53) | `incomingScreenShareViewRequests` | `std::vector<RoomScreenShareViewRequest> incomingScreenShareViewRequests;` | 保存 incoming screen share view requests 相关配置或运行状态。 |
+| [L54](../src/core/SessionEngineTypes.h#L54) | `memberActionResults` | `std::vector<RoomMemberActionResult> memberActionResults;` | 保存 member action results 相关配置或运行状态。 |
+| [L55](../src/core/SessionEngineTypes.h#L55) | `outgoingScreenShareSwitchRequestId` | `std::string outgoingScreenShareSwitchRequestId;` | 保存身份或作用域标识：outgoing screen share switch request id。 |
+| [L56](../src/core/SessionEngineTypes.h#L56) | `peerConnections` | `std::vector<RoomPeerConnectionSnapshot> peerConnections;` | 保存 peer connections 相关配置或运行状态。 |
+| [L57](../src/core/SessionEngineTypes.h#L57) | `availabilities` | `std::vector<RoomAvailabilitySnapshot> availabilities;` | 保存 availabilities 相关配置或运行状态。 |
+| [L96](../src/core/SessionEngineTypes.h#L96) | `webRtcReady` | `bool webRtcReady = false;` | 保存能力或开关状态：web rtc ready。 |
+| [L97](../src/core/SessionEngineTypes.h#L97) | `hasH264Encoder` | `bool hasH264Encoder = false;` | 保存 has h264 encoder 相关配置或运行状态。 |
+| [L98](../src/core/SessionEngineTypes.h#L98) | `hasH264Decoder` | `bool hasH264Decoder = false;` | 保存 has h264 decoder 相关配置或运行状态。 |
+| [L99](../src/core/SessionEngineTypes.h#L99) | `h264HardwareEncoderAvailable` | `bool h264HardwareEncoderAvailable = false;` | 保存能力或开关状态：h264 hardware encoder available。 |
+| [L100](../src/core/SessionEngineTypes.h#L100) | `h264HardwareEncoderCpuNv12InputSupported` | `bool h264HardwareEncoderCpuNv12InputSupported = false;` | 保存 h264 hardware encoder cpu nv12 input supported 相关配置或运行状态。 |
+| [L101](../src/core/SessionEngineTypes.h#L101) | `h264HardwareEncoderD3D11InputCandidate` | `bool h264HardwareEncoderD3D11InputCandidate = false;` | 保存 h264 hardware encoder d3 d11 input candidate 相关配置或运行状态。 |
+| [L102](../src/core/SessionEngineTypes.h#L102) | `h264HardwareEncoderCount` | `uint32_t h264HardwareEncoderCount = 0;` | 保存计数、尺寸或速率指标：h264 hardware encoder count。 |
+| [L103](../src/core/SessionEngineTypes.h#L103) | `h264HardwareEncoderWired` | `bool h264HardwareEncoderWired = false;` | 保存 h264 hardware encoder wired 相关配置或运行状态。 |
+| [L104](../src/core/SessionEngineTypes.h#L104) | `h264SoftwareEncoderWired` | `bool h264SoftwareEncoderWired = false;` | 保存 h264 software encoder wired 相关配置或运行状态。 |
+| [L105](../src/core/SessionEngineTypes.h#L105) | `ffmpegX264EncoderWired` | `bool ffmpegX264EncoderWired = false;` | 保存 ffmpeg x264 encoder wired 相关配置或运行状态。 |
+| [L106](../src/core/SessionEngineTypes.h#L106) | `ffmpegX264EncoderError` | `std::string ffmpegX264EncoderError;` | 保存最近错误或失败原因：ffmpeg x264 encoder error。 |
+| [L107](../src/core/SessionEngineTypes.h#L107) | `ffmpegHardwareEncoderAvailable` | `bool ffmpegHardwareEncoderAvailable = false;` | 保存能力或开关状态：ffmpeg hardware encoder available。 |
+| [L108](../src/core/SessionEngineTypes.h#L108) | `ffmpegHardwareEncoderWired` | `bool ffmpegHardwareEncoderWired = false;` | 保存 ffmpeg hardware encoder wired 相关配置或运行状态。 |
+| [L109](../src/core/SessionEngineTypes.h#L109) | `ffmpegHardwareEncoderError` | `std::string ffmpegHardwareEncoderError;` | 保存最近错误或失败原因：ffmpeg hardware encoder error。 |
+| [L110](../src/core/SessionEngineTypes.h#L110) | `ffmpegHardwareEncoderDescriptions` | `std::vector<std::string> ffmpegHardwareEncoderDescriptions;` | 保存 ffmpeg hardware encoder descriptions 相关配置或运行状态。 |
+| [L111](../src/core/SessionEngineTypes.h#L111) | `h264SoftwareEncoderFallback` | `bool h264SoftwareEncoderFallback = false;` | 保存 h264 software encoder fallback 相关配置或运行状态。 |
+| [L112](../src/core/SessionEngineTypes.h#L112) | `desktopCapturePreference` | `std::string desktopCapturePreference;` | 保存 desktop capture preference 相关配置或运行状态。 |
+| [L113](../src/core/SessionEngineTypes.h#L113) | `videoEncoderPreference` | `std::string videoEncoderPreference;` | 保存 video encoder preference 相关配置或运行状态。 |
+| [L114](../src/core/SessionEngineTypes.h#L114) | `videoDecoderPreference` | `std::string videoDecoderPreference;` | 保存 video decoder preference 相关配置或运行状态。 |
+| [L115](../src/core/SessionEngineTypes.h#L115) | `videoEncoderRuntimeDetails` | `std::vector<std::string> videoEncoderRuntimeDetails;` | 保存 video encoder runtime details 相关配置或运行状态。 |
+| [L116](../src/core/SessionEngineTypes.h#L116) | `videoEncoderLastFallbackReason` | `std::string videoEncoderLastFallbackReason;` | 保存 video encoder last fallback reason 相关配置或运行状态。 |
+| [L117](../src/core/SessionEngineTypes.h#L117) | `h264HardwareEncoderDescriptions` | `std::vector<std::string> h264HardwareEncoderDescriptions;` | 保存 h264 hardware encoder descriptions 相关配置或运行状态。 |
+| [L118](../src/core/SessionEngineTypes.h#L118) | `h264HardwareEncoderWarnings` | `std::vector<std::string> h264HardwareEncoderWarnings;` | 保存 h264 hardware encoder warnings 相关配置或运行状态。 |
+| [L119](../src/core/SessionEngineTypes.h#L119) | `mfD3D11DecoderConfigured` | `bool mfD3D11DecoderConfigured = false;` | 保存 mf d3 d11 decoder configured 相关配置或运行状态。 |
+| [L120](../src/core/SessionEngineTypes.h#L120) | `mfD3D11DecoderHardware` | `bool mfD3D11DecoderHardware = false;` | 保存 mf d3 d11 decoder hardware 相关配置或运行状态。 |
+| [L121](../src/core/SessionEngineTypes.h#L121) | `mfD3D11DecoderSoftware` | `bool mfD3D11DecoderSoftware = false;` | 保存 mf d3 d11 decoder software 相关配置或运行状态。 |
+| [L122](../src/core/SessionEngineTypes.h#L122) | `d3d11NativeDecoderOutput` | `bool d3d11NativeDecoderOutput = false;` | 保存 d3d11 native decoder output 相关配置或运行状态。 |
+| [L123](../src/core/SessionEngineTypes.h#L123) | `mfD3D11DecoderAsynchronous` | `bool mfD3D11DecoderAsynchronous = false;` | 保存 mf d3 d11 decoder asynchronous 相关配置或运行状态。 |
+| [L124](../src/core/SessionEngineTypes.h#L124) | `ffmpegSoftwareH264Decoder` | `bool ffmpegSoftwareH264Decoder = false;` | 保存 ffmpeg software h264 decoder 相关配置或运行状态。 |
+| [L125](../src/core/SessionEngineTypes.h#L125) | `mfD3D11DecoderName` | `std::string mfD3D11DecoderName;` | 保存路径、地址或显示名称：mf d3 d11 decoder name。 |
+| [L126](../src/core/SessionEngineTypes.h#L126) | `mfD3D11DecoderError` | `std::string mfD3D11DecoderError;` | 保存最近错误或失败原因：mf d3 d11 decoder error。 |
+| [L127](../src/core/SessionEngineTypes.h#L127) | `hardwareFingerprint` | `std::string hardwareFingerprint;` | 保存 hardware fingerprint 相关配置或运行状态。 |
+| [L128](../src/core/SessionEngineTypes.h#L128) | `operatingSystemDescription` | `std::string operatingSystemDescription;` | 保存 operating system description 相关配置或运行状态。 |
+| [L129](../src/core/SessionEngineTypes.h#L129) | `nativeArchitecture` | `std::string nativeArchitecture;` | 保存 native architecture 相关配置或运行状态。 |
+| [L130](../src/core/SessionEngineTypes.h#L130) | `remoteSession` | `bool remoteSession = false;` | 保存 remote session 相关配置或运行状态。 |
+| [L131](../src/core/SessionEngineTypes.h#L131) | `graphicsAdapterDescriptions` | `std::vector<std::string> graphicsAdapterDescriptions;` | 保存 graphics adapter descriptions 相关配置或运行状态。 |
+| [L132](../src/core/SessionEngineTypes.h#L132) | `graphicsEnumerationError` | `std::string graphicsEnumerationError;` | 保存最近错误或失败原因：graphics enumeration error。 |
+| [L133](../src/core/SessionEngineTypes.h#L133) | `h264HardwareEncoderProbeSucceeded` | `bool h264HardwareEncoderProbeSucceeded = false;` | 保存 h264 hardware encoder probe succeeded 相关配置或运行状态。 |
+| [L134](../src/core/SessionEngineTypes.h#L134) | `h264HardwareEncoderProbeFromCache` | `bool h264HardwareEncoderProbeFromCache = false;` | 保存 h264 hardware encoder probe from cache 相关配置或运行状态。 |
+| [L135](../src/core/SessionEngineTypes.h#L135) | `audioDeviceModuleCreated` | `bool audioDeviceModuleCreated = false;` | 保存 audio device module created 相关配置或运行状态。 |
+| [L136](../src/core/SessionEngineTypes.h#L136) | `audioDeviceError` | `std::string audioDeviceError;` | 保存最近错误或失败原因：audio device error。 |
+| [L137](../src/core/SessionEngineTypes.h#L137) | `error` | `std::string error;` | 保存最近错误或失败原因：error。 |
+| [L143](../src/core/SessionEngineTypes.h#L143) | `signalingSessionReady` | `bool signalingSessionReady = false;` | True after signaling has accepted direct-session authorization and issued session-ready data. WebRTC may still be negotiating. |
+| [L144](../src/core/SessionEngineTypes.h#L144) | `mediaSlotsPrepared` | `bool mediaSlotsPrepared = false;` | 保存 media slots prepared 相关配置或运行状态。 |
+| [L145](../src/core/SessionEngineTypes.h#L145) | `controlReliableChannelOpen` | `bool controlReliableChannelOpen = false;` | 保存能力或开关状态：control reliable channel open。 |
+| [L146](../src/core/SessionEngineTypes.h#L146) | `inputFastChannelOpen` | `bool inputFastChannelOpen = false;` | 保存能力或开关状态：input fast channel open。 |
+| [L147](../src/core/SessionEngineTypes.h#L147) | `fileTransferChannelOpen` | `bool fileTransferChannelOpen = false;` | 保存能力或开关状态：file transfer channel open。 |
+| [L148](../src/core/SessionEngineTypes.h#L148) | `clipboardReliableChannelOpen` | `bool clipboardReliableChannelOpen = false;` | 保存能力或开关状态：clipboard reliable channel open。 |
+| [L149](../src/core/SessionEngineTypes.h#L149) | `clipboardTransferChannelOpen` | `bool clipboardTransferChannelOpen = false;` | 保存能力或开关状态：clipboard transfer channel open。 |
+| [L152](../src/core/SessionEngineTypes.h#L152) | `sessionEverActive` | `bool sessionEverActive = false;` | Remains true across temporary signaling/P2P interruptions after this direct session has reached Connected at least once. |
+| [L155](../src/core/SessionEngineTypes.h#L155) | `iceRestartAttempt` | `std::uint32_t iceRestartAttempt = 0;` | Initial negotiation also uses kConnecting. Consumers combine this attempt count with their own "was active" latch before showing recovery. |
+| [L156](../src/core/SessionEngineTypes.h#L156) | `remoteDisplay` | `DisplayDescriptor remoteDisplay;` | 保存 remote display 相关配置或运行状态。 |
+| [L157](../src/core/SessionEngineTypes.h#L157) | `remoteDisplayLayoutVersion` | `std::uint64_t remoteDisplayLayoutVersion = 0;` | 保存 remote display layout version 相关配置或运行状态。 |
+| [L158](../src/core/SessionEngineTypes.h#L158) | `remoteScreenShareGeneration` | `std::uint64_t remoteScreenShareGeneration = 0;` | 标记当前世代，用于拒绝过期异步结果：remote screen share generation。 |
+| [L159](../src/core/SessionEngineTypes.h#L159) | `screenPreferencePending` | `bool screenPreferencePending = false;` | 保存待处理队列或请求：screen preference pending。 |
+| [L160](../src/core/SessionEngineTypes.h#L160) | `screenPreferenceSequence` | `std::uint64_t screenPreferenceSequence = 0;` | 保存单调序号，用于排序或去重：screen preference sequence。 |
+| [L161](../src/core/SessionEngineTypes.h#L161) | `screenWidth` | `std::uint32_t screenWidth = 0;` | 保存计数、尺寸或速率指标：screen width。 |
+| [L162](../src/core/SessionEngineTypes.h#L162) | `screenHeight` | `std::uint32_t screenHeight = 0;` | 保存计数、尺寸或速率指标：screen height。 |
+| [L163](../src/core/SessionEngineTypes.h#L163) | `screenFramesPerSecond` | `std::uint32_t screenFramesPerSecond = kDefaultScreenFrameRate;` | 保存 screen frames per second 相关配置或运行状态。 |
+| [L164](../src/core/SessionEngineTypes.h#L164) | `screenMaximumFrameRate` | `std::uint32_t screenMaximumFrameRate = kMaximumScreenFrameRate;` | 保存计数、尺寸或速率指标：screen maximum frame rate。 |
+| [L165](../src/core/SessionEngineTypes.h#L165) | `screenMaxBitrateBps` | `std::uint32_t screenMaxBitrateBps = 0;` | 保存计数、尺寸或速率指标：screen max bitrate bps。 |
+| [L166](../src/core/SessionEngineTypes.h#L166) | `remoteDisplayCatalogReported` | `bool remoteDisplayCatalogReported = false;` | 保存 remote display catalog reported 相关配置或运行状态。 |
+| [L167](../src/core/SessionEngineTypes.h#L167) | `remoteDisplayCatalogLayoutVersion` | `std::uint64_t remoteDisplayCatalogLayoutVersion = 0;` | 保存 remote display catalog layout version 相关配置或运行状态。 |
+| [L168](../src/core/SessionEngineTypes.h#L168) | `remoteDisplays` | `std::vector<DisplayDescriptor> remoteDisplays;` | 保存 remote displays 相关配置或运行状态。 |
+| [L169](../src/core/SessionEngineTypes.h#L169) | `remoteDisplaySwitchPending` | `bool remoteDisplaySwitchPending = false;` | 保存待处理队列或请求：remote display switch pending。 |
+| [L170](../src/core/SessionEngineTypes.h#L170) | `remoteDisplaySwitchSequence` | `std::uint64_t remoteDisplaySwitchSequence = 0;` | 保存单调序号，用于排序或去重：remote display switch sequence。 |
+| [L171](../src/core/SessionEngineTypes.h#L171) | `remoteDisplaySwitchError` | `std::string remoteDisplaySwitchError;` | 保存最近错误或失败原因：remote display switch error。 |
+| [L175](../src/core/SessionEngineTypes.h#L175) | `generation` | `std::uint64_t generation = 0;` | 标记当前世代，用于拒绝过期异步结果：generation。 |
+| [L176](../src/core/SessionEngineTypes.h#L176) | `topology` | `DisplayTopologySnapshot topology;` | 保存 topology 相关配置或运行状态。 |
+| [L177](../src/core/SessionEngineTypes.h#L177) | `selectedDisplayKey` | `std::string selectedDisplayKey;` | 保存 selected display key 相关配置或运行状态。 |
+| [L178](../src/core/SessionEngineTypes.h#L178) | `activeDisplay` | `DisplayDescriptor activeDisplay;` | 保存 active display 相关配置或运行状态。 |
+| [L179](../src/core/SessionEngineTypes.h#L179) | `activeDisplayLayoutVersion` | `std::uint64_t activeDisplayLayoutVersion = 0;` | 保存 active display layout version 相关配置或运行状态。 |
+| [L183](../src/core/SessionEngineTypes.h#L183) | `localCamera` | `LocalCameraState localCamera = LocalCameraState::kOff;` | 保存 local camera 相关配置或运行状态。 |
+| [L184](../src/core/SessionEngineTypes.h#L184) | `localMicrophone` | `LocalMicrophoneState localMicrophone = LocalMicrophoneState::kOff;` | 保存 local microphone 相关配置或运行状态。 |
+| [L185](../src/core/SessionEngineTypes.h#L185) | `roomAudioPlaybackMuted` | `bool roomAudioPlaybackMuted = false;` | 保存 room audio playback muted 相关配置或运行状态。 |
+| [L186](../src/core/SessionEngineTypes.h#L186) | `remoteCameraPublishing` | `bool remoteCameraPublishing = false;` | 保存 remote camera publishing 相关配置或运行状态。 |
+| [L187](../src/core/SessionEngineTypes.h#L187) | `localMediaDevices` | `MediaDeviceSnapshot localMediaDevices;` | 保存 local media devices 相关配置或运行状态。 |
+| [L191](../src/core/SessionEngineTypes.h#L191) | `code` | `std::string code;` | 保存 code 相关配置或运行状态。 |
+| [L192](../src/core/SessionEngineTypes.h#L192) | `message` | `std::string message;` | 保存 message 相关配置或运行状态。 |
+| [L196](../src/core/SessionEngineTypes.h#L196) | `state` | `SessionEngineState state = SessionEngineState::kStopped;` | 保存状态机当前状态：state。 |
+| [L198](../src/core/SessionEngineTypes.h#L198) | `kNotConfigured` | `SessionConnectivityState::kNotConfigured;` | 定义 not configured 的编译期常量或产品边界。 |
+| [L199](../src/core/SessionEngineTypes.h#L199) | `purpose` | `SessionPurpose purpose = SessionPurpose::kNone;` | 保存 purpose 相关配置或运行状态。 |
+| [L200](../src/core/SessionEngineTypes.h#L200) | `origin` | `SessionOrigin origin = SessionOrigin::kNone;` | 保存 origin 相关配置或运行状态。 |
+| [L201](../src/core/SessionEngineTypes.h#L201) | `remoteControlRole` | `RemoteControlRole remoteControlRole = RemoteControlRole::kNone;` | 保存 remote control role 相关配置或运行状态。 |
+| [L204](../src/core/SessionEngineTypes.h#L204) | `roomControlGrantActive` | `bool roomControlGrantActive = false;` | True only after the signaling server's control-grant event has supplied the lease token used to authenticate input and clipboard packets. |
+| [L205](../src/core/SessionEngineTypes.h#L205) | `localDeviceId` | `std::string localDeviceId;` | 保存身份或作用域标识：local device id。 |
+| [L206](../src/core/SessionEngineTypes.h#L206) | `localVerificationCode` | `std::string localVerificationCode;` | 保存 local verification code 相关配置或运行状态。 |
+| [L207](../src/core/SessionEngineTypes.h#L207) | `sessionId` | `std::string sessionId;` | 保存身份或作用域标识：session id。 |
+| [L208](../src/core/SessionEngineTypes.h#L208) | `peerDeviceId` | `std::string peerDeviceId;` | 保存身份或作用域标识：peer device id。 |
+| [L209](../src/core/SessionEngineTypes.h#L209) | `direct` | `DirectSessionSnapshot direct;` | 保存 direct 相关配置或运行状态。 |
+| [L210](../src/core/SessionEngineTypes.h#L210) | `error` | `SessionErrorSnapshot error;` | 保存最近错误或失败原因：error。 |
+| [L211](../src/core/SessionEngineTypes.h#L211) | `screenShare` | `LocalScreenShareSnapshot screenShare;` | 保存 screen share 相关配置或运行状态。 |
+| [L212](../src/core/SessionEngineTypes.h#L212) | `media` | `SessionMediaSnapshot media;` | 保存 media 相关配置或运行状态。 |
+| [L213](../src/core/SessionEngineTypes.h#L213) | `room` | `RoomSnapshot room;` | 保存 room 相关配置或运行状态。 |
+| [L214](../src/core/SessionEngineTypes.h#L214) | `roomActivity` | `RoomActivitySnapshot roomActivity;` | 保存 room activity 相关配置或运行状态。 |
+| [L215](../src/core/SessionEngineTypes.h#L215) | `ownedDevices` | `OwnedDevicesSnapshot ownedDevices;` | 保存 owned devices 相关配置或运行状态。 |
+| [L219](../src/core/SessionEngineTypes.h#L219) | `accepted` | `bool accepted = false;` | 保存 accepted 相关配置或运行状态。 |
+| [L220](../src/core/SessionEngineTypes.h#L220) | `errorCode` | `std::string errorCode;` | 保存 error code 相关配置或运行状态。 |
+| [L221](../src/core/SessionEngineTypes.h#L221) | `errorMessage` | `std::string errorMessage;` | 保存 error message 相关配置或运行状态。 |
 
 ## `src/core/VideoPresentationTelemetry.h`
 

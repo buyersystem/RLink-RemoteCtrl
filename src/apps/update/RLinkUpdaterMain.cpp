@@ -35,7 +35,7 @@ namespace {
 constexpr UINT kStateChangedMessage = WM_APP + 41;
 
 struct Options {
-    std::wstring packageUrl;
+    std::vector<std::wstring> packageUrls;
     std::wstring packageSha256;
     unsigned long long packageSize = 0;
     std::filesystem::path targetDirectory;
@@ -130,7 +130,11 @@ std::optional<Options> ParseOptions()
         }
         return {};
     };
-    result.packageUrl = valueFor(L"--package-url");
+    for (int index = 1; index + 1 < count; ++index) {
+        if (arguments[index] == std::wstring(L"--package-url")) {
+            result.packageUrls.emplace_back(arguments[index + 1]);
+        }
+    }
     result.packageSha256 = valueFor(L"--package-sha256");
     result.targetDirectory = valueFor(L"--target-dir");
     result.restartExecutable = valueFor(L"--restart-exe");
@@ -145,7 +149,8 @@ std::optional<Options> ParseOptions()
         return std::nullopt;
     }
     LocalFree(arguments);
-    if (result.packageUrl.empty() || result.packageSha256.size() != 64 ||
+    if (result.packageUrls.empty() || result.packageUrls.size() > 8 ||
+        result.packageSha256.size() != 64 ||
         result.packageSize == 0 || result.targetDirectory.empty() ||
         result.restartExecutable != L"RLinkAPP.exe" ||
         result.targetVersion.empty() || result.parentProcessId == 0) {
@@ -168,17 +173,22 @@ bool IsAllowedHttpsUrl(const std::wstring& url)
     std::wstring hostname(host.data(), parts.dwHostNameLength);
     std::transform(hostname.begin(), hostname.end(), hostname.begin(),
                    ::towlower);
-    return hostname == L"github.com" ||
-        hostname == L"objects.githubusercontent.com" ||
-        hostname == L"release-assets.githubusercontent.com";
+    return !hostname.empty();
 }
 
 bool IsAllowedPackageUrl(const std::wstring& url)
 {
-    constexpr wchar_t prefix[] =
+    constexpr wchar_t githubPrefix[] =
         L"https://github.com/dyhwdnmd/RLink-RemoteCtrl/releases/download/";
-    return url.size() > std::size(prefix) - 1 &&
-        _wcsnicmp(url.c_str(), prefix, std::size(prefix) - 1) == 0;
+    constexpr wchar_t cnbPrefix[] =
+        L"https://cnb.cool/dyh-Rlink/RLink-RemoteCtrl/";
+    const auto startsWith = [&url](const wchar_t* prefix,
+                                   std::size_t length) {
+        return url.size() > length &&
+            _wcsnicmp(url.c_str(), prefix, length) == 0;
+    };
+    return startsWith(githubPrefix, std::size(githubPrefix) - 1) ||
+        startsWith(cnbPrefix, std::size(cnbPrefix) - 1);
 }
 
 std::wstring LastErrorText(const wchar_t* operation)
@@ -250,11 +260,11 @@ cleanup:
     return ok;
 }
 
-bool DownloadPackage(const Options& options,
+bool DownloadPackage(const Options& options, const std::wstring& packageUrl,
                      const std::filesystem::path& destination,
                      std::wstring* error)
 {
-    if (!IsAllowedPackageUrl(options.packageUrl)) {
+    if (!IsAllowedPackageUrl(packageUrl)) {
         *error = L"安装包地址不受信任。";
         return false;
     }
@@ -262,16 +272,21 @@ bool DownloadPackage(const Options& options,
     parts.dwStructSize = sizeof(parts);
     std::array<wchar_t, 512> host{};
     std::array<wchar_t, 4096> path{};
+    std::array<wchar_t, 4096> extra{};
     parts.lpszHostName = host.data();
     parts.dwHostNameLength = static_cast<DWORD>(host.size());
     parts.lpszUrlPath = path.data();
     parts.dwUrlPathLength = static_cast<DWORD>(path.size());
-    if (!WinHttpCrackUrl(options.packageUrl.c_str(), 0, 0, &parts)) {
+    parts.lpszExtraInfo = extra.data();
+    parts.dwExtraInfoLength = static_cast<DWORD>(extra.size());
+    if (!WinHttpCrackUrl(packageUrl.c_str(), 0, 0, &parts)) {
         *error = L"无法解析安装包地址。";
         return false;
     }
     const std::wstring hostName(host.data(), parts.dwHostNameLength);
-    const std::wstring requestPath(path.data(), parts.dwUrlPathLength);
+    const std::wstring requestPath =
+        std::wstring(path.data(), parts.dwUrlPathLength) +
+        std::wstring(extra.data(), parts.dwExtraInfoLength);
     HINTERNET session = WinHttpOpen(
         L"RLinkUpdater/1.0", WINHTTP_ACCESS_TYPE_AUTOMATIC_PROXY,
         WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
@@ -711,11 +726,18 @@ bool RunSelfTest()
         IsAllowedPackageUrl(
             L"https://github.com/dyhwdnmd/RLink-RemoteCtrl/"
             L"releases/download/v0.2.0/RLink-Windows-x64-0.2.0.zip") &&
+        IsAllowedPackageUrl(
+            L"https://cnb.cool/dyh-Rlink/RLink-RemoteCtrl/"
+            L"-/releases/download/v0.2.0/RLink-Windows-x64-0.2.0.zip") &&
         !IsAllowedPackageUrl(
             L"https://github.com/example/other/releases/download/"
             L"v0.2.0/update.zip") &&
         !IsAllowedPackageUrl(L"http://github.com/dyhwdnmd/"
             L"RLink-RemoteCtrl/releases/download/v0.2.0/update.zip") &&
+        !IsAllowedPackageUrl(
+            L"https://cnb.cool/other/RLink-RemoteCtrl/update.zip") &&
+        IsAllowedHttpsUrl(L"https://download.cnb.cool/signed/package.zip") &&
+        !IsAllowedHttpsUrl(L"http://download.cnb.cool/package.zip") &&
         QuoteArgument(L"C:\\Program Files\\RLink") ==
             L"\"C:\\Program Files\\RLink\"";
     if (!policyPassed) {
@@ -784,10 +806,27 @@ void RunUpdate(Options options)
         return;
     }
 
-    PublishState(3, L"正在准备更新",
-                 L"正在连接 GitHub Releases…");
-    if (!DownloadPackage(options, package, &error)) {
-        PublishFailure(error);
+    bool downloaded = false;
+    std::wstring downloadErrors;
+    for (std::size_t index = 0; index < options.packageUrls.size(); ++index) {
+        PublishState(3, L"正在准备更新",
+            L"正在尝试下载源 " + std::to_wstring(index + 1) + L"/" +
+                std::to_wstring(options.packageUrls.size()) + L"…");
+        error.clear();
+        if (DownloadPackage(options, options.packageUrls[index], package,
+                            &error)) {
+            downloaded = true;
+            break;
+        }
+        if (!downloadErrors.empty()) {
+            downloadErrors += L"\n";
+        }
+        downloadErrors += L"下载源 " + std::to_wstring(index + 1) +
+            L"：" + error;
+    }
+    if (!downloaded) {
+        PublishFailure(downloadErrors.empty()
+            ? L"没有可用的安装包下载地址。" : downloadErrors);
         return;
     }
     PublishState(68, L"正在解压更新", L"正在准备新的程序文件…");

@@ -2,6 +2,18 @@ QMainWindow, QWidget[themeRoot="light"] {
     background: #F5F4F0;
     color: #172033;
 }
+QToolButton#profileUpdateButton {
+    background: #E8EDFF;
+    border: 1px solid #C8D2FF;
+}
+QToolButton#profileUpdateButton:hover {
+    background: #DCE4FF;
+    border-color: #AAB9FF;
+}
+QToolButton#profileUpdateButton:pressed {
+    background: #CDD8FF;
+    border-color: #8FA3F7;
+}
 QFrame[card="true"] {
     background: #FFFEFB;
     border: 1px solid #DDE0E4;

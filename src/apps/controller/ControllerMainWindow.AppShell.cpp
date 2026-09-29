@@ -430,7 +430,7 @@ void ControllerMainWindow::HandleSoftwareUpdateState(
             break;
         case UpdateState::kChecking:
             settingsControls->softwareUpdateStatusLabel->setText(
-                QStringLiteral("正在从 GitHub Releases 检查新版本"));
+                QStringLiteral("正在从更新镜像检查新版本"));
             break;
         case UpdateState::kUpToDate:
             settingsControls->softwareUpdateStatusLabel->setText(

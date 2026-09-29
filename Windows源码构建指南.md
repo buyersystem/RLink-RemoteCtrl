@@ -32,6 +32,11 @@ CMake 目标与源码的对应关系：
 | `RemoteCSignalServer` | 可执行 | Qt HTTP/WS 信令服务 |
 | `RLinkUpdater` | 可执行 | 独立更新器（不依赖 Qt） |
 
+重构后的源码只使用 `.h/.cpp`。大型类的实现按
+`ClassName.Topic.cpp` 拆分，例如 `InProcessSessionEngine.Room.cpp`；
+它们仍属于同一个类，接口和共享状态以对应 `.h` 为准。
+实际 target 与源文件清单以 `cmake\targets.cmake` 为准。
+
 ## 2. 所需环境
 
 建议使用与当前已验证环境一致的版本：
@@ -421,6 +426,18 @@ cmake --build --preset windows-msvc-x64-v143-release -j
 `build\RLinkRemoteCtrl.sln`）。该生成器是多配置的，一次 configure 即可构建两种
 配置：
 
+### 在 Visual Studio 中打开
+
+先运行一次 `cmake_configure.bat`，然后打开：
+
+```powershell
+start .\build\RLinkRemoteCtrl.sln
+```
+
+在解决方案中将配置设为 `Release | x64`，主客户端项目是
+`RLinkAPP`。不要打开旧的 `build\RLink.sln` 或 `ControllerApp.vcxproj`；
+如果它们仍存在，只是之前构建留下的本地文件。
+
 ```powershell
 cmake --build --preset windows-msvc-x64-v143-release -j   # -> x64\Release
 cmake --build --preset windows-msvc-x64-v143-debug   -j   # -> x64\Debug
@@ -456,6 +473,12 @@ Test-Path .\x64\Debug\avcodec-62.dll
 
 全部返回 `True` 表示主要程序和运行时文件已经生成。Debug 的平台插件是带调试
 后缀的 `qwindowsd.dll`，不是 `qwindows.dll`。
+
+`x64\Release` 是可重用的构建输出目录，CMake 不会自动删除已经不属于
+任何 target 的旧文件。因此升级工程后偶尔会看到如 `RemoteCApp.exe`
+这样的历史产物；它不是当前客户端。不要把整个 `x64\Release`
+直接发布，打包前应构建受控的包目录，并检查其根目录只使用
+`RLinkAPP.exe` 作为客户端入口。
 
 ## 7. 常见问题
 
