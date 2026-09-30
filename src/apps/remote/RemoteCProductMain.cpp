@@ -904,6 +904,19 @@ std::unique_ptr<remote::app::InProcessSessionEngine> CreateSessionEngine(
         hardwareProfile.graphicsEnumerationError;
     engineOptions.desktopCaptureImplementation =
         ConfiguredDesktopCaptureImplementation();
+#if defined(RLINK_ENABLE_CONTENT_ANALYZER) && \
+    RLINK_ENABLE_CONTENT_ANALYZER
+    engineOptions.contentAnalyzerEnabled = mediaSettings.value(
+        QStringLiteral("media/contentAnalyzerEnabled"),
+        false).toBool();
+    engineOptions.contentAnalyzerRateHz = static_cast<std::uint32_t>(
+        std::clamp(
+            mediaSettings.value(
+                QStringLiteral("media/contentAnalyzerRateHz"),
+                3).toInt(),
+            2,
+            5));
+#endif
     engineOptions.videoEncoderPreference =
         ConfiguredVideoEncoderPreference();
     engineOptions.ffmpegX264Preset = ConfiguredFfmpegX264Preset();

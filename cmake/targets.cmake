@@ -9,6 +9,28 @@ set(_src "${CMAKE_SOURCE_DIR}/src")
 # Static libraries
 # ---------------------------------------------------------------------------
 
+# Media intelligence is split from RLink adapters so the policy/runtime can
+# be embedded by another native C++ application without Qt, WebRTC or D3D11.
+add_library(media_intelligence_core STATIC
+  "${_src}/media_intelligence/core/ContentState.cpp"
+  "${_src}/media_intelligence/core/ContentState.h"
+  "${_src}/media_intelligence/core/ContentMotionAnalyzer.cpp"
+  "${_src}/media_intelligence/core/ContentMotionAnalyzer.h")
+rlink_apply_common(media_intelligence_core)
+set_target_properties(media_intelligence_core PROPERTIES
+  AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
+  INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+
+add_library(media_intelligence_runtime STATIC
+  "${_src}/media_intelligence/runtime/ContentAnalysisWorker.cpp"
+  "${_src}/media_intelligence/runtime/ContentAnalysisWorker.h")
+rlink_apply_common(media_intelligence_runtime)
+set_target_properties(media_intelligence_runtime PROPERTIES
+  AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
+  INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+target_link_libraries(media_intelligence_runtime PUBLIC
+  media_intelligence_core)
+
 # RemoteCore: protocols + core session policy (no Qt, uses WebRTC headers).
 add_library(rlink_core STATIC
   "${_src}/core/DesktopCaptureTypes.h"
@@ -110,6 +132,8 @@ add_library(rlink_webrtc_transport STATIC
   "${_src}/webrtc/WindowsPreferredVideoEncoderFactory.cpp")
 rlink_apply_common(rlink_webrtc_transport)
 target_link_libraries(rlink_webrtc_transport PUBLIC rlink_webrtc rlink_ffmpeg)
+target_link_libraries(rlink_webrtc_transport PUBLIC
+  media_intelligence_runtime)
 
 # RemoteSessionEngine: in-process session engine + Windows platform services.
 add_library(rlink_session_engine STATIC
@@ -288,12 +312,25 @@ target_link_libraries(RLinkAPP PRIVATE
   rlink_session_engine rlink_auth
   Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::WebSockets Qt6::NetworkAuth
   d3dcompiler)
+target_compile_definitions(RLinkAPP PRIVATE
+  RLINK_ENABLE_CONTENT_ANALYZER=$<BOOL:${RLINK_ENABLE_CONTENT_ANALYZER}>)
 target_link_options(RLinkAPP PRIVATE
   "/ENTRY:mainCRTStartup"
   "/MAP:$<TARGET_FILE_DIR:RLinkAPP>/RLinkAPP.map")
 rlink_deploy_qt(RLinkAPP)
 rlink_copy_ffmpeg_runtime(RLinkAPP)
 rlink_copy_licenses(RLinkAPP)
+
+# Focused component test. It is excluded from the default application build
+# and can be built without starting Qt or WebRTC runtime services.
+add_executable(MediaIntelligenceSelfTest EXCLUDE_FROM_ALL
+  "${_src}/testing/MediaIntelligenceSelfTest.cpp")
+rlink_apply_common(MediaIntelligenceSelfTest)
+set_target_properties(MediaIntelligenceSelfTest PROPERTIES
+  AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
+  INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+target_link_libraries(MediaIntelligenceSelfTest PRIVATE
+  media_intelligence_runtime)
 
 # RemoteCSignalServer: Qt HTTP/WebSocket signaling server (console).
 add_executable(RemoteCSignalServer

@@ -26,13 +26,20 @@ public:
         kFailed,
     };
 
+    struct FrameMetadata {
+        // Conservative coverage estimate for dirty and moved rectangles. The
+        // value is clamped to [0, 1] and excludes pointer-only updates.
+        float changedAreaRatio = 0.0f;
+    };
+
     DxgiNativeDesktopCapturer();
     ~DxgiNativeDesktopCapturer();
 
     bool Initialize(const DisplayDescriptor& target);
     Result Capture(
         std::uint32_t timeoutMs,
-        webrtc::scoped_refptr<D3D11DesktopFrameBuffer>* frame);
+        webrtc::scoped_refptr<D3D11DesktopFrameBuffer>* frame,
+        FrameMetadata* metadata = nullptr);
     std::string LastError() const;
 
 private:

@@ -88,6 +88,7 @@ struct RtpStreamStatsSnapshot {
     double captureAttemptsPerSecond = 0.0;
     double captureDeliveredFramesPerSecond = 0.0;
     double captureChangedFramesPerSecond = 0.0;
+    double captureChangedAreaRatio = 0.0;
     double captureIdleHeartbeatFramesPerSecond = 0.0;
     std::uint64_t captureAttempts = 0;
     std::uint64_t captureDeliveredFrames = 0;
@@ -100,6 +101,20 @@ struct RtpStreamStatsSnapshot {
     std::uint64_t captureInputBoosts = 0;
     std::uint64_t captureForcedRefreshFrames = 0;
     double latestCaptureCallMs = 0.0;
+    bool contentAnalyzerEnabled = false;
+    std::string contentAnalyzerBackend;
+    std::string contentSemanticType;
+    double contentSemanticConfidence = 0.0;
+    std::string contentMotionLevel;
+    double contentMotionScore = 0.0;
+    std::uint64_t contentSourceFrameId = 0;
+    std::uint32_t contentStateAgeMs = 0;
+    std::uint32_t contentLatestAnalysisTimeUs = 0;
+    std::uint64_t contentSubmittedSamples = 0;
+    std::uint64_t contentReplacedSamples = 0;
+    std::uint64_t contentProcessedSamples = 0;
+    std::uint64_t contentRejectedSamples = 0;
+    std::uint64_t contentDiscardedResults = 0;
     double averageEncodeTimeMs = 0.0;
     double averageDecodeTimeMs = 0.0;
     double averageProcessingDelayMs = 0.0;

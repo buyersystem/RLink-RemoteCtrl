@@ -3,8 +3,12 @@
 
 #include "DxgiNativeDesktopCapturer.h"
 
+#include <algorithm>
 #include <array>
+#include <cstddef>
+#include <cstdint>
 #include <sstream>
+#include <vector>
 
 #include <Windows.h>
 #include <d3d10_1.h>
@@ -35,6 +39,23 @@ bool IsPrimaryOutput(const DXGI_OUTPUT_DESC& description)
     return description.AttachedToDesktop &&
            description.DesktopCoordinates.left == 0 &&
            description.DesktopCoordinates.top == 0;
+}
+
+std::uint64_t ClippedRectangleArea(
+    const RECT& rectangle,
+    std::uint32_t width,
+    std::uint32_t height)
+{
+    const auto left = std::clamp<LONG>(
+        rectangle.left, 0, static_cast<LONG>(width));
+    const auto top = std::clamp<LONG>(
+        rectangle.top, 0, static_cast<LONG>(height));
+    const auto right = std::clamp<LONG>(
+        rectangle.right, left, static_cast<LONG>(width));
+    const auto bottom = std::clamp<LONG>(
+        rectangle.bottom, top, static_cast<LONG>(height));
+    return static_cast<std::uint64_t>(right - left) *
+        static_cast<std::uint64_t>(bottom - top);
 }
 
 }  // namespace
@@ -216,8 +237,12 @@ public:
 
     Result Capture(
         std::uint32_t timeoutMs,
-        webrtc::scoped_refptr<D3D11DesktopFrameBuffer>* resultFrame)
+        webrtc::scoped_refptr<D3D11DesktopFrameBuffer>* resultFrame,
+        FrameMetadata* metadata)
     {
+        if (metadata) {
+            *metadata = {};
+        }
         if (!resultFrame || !duplication || !device || !context) {
             error = "The native DXGI capturer is not initialized.";
             return Result::kFailed;
@@ -254,6 +279,76 @@ public:
                    << ").";
             error = stream.str();
             return Result::kFailed;
+        }
+
+        if (metadata) {
+            if (!lastFrame) {
+                metadata->changedAreaRatio = 1.0f;
+            } else if (information.TotalMetadataBufferSize > 0) {
+                const auto metadataBytes =
+                    information.TotalMetadataBufferSize;
+                moveRectangles.resize(
+                    (metadataBytes + sizeof(DXGI_OUTDUPL_MOVE_RECT) - 1) /
+                    sizeof(DXGI_OUTDUPL_MOVE_RECT));
+                dirtyRectangles.resize(
+                    (metadataBytes + sizeof(RECT) - 1) / sizeof(RECT));
+
+                std::uint64_t changedPixels = 0;
+                UINT moveBytes = 0;
+                if (SUCCEEDED(duplication->GetFrameMoveRects(
+                        static_cast<UINT>(
+                            moveRectangles.size() *
+                            sizeof(DXGI_OUTDUPL_MOVE_RECT)),
+                        moveRectangles.data(),
+                        &moveBytes))) {
+                    const auto moveCount = moveBytes /
+                        sizeof(DXGI_OUTDUPL_MOVE_RECT);
+                    for (std::size_t index = 0; index < moveCount;
+                         ++index) {
+                        const auto& move = moveRectangles[index];
+                        changedPixels += ClippedRectangleArea(
+                            move.DestinationRect,
+                            source.Width,
+                            source.Height);
+                        RECT sourceRect{};
+                        sourceRect.left = move.SourcePoint.x;
+                        sourceRect.top = move.SourcePoint.y;
+                        sourceRect.right = sourceRect.left +
+                            (move.DestinationRect.right -
+                             move.DestinationRect.left);
+                        sourceRect.bottom = sourceRect.top +
+                            (move.DestinationRect.bottom -
+                             move.DestinationRect.top);
+                        changedPixels += ClippedRectangleArea(
+                            sourceRect, source.Width, source.Height);
+                    }
+                }
+
+                UINT dirtyBytes = 0;
+                if (SUCCEEDED(duplication->GetFrameDirtyRects(
+                        static_cast<UINT>(
+                            dirtyRectangles.size() * sizeof(RECT)),
+                        dirtyRectangles.data(),
+                        &dirtyBytes))) {
+                    const auto dirtyCount = dirtyBytes / sizeof(RECT);
+                    for (std::size_t index = 0; index < dirtyCount;
+                         ++index) {
+                        changedPixels += ClippedRectangleArea(
+                            dirtyRectangles[index],
+                            source.Width,
+                            source.Height);
+                    }
+                }
+
+                const auto framePixels =
+                    static_cast<std::uint64_t>(source.Width) *
+                    static_cast<std::uint64_t>(source.Height);
+                if (framePixels > 0) {
+                    metadata->changedAreaRatio = static_cast<float>(
+                        (std::min)(changedPixels, framePixels)) /
+                        static_cast<float>(framePixels);
+                }
+            }
         }
 
         D3D11_TEXTURE2D_DESC copy = source;
@@ -294,6 +389,8 @@ public:
     ComPtr<ID3D11DeviceContext> context;
     ComPtr<IDXGIOutputDuplication> duplication;
     webrtc::scoped_refptr<D3D11DesktopFrameBuffer> lastFrame;
+    std::vector<DXGI_OUTDUPL_MOVE_RECT> moveRectangles;
+    std::vector<RECT> dirtyRectangles;
     std::string error;
 };
 
@@ -312,9 +409,10 @@ bool DxgiNativeDesktopCapturer::Initialize(
 DxgiNativeDesktopCapturer::Result
 DxgiNativeDesktopCapturer::Capture(
     std::uint32_t timeoutMs,
-    webrtc::scoped_refptr<D3D11DesktopFrameBuffer>* frame)
+    webrtc::scoped_refptr<D3D11DesktopFrameBuffer>* frame,
+    FrameMetadata* metadata)
 {
-    return impl_->Capture(timeoutMs, frame);
+    return impl_->Capture(timeoutMs, frame, metadata);
 }
 
 std::string DxgiNativeDesktopCapturer::LastError() const

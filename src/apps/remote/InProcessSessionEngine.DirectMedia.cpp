@@ -112,7 +112,10 @@ std::optional<OperationError> InProcessSessionEngine::PrepareDirectMedia(
                         nullptr);
         }
         source = webrtc::make_ref_counted<WindowsDesktopCaptureSource>(
-            options_.desktopCaptureImplementation, captureTarget);
+            options_.desktopCaptureImplementation,
+            captureTarget,
+            options_.contentAnalyzerEnabled,
+            options_.contentAnalyzerRateHz);
         if (!source->SetTargetFrameRate(kDefaultScreenFrameRate)) {
             return fail("direct_capture_frame_rate_rejected",
                         "The desktop capturer rejected the default frame rate.",

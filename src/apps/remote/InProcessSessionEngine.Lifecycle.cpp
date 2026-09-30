@@ -817,6 +817,8 @@ SessionDiagnosticsSnapshot InProcessSessionEngine::Diagnostics() const
                     captureStats->deliveredFramesPerSecond;
                 stream.captureChangedFramesPerSecond =
                     captureStats->changedFramesPerSecond;
+                stream.captureChangedAreaRatio =
+                    captureStats->changedAreaRatio;
                 stream.captureIdleHeartbeatFramesPerSecond =
                     captureStats->idleHeartbeatFramesPerSecond;
                 stream.captureAttempts =
@@ -841,6 +843,38 @@ SessionDiagnosticsSnapshot InProcessSessionEngine::Diagnostics() const
                     captureStats->totalForcedRefreshFrames;
                 stream.latestCaptureCallMs =
                     captureStats->latestCaptureCallMs;
+                stream.contentAnalyzerEnabled =
+                    captureStats->contentAnalyzerEnabled;
+                stream.contentAnalyzerBackend =
+                    captureStats->contentAnalyzerEnabled
+                    ? "rules"
+                    : "disabled";
+                stream.contentSemanticType =
+                    media_intelligence::ScreenSemanticTypeName(
+                        captureStats->contentState.semantic);
+                stream.contentSemanticConfidence =
+                    captureStats->contentState.semanticConfidence;
+                stream.contentMotionLevel =
+                    media_intelligence::ScreenMotionLevelName(
+                        captureStats->contentState.motion);
+                stream.contentMotionScore =
+                    captureStats->contentState.motionScore;
+                stream.contentSourceFrameId =
+                    captureStats->contentState.sourceFrameId;
+                stream.contentStateAgeMs =
+                    captureStats->contentStateAgeMs;
+                stream.contentLatestAnalysisTimeUs =
+                    captureStats->contentLatestAnalysisTimeUs;
+                stream.contentSubmittedSamples =
+                    captureStats->contentSubmittedSamples;
+                stream.contentReplacedSamples =
+                    captureStats->contentReplacedSamples;
+                stream.contentProcessedSamples =
+                    captureStats->contentProcessedSamples;
+                stream.contentRejectedSamples =
+                    captureStats->contentRejectedSamples;
+                stream.contentDiscardedResults =
+                    captureStats->contentDiscardedResults;
                 // RTCVideoSourceStats is optional and is absent for custom
                 // native frame buffers in some libwebrtc builds. Every
                 // delivered capture frame is passed directly to OnFrame, so

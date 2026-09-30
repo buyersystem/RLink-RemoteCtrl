@@ -24,6 +24,8 @@ set(RLINK_WEBRTC_OUT_DEBUG "$ENV{RLINK_WEBRTC_OUT_DEBUG}" CACHE PATH
     "WebRTC GN out directory for Debug builds (env RLINK_WEBRTC_OUT_DEBUG)")
 set(RLINK_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/x64" CACHE PATH
     "Root directory for build outputs")
+option(RLINK_ENABLE_CONTENT_ANALYZER
+    "Allow the local content analyzer to be enabled at runtime" ON)
 
 if(NOT RLINK_QT_DIR OR NOT RLINK_WEBRTC_SRC OR NOT RLINK_WEBRTC_OUT)
   message(FATAL_ERROR

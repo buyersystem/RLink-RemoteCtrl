@@ -244,7 +244,10 @@ SessionCommandResult InProcessSessionEngine::SwitchLocalDirectDisplay(
 
     auto replacement =
         webrtc::make_ref_counted<WindowsDesktopCaptureSource>(
-            options_.desktopCaptureImplementation, *selected);
+            options_.desktopCaptureImplementation,
+            *selected,
+            options_.contentAnalyzerEnabled,
+            options_.contentAnalyzerRateHz);
     if (!replacement->SetTargetFrameRate(targetFrameRate) ||
         !replacement->StartCapture()) {
         const std::string error = replacement->LastError();

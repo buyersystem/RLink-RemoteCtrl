@@ -1003,6 +1003,69 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                                    : QByteArray("normal"),
                                true}
                         << DiagnosticsChip{
+                               QStringLiteral("captureChangedArea"),
+                               QStringLiteral("画面变化面积"),
+                               stream.contentAnalyzerEnabled
+                                   ? QStringLiteral("%1% · 变化频率 %2 FPS")
+                                         .arg(
+                                             stream.captureChangedAreaRatio *
+                                                 100.0,
+                                             0, 'f', 2)
+                                         .arg(
+                                             stream.captureChangedFramesPerSecond,
+                                             0, 'f', 1)
+                                   : QStringLiteral("内容分析已关闭"),
+                               "normal", true}
+                        << DiagnosticsChip{
+                               QStringLiteral("contentMotion"),
+                               QStringLiteral("内容运动观察"),
+                               stream.contentAnalyzerEnabled &&
+                                       stream.contentSourceFrameId > 0
+                                   ? QStringLiteral(
+                                         "%1 · 分数 %2 · 帧 #%3 · %4 ms")
+                                         .arg(
+                                             stream.contentMotionLevel == "high"
+                                                 ? QStringLiteral("高")
+                                                 : (stream.contentMotionLevel ==
+                                                            "medium"
+                                                        ? QStringLiteral("中")
+                                                        : (stream.contentMotionLevel ==
+                                                                   "low"
+                                                               ? QStringLiteral("低")
+                                                               : (stream.contentMotionLevel ==
+                                                                          "idle"
+                                                                      ? QStringLiteral("静止")
+                                                                      : QStringLiteral("未知")))))
+                                         .arg(
+                                             stream.contentMotionScore,
+                                             0, 'f', 3)
+                                         .arg(stream.contentSourceFrameId)
+                                         .arg(stream.contentStateAgeMs)
+                                   : (stream.contentAnalyzerEnabled
+                                          ? QStringLiteral("等待首个分析样本")
+                                          : QStringLiteral("规则观察已关闭")),
+                               stream.contentAnalyzerEnabled
+                                   ? QByteArray("good")
+                                   : QByteArray("normal"),
+                               true}
+                        << DiagnosticsChip{
+                               QStringLiteral("contentAnalysisQueue"),
+                               QStringLiteral("内容分析队列"),
+                               stream.contentAnalyzerEnabled
+                                   ? QStringLiteral(
+                                         "提交 %1 · 完成 %2 · 替换 %3 · %4 us")
+                                         .arg(stream.contentSubmittedSamples)
+                                         .arg(stream.contentProcessedSamples)
+                                         .arg(stream.contentReplacedSamples)
+                                         .arg(
+                                             stream.contentLatestAnalysisTimeUs)
+                                   : QStringLiteral("未启动工作线程"),
+                               stream.contentRejectedSamples > 0 ||
+                                       stream.contentDiscardedResults > 0
+                                   ? QByteArray("warning")
+                                   : QByteArray("normal"),
+                               false}
+                        << DiagnosticsChip{
                                QStringLiteral("captureSuppression"),
                                QStringLiteral("累计抑制重复帧"),
                                stream.captureAdaptiveFrameDeliveryEnabled

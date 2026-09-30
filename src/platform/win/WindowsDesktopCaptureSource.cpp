@@ -6,6 +6,7 @@
 #include <Windows.h>
 
 #include <algorithm>
+#include <cmath>
 #include <intrin.h>
 #include <utility>
 
@@ -19,6 +20,7 @@
 #include "DesktopBgraFrameBuffer.h"
 #include "DxgiNativeDesktopCapturer.h"
 #include "WindowsDisplayTopology.h"
+#include "src/media_intelligence/runtime/ContentAnalysisWorker.h"
 
 namespace remote {
 namespace {
@@ -290,14 +292,51 @@ UpdateBounds BoundingUpdateRegion(
     return result;
 }
 
+float ChangedAreaRatio(
+    const webrtc::DesktopRegion& region,
+    int frameWidth,
+    int frameHeight)
+{
+    if (frameWidth <= 0 || frameHeight <= 0) {
+        return 0.0f;
+    }
+    std::uint64_t changedPixels = 0;
+    for (webrtc::DesktopRegion::Iterator it(region);
+         !it.IsAtEnd();
+         it.Advance()) {
+        const auto& rect = it.rect();
+        const int left = std::clamp(rect.left(), 0, frameWidth);
+        const int top = std::clamp(rect.top(), 0, frameHeight);
+        const int right = std::clamp(rect.right(), left, frameWidth);
+        const int bottom = std::clamp(rect.bottom(), top, frameHeight);
+        changedPixels += static_cast<std::uint64_t>(right - left) *
+            static_cast<std::uint64_t>(bottom - top);
+    }
+    const auto framePixels = static_cast<std::uint64_t>(frameWidth) *
+        static_cast<std::uint64_t>(frameHeight);
+    return static_cast<float>((std::min)(changedPixels, framePixels)) /
+        static_cast<float>(framePixels);
+}
+
 }  // namespace
 
 WindowsDesktopCaptureSource::WindowsDesktopCaptureSource(
     DesktopCaptureImplementation implementation,
-    DisplayDescriptor captureTarget)
+    DisplayDescriptor captureTarget,
+    bool contentAnalyzerEnabled,
+    std::uint32_t contentAnalyzerRateHz)
     : configuredImplementation_(implementation),
-      captureTarget_(std::move(captureTarget))
+      captureTarget_(std::move(captureTarget)),
+      contentAnalyzerRateHz_(
+          std::clamp(contentAnalyzerRateHz, 2u, 5u))
 {
+    if (contentAnalyzerEnabled) {
+        media_intelligence::ContentAnalysisWorker::Config config;
+        config.activeRateHz = contentAnalyzerRateHz_;
+        contentAnalysisWorker_ =
+            std::make_unique<media_intelligence::ContentAnalysisWorker>(
+                config);
+    }
 }
 
 WindowsDesktopCaptureSource::~WindowsDesktopCaptureSource()
@@ -318,6 +357,19 @@ bool WindowsDesktopCaptureSource::StartCapture(
     fallbackReason_.clear();
     lastError_.clear();
     ResetActivityTracking();
+    changedAreaRatioPpm_.store(0, std::memory_order_release);
+    changedAreaWindowPpmTotal_.store(0, std::memory_order_release);
+    changedAreaWindowSamples_.store(0, std::memory_order_release);
+    if (contentAnalysisWorker_) {
+        const auto generation =
+            contentAnalysisGeneration_.fetch_add(
+                1, std::memory_order_acq_rel) + 1;
+        contentAnalysisSourceFrameId_.store(
+            0, std::memory_order_release);
+        nextContentAnalysisSubmitSteadyUs_.store(
+            0, std::memory_order_release);
+        contentAnalysisWorker_->Start(generation);
+    }
     running_ = true;
     captureThread_ = std::jthread(
         [this](std::stop_token stopToken) { CaptureLoop(stopToken); });
@@ -345,14 +397,21 @@ void WindowsDesktopCaptureSource::StopCapture()
         std::lock_guard lock(mutex_);
         if (!captureThread_.joinable()) {
             running_ = false;
-            return;
+        } else {
+            captureThread_.request_stop();
+            thread = std::move(captureThread_);
         }
-        captureThread_.request_stop();
-        thread = std::move(captureThread_);
     }
-    thread.join();
-    std::lock_guard lock(mutex_);
-    running_ = false;
+    if (thread.joinable()) {
+        thread.join();
+    }
+    if (contentAnalysisWorker_) {
+        contentAnalysisWorker_->Stop();
+    }
+    {
+        std::lock_guard lock(mutex_);
+        running_ = false;
+    }
 }
 
 bool WindowsDesktopCaptureSource::SetTargetFrameRate(
@@ -496,6 +555,9 @@ WindowsDesktopCaptureSource::CaptureRuntimeStats() const noexcept
     stats.changedFramesPerSecond =
         static_cast<double>(changedFramesPerSecondMilli_.load(
             std::memory_order_acquire)) / 1000.0;
+    stats.changedAreaRatio =
+        static_cast<double>(changedAreaRatioPpm_.load(
+            std::memory_order_acquire)) / 1'000'000.0;
     stats.idleHeartbeatFramesPerSecond =
         static_cast<double>(idleHeartbeatFramesPerSecondMilli_.load(
             std::memory_order_acquire)) / 1000.0;
@@ -525,7 +587,110 @@ WindowsDesktopCaptureSource::CaptureRuntimeStats() const noexcept
     stats.latestCaptureCallMs =
         static_cast<double>(latestCaptureCallUs_.load(
             std::memory_order_acquire)) / 1000.0;
+    if (contentAnalysisWorker_) {
+        const auto snapshot = contentAnalysisWorker_->Snapshot(
+            static_cast<std::uint64_t>(SteadyNowUs() / 1000));
+        stats.contentAnalyzerEnabled = snapshot.running;
+        stats.contentAnalysisGeneration = snapshot.generation;
+        stats.contentState = snapshot.state;
+        stats.contentStateAgeMs = snapshot.stateAgeMs;
+        stats.contentLatestAnalysisTimeUs =
+            snapshot.latestAnalysisTimeUs;
+        stats.contentSubmittedSamples = snapshot.submittedSamples;
+        stats.contentReplacedSamples = snapshot.replacedSamples;
+        stats.contentProcessedSamples = snapshot.processedSamples;
+        stats.contentRejectedSamples = snapshot.rejectedSamples;
+        stats.contentDiscardedResults = snapshot.discardedResults;
+    }
     return stats;
+}
+
+void WindowsDesktopCaptureSource::RecordChangedAreaRatio(
+    float ratio) noexcept
+{
+    if (!contentAnalysisWorker_) {
+        return;
+    }
+    const auto ppm = static_cast<std::uint64_t>(std::llround(
+        std::clamp(ratio, 0.0f, 1.0f) * 1'000'000.0f));
+    changedAreaWindowPpmTotal_.fetch_add(
+        ppm, std::memory_order_relaxed);
+    changedAreaWindowSamples_.fetch_add(
+        1, std::memory_order_relaxed);
+}
+
+void WindowsDesktopCaptureSource::PublishChangedAreaRatioWindow() noexcept
+{
+    if (!contentAnalysisWorker_) {
+        return;
+    }
+    const auto total = changedAreaWindowPpmTotal_.exchange(
+        0, std::memory_order_acq_rel);
+    const auto samples = changedAreaWindowSamples_.exchange(
+        0, std::memory_order_acq_rel);
+    changedAreaRatioPpm_.store(
+        samples > 0 ? total / samples : 0,
+        std::memory_order_release);
+}
+
+void WindowsDesktopCaptureSource::MaybeSubmitContentAnalysis(
+    float changedAreaRatio) noexcept
+{
+    if (!contentAnalysisWorker_) {
+        return;
+    }
+    const auto nowUs = SteadyNowUs();
+    auto nextSubmitUs = nextContentAnalysisSubmitSteadyUs_.load(
+        std::memory_order_acquire);
+    if (nowUs < nextSubmitUs) {
+        return;
+    }
+    const auto activity = activityState_.load(std::memory_order_acquire);
+    const auto rate = activity == CaptureActivityState::kIdle
+        ? 1u
+        : contentAnalyzerRateHz_;
+    const auto requestedNext = nowUs + 1'000'000 /
+        static_cast<std::int64_t>((std::max)(rate, 1u));
+    if (!nextContentAnalysisSubmitSteadyUs_.compare_exchange_strong(
+            nextSubmitUs,
+            requestedNext,
+            std::memory_order_acq_rel,
+            std::memory_order_acquire)) {
+        return;
+    }
+
+    media_intelligence::ContentAnalysisRequest request;
+    request.generation = contentAnalysisGeneration_.load(
+        std::memory_order_acquire);
+    switch (activity) {
+    case CaptureActivityState::kStarting:
+        request.ruleSample.activity =
+            media_intelligence::CaptureActivity::kStarting;
+        break;
+    case CaptureActivityState::kActive:
+        request.ruleSample.activity =
+            media_intelligence::CaptureActivity::kActive;
+        break;
+    case CaptureActivityState::kIdle:
+        request.ruleSample.activity =
+            media_intelligence::CaptureActivity::kIdle;
+        break;
+    }
+    request.ruleSample.changedAreaRatio = std::clamp(
+        changedAreaRatio, 0.0f, 1.0f);
+    request.ruleSample.changedFramesPerSecond = static_cast<float>(
+        changedFramesPerSecondMilli_.load(
+            std::memory_order_acquire) / 1000.0);
+    request.ruleSample.inputBoostActive =
+        configuredImplementation_ ==
+            DesktopCaptureImplementation::kLibWebRtc &&
+        nowUs < inputBoostUntilSteadyUs_.load(std::memory_order_acquire);
+    request.ruleSample.sourceFrameId =
+        contentAnalysisSourceFrameId_.fetch_add(
+            1, std::memory_order_relaxed) + 1;
+    request.ruleSample.timestampMs =
+        static_cast<std::uint64_t>(nowUs / 1000);
+    contentAnalysisWorker_->Submit(std::move(request));
 }
 
 void WindowsDesktopCaptureSource::SignalCaptureSchedule()
@@ -668,14 +833,21 @@ void WindowsDesktopCaptureSource::CaptureLoop(std::stop_token stopToken)
                 ++windowAttempts;
                 webrtc::scoped_refptr<D3D11DesktopFrameBuffer>
                     nativeFrame;
+                DxgiNativeDesktopCapturer::FrameMetadata frameMetadata;
                 const auto result = nativeCapturer.Capture(
-                    nativeHasFrame ? 0u : 100u, &nativeFrame);
+                    nativeHasFrame ? 0u : 100u,
+                    &nativeFrame,
+                    contentAnalysisWorker_ ? &frameMetadata : nullptr);
                 if (result ==
                     DxgiNativeDesktopCapturer::Result::kFailed) {
                     nativeFailed = true;
                     break;
                 }
                 if (nativeFrame) {
+                    RecordChangedAreaRatio(
+                        frameMetadata.changedAreaRatio);
+                    MaybeSubmitContentAnalysis(
+                        frameMetadata.changedAreaRatio);
                     nativeHasFrame = true;
                     capturedWidth_.store(
                         static_cast<std::uint32_t>(
@@ -758,6 +930,7 @@ void WindowsDesktopCaptureSource::CaptureLoop(std::stop_token stopToken)
                         heartbeatsInWindow * 1'000'000'000ULL /
                             static_cast<std::uint64_t>(elapsedUs),
                         std::memory_order_release);
+                    PublishChangedAreaRatioWindow();
                     rateWindowStartedAt = captureFinishedAt;
                     windowAttempts = 0;
                     windowDelivered = currentDelivered;
@@ -957,6 +1130,7 @@ void WindowsDesktopCaptureSource::CaptureLoop(std::stop_token stopToken)
                 heartbeatsInWindow * 1'000'000'000ULL /
                     static_cast<std::uint64_t>(elapsedUs),
                 std::memory_order_release);
+            PublishChangedAreaRatioWindow();
             rateWindowStartedAt = captureFinishedAt;
             windowAttempts = 0;
             windowDelivered = currentDelivered;
@@ -1056,6 +1230,10 @@ void WindowsDesktopCaptureSource::OnCaptureResult(
     capturedHeight_.store(
         static_cast<std::uint32_t>(height), std::memory_order_release);
     const bool desktopChanged = !frame->updated_region().is_empty();
+    const float changedAreaRatio = contentAnalysisWorker_
+        ? ChangedAreaRatio(frame->updated_region(), width, height)
+        : 0.0f;
+    RecordChangedAreaRatio(changedAreaRatio);
     const bool crdPolicyEnabled =
         configuredImplementation_ ==
         DesktopCaptureImplementation::kLibWebRtc;
@@ -1077,6 +1255,7 @@ void WindowsDesktopCaptureSource::OnCaptureResult(
               forceRefresh,
               std::chrono::steady_clock::now(),
               &deliveryReason);
+    MaybeSubmitContentAnalysis(changedAreaRatio);
     if (deliver) {
         auto bgra = webrtc::make_ref_counted<DesktopBgraFrameBuffer>(
             frame->data(), frame->stride(), width, height);

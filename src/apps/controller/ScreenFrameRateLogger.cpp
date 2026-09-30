@@ -47,11 +47,25 @@ struct ScreenFrameRateLogRecord {
   double captureAttemptFps = 0.0;
   double captureDeliveredFps = 0.0;
   double captureChangedFps = 0.0;
+  double captureChangedAreaRatio = 0.0;
   double captureHeartbeatFps = 0.0;
   std::uint64_t captureSuppressedTotal = 0;
   bool captureInputBoostActive = false;
   std::uint64_t captureInputBoostTotal = 0;
   std::uint64_t captureForcedRefreshTotal = 0;
+  bool contentAnalyzerEnabled = false;
+  std::string contentSemanticType;
+  double contentSemanticConfidence = 0.0;
+  std::string contentMotionLevel;
+  double contentMotionScore = 0.0;
+  std::uint64_t contentSourceFrameId = 0;
+  std::uint32_t contentStateAgeMs = 0;
+  std::uint32_t contentLatestAnalysisTimeUs = 0;
+  std::uint64_t contentSubmittedSamples = 0;
+  std::uint64_t contentReplacedSamples = 0;
+  std::uint64_t contentProcessedSamples = 0;
+  std::uint64_t contentRejectedSamples = 0;
+  std::uint64_t contentDiscardedResults = 0;
   double sourceFps = 0.0;
   double rtpFps = 0.0;
   double encodedFps = 0.0;
@@ -121,9 +135,17 @@ private:
                 "capture_fallback_reason,activity,"
                 "capture_target_fps,capture_attempt_fps,"
                 "capture_delivered_fps,capture_changed_fps,"
+                "capture_changed_area_ratio,"
                 "capture_heartbeat_fps,capture_suppressed_total,"
                 "capture_input_boost_active,capture_input_boost_total,"
                 "capture_forced_refresh_total,"
+                "content_analyzer_enabled,content_semantic_type,"
+                "content_semantic_confidence,content_motion_level,"
+                "content_motion_score,content_source_frame_id,"
+                "content_state_age_ms,content_analysis_time_us,"
+                "content_submitted_samples,content_replaced_samples,"
+                "content_processed_samples,content_rejected_samples,"
+                "content_discarded_results,"
                 "source_fps,rtp_fps,encoded_fps,sent_fps,"
                 "presented_fps,bitrate_bps\n";
     }
@@ -151,11 +173,27 @@ private:
                << ',' << QString::number(record.captureAttemptFps, 'f', 3)
                << ',' << QString::number(record.captureDeliveredFps, 'f', 3)
                << ',' << QString::number(record.captureChangedFps, 'f', 3)
+               << ',' << QString::number(
+                      record.captureChangedAreaRatio, 'f', 6)
                << ',' << QString::number(record.captureHeartbeatFps, 'f', 3)
                << ',' << record.captureSuppressedTotal << ','
                << (record.captureInputBoostActive ? 1 : 0) << ','
                << record.captureInputBoostTotal << ','
                << record.captureForcedRefreshTotal << ','
+               << (record.contentAnalyzerEnabled ? 1 : 0) << ','
+               << CsvCell(record.contentSemanticType) << ','
+               << QString::number(
+                      record.contentSemanticConfidence, 'f', 6) << ','
+               << CsvCell(record.contentMotionLevel) << ','
+               << QString::number(record.contentMotionScore, 'f', 6) << ','
+               << record.contentSourceFrameId << ','
+               << record.contentStateAgeMs << ','
+               << record.contentLatestAnalysisTimeUs << ','
+               << record.contentSubmittedSamples << ','
+               << record.contentReplacedSamples << ','
+               << record.contentProcessedSamples << ','
+               << record.contentRejectedSamples << ','
+               << record.contentDiscardedResults << ','
                << QString::number(record.sourceFps, 'f', 3) << ','
                << QString::number(record.rtpFps, 'f', 3) << ','
                << QString::number(record.encodedFps, 'f', 3) << ','
@@ -202,11 +240,26 @@ void AppendScreenFrameRateLog(const SessionDiagnosticsSnapshot &diagnostics) {
       record.captureAttemptFps = stream.captureAttemptsPerSecond;
       record.captureDeliveredFps = stream.captureDeliveredFramesPerSecond;
       record.captureChangedFps = stream.captureChangedFramesPerSecond;
+      record.captureChangedAreaRatio = stream.captureChangedAreaRatio;
       record.captureHeartbeatFps = stream.captureIdleHeartbeatFramesPerSecond;
       record.captureSuppressedTotal = stream.captureSuppressedUnchangedFrames;
       record.captureInputBoostActive = stream.captureInputBoostActive;
       record.captureInputBoostTotal = stream.captureInputBoosts;
       record.captureForcedRefreshTotal = stream.captureForcedRefreshFrames;
+      record.contentAnalyzerEnabled = stream.contentAnalyzerEnabled;
+      record.contentSemanticType = stream.contentSemanticType;
+      record.contentSemanticConfidence = stream.contentSemanticConfidence;
+      record.contentMotionLevel = stream.contentMotionLevel;
+      record.contentMotionScore = stream.contentMotionScore;
+      record.contentSourceFrameId = stream.contentSourceFrameId;
+      record.contentStateAgeMs = stream.contentStateAgeMs;
+      record.contentLatestAnalysisTimeUs =
+          stream.contentLatestAnalysisTimeUs;
+      record.contentSubmittedSamples = stream.contentSubmittedSamples;
+      record.contentReplacedSamples = stream.contentReplacedSamples;
+      record.contentProcessedSamples = stream.contentProcessedSamples;
+      record.contentRejectedSamples = stream.contentRejectedSamples;
+      record.contentDiscardedResults = stream.contentDiscardedResults;
       record.sourceFps = stream.sourceFramesPerSecond;
       record.rtpFps = stream.framesPerSecond;
       record.encodedFps = stream.encodedFramesPerSecond;

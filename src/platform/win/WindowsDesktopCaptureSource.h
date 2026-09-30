@@ -19,6 +19,11 @@
 #include "modules/desktop_capture/desktop_capturer.h"
 #include "src/core/DesktopCaptureTypes.h"
 #include "src/core/DisplayTopology.h"
+#include "src/media_intelligence/core/ContentState.h"
+
+namespace remote::media_intelligence {
+class ContentAnalysisWorker;
+}
 
 namespace remote {
 
@@ -43,6 +48,7 @@ public:
         double captureAttemptsPerSecond = 0.0;
         double deliveredFramesPerSecond = 0.0;
         double changedFramesPerSecond = 0.0;
+        double changedAreaRatio = 0.0;
         double idleHeartbeatFramesPerSecond = 0.0;
         std::uint64_t totalCaptureAttempts = 0;
         std::uint64_t totalDeliveredFrames = 0;
@@ -55,6 +61,16 @@ public:
         std::uint64_t totalInputBoosts = 0;
         std::uint64_t totalForcedRefreshFrames = 0;
         double latestCaptureCallMs = 0.0;
+        bool contentAnalyzerEnabled = false;
+        std::uint64_t contentAnalysisGeneration = 0;
+        media_intelligence::ContentState contentState;
+        std::uint32_t contentStateAgeMs = 0;
+        std::uint32_t contentLatestAnalysisTimeUs = 0;
+        std::uint64_t contentSubmittedSamples = 0;
+        std::uint64_t contentReplacedSamples = 0;
+        std::uint64_t contentProcessedSamples = 0;
+        std::uint64_t contentRejectedSamples = 0;
+        std::uint64_t contentDiscardedResults = 0;
     };
 
     enum class CaptureBackend {
@@ -66,7 +82,9 @@ public:
     explicit WindowsDesktopCaptureSource(
         DesktopCaptureImplementation implementation =
             DesktopCaptureImplementation::kNativeDxgi,
-        DisplayDescriptor captureTarget = {});
+        DisplayDescriptor captureTarget = {},
+        bool contentAnalyzerEnabled = false,
+        std::uint32_t contentAnalyzerRateHz = 3);
     ~WindowsDesktopCaptureSource() override;
 
     bool StartCapture(
@@ -148,12 +166,18 @@ private:
     bool ConsumeForcedRefreshFrame();
     void ScheduleForcedRefreshFrames(std::uint32_t frameCount);
     void SignalCaptureSchedule();
+    void RecordChangedAreaRatio(float ratio) noexcept;
+    void PublishChangedAreaRatioWindow() noexcept;
+    void MaybeSubmitContentAnalysis(float changedAreaRatio) noexcept;
 
     mutable std::mutex mutex_;
     std::condition_variable firstFrameCondition_;
     std::jthread captureThread_;
     const DesktopCaptureImplementation configuredImplementation_;
     const DisplayDescriptor captureTarget_;
+    const std::uint32_t contentAnalyzerRateHz_ = 3;
+    std::unique_ptr<media_intelligence::ContentAnalysisWorker>
+        contentAnalysisWorker_;
     CaptureBackend backend_ = CaptureBackend::kGdi;
     bool initializationFinished_ = false;
     bool firstFrameReady_ = false;
@@ -178,11 +202,17 @@ private:
     std::atomic<std::uint64_t> captureAttemptsPerSecondMilli_{0};
     std::atomic<std::uint64_t> deliveredFramesPerSecondMilli_{0};
     std::atomic<std::uint64_t> changedFramesPerSecondMilli_{0};
+    std::atomic<std::uint64_t> changedAreaRatioPpm_{0};
+    std::atomic<std::uint64_t> changedAreaWindowPpmTotal_{0};
+    std::atomic<std::uint64_t> changedAreaWindowSamples_{0};
     std::atomic<std::uint64_t> idleHeartbeatFramesPerSecondMilli_{0};
     std::atomic<std::uint64_t> latestCaptureCallUs_{0};
     std::atomic<std::int64_t> inputBoostUntilSteadyUs_{0};
     std::atomic<std::int64_t> startupPrimeUntilSteadyUs_{0};
     std::atomic<std::uint32_t> forcedRefreshFramesRemaining_{0};
+    std::atomic<std::uint64_t> contentAnalysisGeneration_{0};
+    std::atomic<std::uint64_t> contentAnalysisSourceFrameId_{0};
+    std::atomic<std::int64_t> nextContentAnalysisSubmitSteadyUs_{0};
     // HANDLE is kept opaque in the header. It is created and destroyed by the
     // active capture thread while mutex_ protects publication/lifetime.
     void* captureScheduleWakeEvent_ = nullptr;

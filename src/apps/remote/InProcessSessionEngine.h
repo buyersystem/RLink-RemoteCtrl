@@ -55,6 +55,8 @@ struct InProcessSessionEngineOptions {
     bool enableRealCameraCapture = true;
     DesktopCaptureImplementation desktopCaptureImplementation =
         DesktopCaptureImplementation::kNativeDxgi;
+    bool contentAnalyzerEnabled = false;
+    std::uint32_t contentAnalyzerRateHz = 3;
     VideoEncoderPreference videoEncoderPreference =
         VideoEncoderPreference::kAutomatic;
     FfmpegX264Preset ffmpegX264Preset = FfmpegX264Preset::kMedium;

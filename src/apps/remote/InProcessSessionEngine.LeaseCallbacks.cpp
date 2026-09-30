@@ -80,7 +80,10 @@ void InProcessSessionEngine::OnRoomScreenShareGranted(
     if (options_.enableRealDesktopCapture) {
         auto source =
             webrtc::make_ref_counted<WindowsDesktopCaptureSource>(
-                options_.desktopCaptureImplementation, captureTarget);
+                options_.desktopCaptureImplementation,
+                captureTarget,
+                options_.contentAnalyzerEnabled,
+                options_.contentAnalyzerRateHz);
         if (!source->SetTargetFrameRate(targetFrameRate)) {
             signaling->StopRoomScreenShare(
                 granted.roomId, granted.grantId,
