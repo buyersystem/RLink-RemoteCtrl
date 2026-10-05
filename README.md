@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/ui/branding/remotec-logo.png" alt="RLink Logo" width="112" height="112">
+  <img src="assets/ui/branding/remotec-logo.png" alt="RLink Logo" width="80" height="80">
 </p>
 
 <h1 align="center">RLink</h1>
@@ -26,9 +26,7 @@
 
 ---
 
-RLink 是一款面向 Windows 的开源远程桌面与多人协作工具。在外访问自己的电脑、
-帮助他人操作桌面，或邀请成员一起看屏幕、开摄像头和交流，都可以在同一个客户端中完成。
-支持 4K 画面与最高 120 FPS 目标帧率，并提供键鼠控制、多显示器切换、文件传输和双向远程复制粘贴。
+RLink 是一款面向 Windows 的高性能开源远程桌面与多人协作工具，支持最高 4K、120 FPS 的低延迟桌面共享。用户可通过设备 ID 和一次性验证码快速发起远程协助，也可登录账户直接访问自己的在线设备，并支持多人音视频、屏幕共享、远程控制。
 
 ## 下载
 
