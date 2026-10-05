@@ -7,10 +7,22 @@
 
 namespace remote {
 
+inline constexpr std::uint32_t kDefaultScreenVideoBitrateBppHundredths = 15;
+inline constexpr std::uint32_t kMinimumScreenVideoBitrateBppHundredths = 3;
+inline constexpr std::uint32_t kMaximumScreenVideoBitrateBppHundredths = 50;
+
+// Invalid persisted or external values fall back to the existing default.
+std::uint32_t NormalizeScreenVideoBitrateBppHundredths(std::uint32_t value);
+
 struct ScreenStreamPolicyRequest {
     std::uint32_t maxWidth = 0;
     std::uint32_t maxHeight = 0;
     std::uint32_t framesPerSecond = 60;
+    // Video ceiling coefficient. Connection headroom is derived internally
+    // as 105% of this video ceiling; neither is a forced sending rate.
+    // This is not a measured quality requirement or an encoder QP setting.
+    std::uint32_t videoBitrateBppHundredths =
+        kDefaultScreenVideoBitrateBppHundredths;
 };
 
 struct ScreenStreamPolicyResult {
@@ -19,6 +31,7 @@ struct ScreenStreamPolicyResult {
     std::uint32_t framesPerSecond = 60;
     std::uint32_t startBitrateBps = 0;
     std::uint32_t maxBitrateBps = 0;
+    std::uint32_t networkProbeMaxBitrateBps = 0;
 };
 
 // Resolves the encoded desktop dimensions and bitrate without depending on

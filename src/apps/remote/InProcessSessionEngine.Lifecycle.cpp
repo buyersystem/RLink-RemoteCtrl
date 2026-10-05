@@ -24,8 +24,10 @@
 #include "RoomMediaSlots.h"
 #include "SessionDiagnosticsFormatting.h"
 #include "SessionStatsPoller.h"
+#include "adapters/ContentAwarePolicyDiagnostics.h"
 #include "VideoPipelinePreferenceNames.h"
 #include "src/core/VideoPresentationTelemetry.h"
+#include "src/protocol/DataChannelCatalog.h"
 #include "src/platform/win/WindowsCameraCaptureSource.h"
 #include "src/platform/win/WindowsDesktopCaptureSource.h"
 #include "src/platform/win/WindowsDisplayTopology.h"
@@ -548,6 +550,7 @@ void InProcessSessionEngine::Stop()
             canNotifyDirectSessionEnd = signalingOnline;
         }
         snapshot_.state = SessionEngineState::kStopping;
+        ++directSessionGeneration_;
         (void)localMedia_.BeginCameraOperation();
         controller = std::move(sessionController_);
         session = std::move(webRtcSession_);
@@ -847,13 +850,15 @@ SessionDiagnosticsSnapshot InProcessSessionEngine::Diagnostics() const
                     captureStats->contentAnalyzerEnabled;
                 stream.contentAnalyzerBackend =
                     captureStats->contentAnalyzerEnabled
-                    ? "rules"
+                    ? captureStats->contentAnalyzerBackend
                     : "disabled";
                 stream.contentSemanticType =
                     media_intelligence::ScreenSemanticTypeName(
                         captureStats->contentState.semantic);
                 stream.contentSemanticConfidence =
                     captureStats->contentState.semanticConfidence;
+                stream.contentScene = media_intelligence::ScreenSceneName(
+                    captureStats->contentState.scene);
                 stream.contentMotionLevel =
                     media_intelligence::ScreenMotionLevelName(
                         captureStats->contentState.motion);
@@ -865,6 +870,19 @@ SessionDiagnosticsSnapshot InProcessSessionEngine::Diagnostics() const
                     captureStats->contentStateAgeMs;
                 stream.contentLatestAnalysisTimeUs =
                     captureStats->contentLatestAnalysisTimeUs;
+                stream.contentLatestScaleConvertTimeUs =
+                    captureStats->contentLatestScaleConvertTimeUs;
+                stream.contentLatestJpegEncodeTimeUs =
+                    captureStats->contentLatestJpegEncodeTimeUs;
+                stream.contentLatestJpegBytes =
+                    captureStats->contentLatestJpegBytes;
+                stream.contentLatestReturnedSemanticConfidence =
+                    captureStats->contentLatestReturnedClassification.confidence;
+                stream.contentLatestReturnedScene =
+                    media_intelligence::ScreenSceneName(
+                        captureStats->contentLatestReturnedClassification.scene);
+                stream.contentLatestReturnedAgeMs =
+                    captureStats->contentLatestReturnedAgeMs;
                 stream.contentSubmittedSamples =
                     captureStats->contentSubmittedSamples;
                 stream.contentReplacedSamples =
@@ -892,6 +910,11 @@ SessionDiagnosticsSnapshot InProcessSessionEngine::Diagnostics() const
                         captureStats->deliveredFramesPerSecond;
                 }
             }
+            AnnotateContentAwarePolicyShadow(stats,
+                static_cast<std::uint64_t>(
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::steady_clock::now().time_since_epoch())
+                        .count()));
         };
     const auto annotatePresentation = [](
         const std::string& peerDeviceId,
@@ -1008,12 +1031,26 @@ void InProcessSessionEngine::StopStatsPolling()
 
 void InProcessSessionEngine::PollStatsOnce()
 {
-    std::vector<std::shared_ptr<RoomPairRuntime>> roomPairs;
+    struct PollTarget {
+        std::shared_ptr<RoomPairRuntime> pair;
+        ScreenContentPolicyObservation observation;
+        ScreenReceiverFeedback receiverContext;
+        std::uint64_t senderGeneration = 0;
+        std::uint64_t senderPreference = 0;
+        std::string encoderProfile;
+    };
+    std::vector<PollTarget> roomPairs;
     ScreenContentActivity screenActivity = ScreenContentActivity::kUnknown;
+    ScreenContentPolicyObservation contentObservation;
+    std::shared_ptr<const media_intelligence::CalibratedStreamQualityModel> calibration;
+    bool allowReference = false;
     {
         std::lock_guard lock(mutex_);
+        calibration = options_.screenQualityCalibration;
+        allowReference = options_.allowScreenReferenceQualityModel;
         if (const auto source = screenShare_.CaptureSource()) {
-            switch (source->CaptureRuntimeStats().activityState) {
+            const auto capture = source->CaptureRuntimeStats();
+            switch (capture.activityState) {
             case WindowsDesktopCaptureSource::CaptureActivityState::kStarting:
                 screenActivity = ScreenContentActivity::kStarting;
                 break;
@@ -1024,6 +1061,13 @@ void InProcessSessionEngine::PollStatsOnce()
                 screenActivity = ScreenContentActivity::kIdle;
                 break;
             }
+            const auto observedAtMs = static_cast<std::uint64_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::steady_clock::now().time_since_epoch()).count());
+            contentObservation = BuildScreenContentPolicyObservation(
+                capture.contentAnalyzerEnabled, snapshot_.screenShare.generation,
+                source->CapturedWidth(), source->CapturedHeight(), screenActivity,
+                capture.contentState, observedAtMs);
         }
         // The legacy direct session is uniquely owned and can be disposed
         // independently of room pairs. Its GetStats call only posts an
@@ -1031,14 +1075,60 @@ void InProcessSessionEngine::PollStatsOnce()
         // sessions below are shared and can safely be invoked after releasing
         // the engine mutex.
         if (webRtcSession_) {
+            ScreenReceiverFeedback context;
+            const bool activeDirect = snapshot_.state == SessionEngineState::kActive &&
+                snapshot_.purpose == SessionPurpose::kRemoteControl;
+            if (activeDirect && snapshot_.remoteControlRole == RemoteControlRole::kController &&
+                directSession_.IsChannelOpen(kTelemetryChannel) && !snapshot_.direct.screenPreferencePending) {
+                context.roomId = snapshot_.sessionId;
+                context.senderDeviceId = snapshot_.localDeviceId;
+                context.screenShareGeneration = snapshot_.direct.remoteScreenShareGeneration;
+                context.preferenceSequence = snapshot_.direct.screenPreferenceAcceptedSequence;
+            }
+            webRtcSession_->SetScreenReceiverFeedbackContext(context);
+            if (options_.screenQualityCalibration) webRtcSession_->SetScreenContentPolicyCalibration(
+                options_.screenQualityCalibration,
+                VideoEncoderQualityProfileForPreset(options_.ffmpegX264Preset).displayName);
+            webRtcSession_->SetScreenContentPolicyReferenceEnabled(allowReference,
+                VideoEncoderQualityProfileForPreset(options_.ffmpegX264Preset).displayName);
+            webRtcSession_->SetScreenSenderFeedbackContract(
+                activeDirect && snapshot_.remoteControlRole == RemoteControlRole::kControlled &&
+                screenShare_.HasCaptureSource() ? snapshot_.screenShare.generation : 0,
+                directSession_.screenPreferenceApplied ? directSession_.screenPreference.sequence : 0);
             webRtcSession_->SetScreenContentActivity(screenActivity);
+            webRtcSession_->SetScreenContentPolicyObservation(contentObservation);
             webRtcSession_->RequestStats();
         }
         roomPairs.reserve(roomPairs_.size());
         for (const auto& [pairId, pair] : roomPairs_) {
             (void)pairId;
             if (pair && pair->session) {
-                roomPairs.push_back(pair);
+                PollTarget target{.pair = pair, .observation = contentObservation};
+                target.encoderProfile = VideoEncoderQualityProfileForPreset(options_.ffmpegX264Preset).displayName;
+                const bool activeRoom = snapshot_.room.membership == RoomMembershipState::kActive &&
+                    snapshot_.room.screenShareState == RoomScreenShareState::kActive;
+                if (activeRoom && snapshot_.room.screenSharerDeviceId == snapshot_.localDeviceId) {
+                    target.observation.generation = target.senderGeneration = snapshot_.room.screenShareEpoch;
+                    const auto preference = roomSession_.screenStreamPreferences_.find(pairId);
+                    if (preference != roomSession_.screenStreamPreferences_.end())
+                        target.senderPreference = preference->second.sequence;
+                } else if (activeRoom && snapshot_.room.screenSharerDeviceId == pair->peerDeviceId) {
+                    const auto preference = std::find_if(snapshot_.roomActivity.peerConnections.begin(),
+                        snapshot_.roomActivity.peerConnections.end(),
+                        [&pairId](const auto& value) { return value.pairId == pairId; });
+                    const auto channel = pair->openDataChannels.find(std::string(kTelemetryChannel));
+                    if (preference != snapshot_.roomActivity.peerConnections.end() &&
+                        channel != pair->openDataChannels.end() && channel->second &&
+                        !preference->screenPreferencePending) {
+                        target.receiverContext.roomId = snapshot_.room.roomId;
+                        target.receiverContext.senderDeviceId = snapshot_.localDeviceId;
+                        target.receiverContext.screenShareGeneration = snapshot_.room.screenShareEpoch;
+                        target.receiverContext.preferenceSequence =
+                            preference->screenPreferenceAcceptedGeneration == snapshot_.room.screenShareEpoch
+                                ? preference->screenPreferenceAcceptedSequence : 0;
+                    }
+                }
+                roomPairs.push_back(std::move(target));
             }
         }
     }
@@ -1046,9 +1136,15 @@ void InProcessSessionEngine::PollStatsOnce()
     // engine mutex: a busy signaling thread would otherwise prevent the Qt
     // thread from even reading a snapshot and Windows would report the app as
     // hung.
-    for (const auto& pair : roomPairs) {
-        pair->session->SetScreenContentActivity(screenActivity);
-        pair->session->RequestStats();
+    for (const auto& target : roomPairs) {
+        target.pair->session->SetScreenContentActivity(screenActivity);
+        target.pair->session->SetScreenContentPolicyObservation(target.observation);
+        if (calibration) target.pair->session->SetScreenContentPolicyCalibration(
+            calibration, target.encoderProfile);
+        target.pair->session->SetScreenContentPolicyReferenceEnabled(allowReference, target.encoderProfile);
+        target.pair->session->SetScreenReceiverFeedbackContext(target.receiverContext);
+        target.pair->session->SetScreenSenderFeedbackContract(target.senderGeneration, target.senderPreference);
+        target.pair->session->RequestStats();
     }
 }
 

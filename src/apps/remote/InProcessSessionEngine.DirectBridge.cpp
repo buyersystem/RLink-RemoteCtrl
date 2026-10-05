@@ -303,6 +303,7 @@ void InProcessSessionEngine::OnDataMessage(
     if (!binary) {
         return;
     }
+    if (DispatchScreenReceiverFeedback({}, label, payload)) return;
     if (DispatchRemoteCursorData({}, label, payload)) {
         return;
     }

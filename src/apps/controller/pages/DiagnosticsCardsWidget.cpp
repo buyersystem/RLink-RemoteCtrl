@@ -22,6 +22,10 @@ namespace {
 
 QString DiagnosticsMetricExplanation(const QString &label) {
   static const QHash<QString, QString> explanations{
+      {QStringLiteral("估算视频预算"), QStringLiteral("估计可用上行的 95%，最多达到用户视频码率上限；这是分配预算，不是实际流量。")},
+      {QStringLiteral("候选参考需求"), QStringLiteral("模型估算候选规格的画质需求。健康网络保持已有参数，因此参考需求可能高于期望码率；弱网可执行候选必须满足预算。")},
+      {QStringLiteral("候选期望码率"), QStringLiteral("策略准备分配的编码预算；经连续窗口确认后应用，不等于 WebRTC 实际目标码率。")},
+      {QStringLiteral("候选发送上限"), QStringLiteral("候选确认后准备写入 RTP 的码率上限；当前实际应用值见“当前发送上限”，编码器不一定跑满。")},
       {QStringLiteral("状态"),
        QStringLiteral(
            "当前对象的运行状态；等待、连接中或关闭时会随实时状态更新。")},
@@ -292,16 +296,21 @@ DiagnosticsCardsWidget::DiagnosticsCardsWidget(QWidget *parent)
 
 void DiagnosticsCardsWidget::SetSections(
     const QVector<DiagnosticsSection> &sections, const QString &emptyText) {
+  if (sections_ == sections && emptyText_ == emptyText &&
+      structure_ != QStringLiteral("__startup_placeholder__")) return;
+  sections_ = sections;
+  emptyText_ = emptyText;
   QStringList structureParts;
   cardCopyTexts_.clear();
   for (const auto &section : sections) {
     structureParts << section.key;
     for (const auto &card : section.cards) {
-      structureParts << card.key;
-      QStringList copyLines{
-          card.title, card.subtitle.isEmpty()
+      structureParts << card.key << QString::number(card.stackedMetrics)
+                     << QString::number(card.copyable);
+      QStringList copyLines{card.title};
+      copyLines << (card.copyable ? section.title : card.subtitle.isEmpty()
                           ? QStringLiteral("成员：未报告")
-                          : QStringLiteral("成员：%1").arg(card.subtitle)};
+                          : QStringLiteral("成员：%1").arg(card.subtitle));
       for (const auto &chip : card.chips) {
         structureParts << QStringLiteral("%1:%2").arg(chip.key).arg(
             chip.wide ? 1 : 0);
@@ -317,29 +326,47 @@ void DiagnosticsCardsWidget::SetSections(
     structure_ = structure;
   }
 
-  for (const auto &section : sections) {
+  if (sections.isEmpty()) {
+    if (auto* empty = findChild<QLabel*>(QStringLiteral("statsEmptyText"))) {
+      if (empty->text() != emptyText) empty->setText(emptyText);
+    }
+  }
+  RefreshValues();
+}
+
+void DiagnosticsCardsWidget::RefreshValues() {
+  for (const auto &section : sections_) {
+    if (auto* title = sectionButtons_.value(section.key)) {
+      if (title->text() != section.title) title->setText(section.title);
+    }
+    if (auto* description = sectionDescriptions_.value(section.key)) {
+      if (description->text() != section.description) description->setText(section.description);
+    }
     for (const auto &card : section.cards) {
       const QString cardPrefix = section.key + QLatin1Char('/') + card.key;
       if (auto *title = titleButtons_.value(cardPrefix + "/title", nullptr)) {
-        title->setText(card.title);
+        if (title->text() != card.title) title->setText(card.title);
       }
       if (auto *subtitle =
               textLabels_.value(cardPrefix + "/subtitle", nullptr)) {
-        subtitle->setText(card.subtitle);
+        if (subtitle->text() != card.subtitle) subtitle->setText(card.subtitle);
         subtitle->setVisible(!card.subtitle.isEmpty());
       }
       for (const auto &chip : card.chips) {
         const QString chipKey = cardPrefix + QLatin1Char('/') + chip.key;
+        auto* frame = chipFrames_.value(chipKey, nullptr);
+        if (!frame || !frame->isVisibleTo(this)) continue;
         const QString toolTip = DiagnosticsMetricToolTip(chip);
         if (auto *value = textLabels_.value(chipKey, nullptr)) {
-          value->setText(chip.value);
-          value->setToolTip(toolTip);
+          if (value->text() != chip.value) value->setText(chip.value);
+          if (value->toolTip() != toolTip) value->setToolTip(toolTip);
         }
         if (auto *label = chipNameLabels_.value(chipKey, nullptr)) {
-          label->setToolTip(toolTip);
+          if (label->text() != chip.label) label->setText(chip.label);
+          if (label->toolTip() != toolTip) label->setToolTip(toolTip);
         }
-        if (auto *frame = chipFrames_.value(chipKey, nullptr)) {
-          frame->setToolTip(toolTip);
+        {
+          if (frame->toolTip() != toolTip) frame->setToolTip(toolTip);
           if (frame->property("tone").toByteArray() != chip.tone) {
             frame->setProperty("tone", chip.tone);
             frame->style()->unpolish(frame);
@@ -362,9 +389,12 @@ void DiagnosticsCardsWidget::Rebuild(
   chipNameLabels_.clear();
   chipFrames_.clear();
   titleButtons_.clear();
+  sectionButtons_.clear();
+  sectionDescriptions_.clear();
 
   if (sections.isEmpty()) {
     auto *empty = new QLabel(emptyText, this);
+    empty->setWordWrap(true);
     empty->setObjectName(QStringLiteral("statsEmptyText"));
     empty->setAlignment(Qt::AlignCenter);
     empty->setMinimumHeight(120);
@@ -385,7 +415,7 @@ void DiagnosticsCardsWidget::Rebuild(
     sectionHeaderLayout->setContentsMargins(2, 4, 2, 2);
     sectionHeaderLayout->setSpacing(10);
     const bool sectionExpanded = sectionExpanded_.value(
-        section.key, section.key == QStringLiteral("connection"));
+        section.key, section.initiallyExpanded || section.key == QStringLiteral("connection"));
     sectionExpanded_.insert(section.key, sectionExpanded);
     auto *sectionToggle = new QToolButton(sectionHeader);
     sectionToggle->setObjectName(QStringLiteral("statsSectionToggle"));
@@ -397,10 +427,13 @@ void DiagnosticsCardsWidget::Rebuild(
     sectionToggle->setChecked(sectionExpanded);
     sectionToggle->setCursor(Qt::PointingHandCursor);
     sectionHeaderLayout->addWidget(sectionToggle);
+    sectionButtons_.insert(section.key, sectionToggle);
     auto *sectionDescription = new QLabel(section.description, sectionHeader);
+    sectionDescription->setWordWrap(true);
     sectionDescription->setObjectName(
         QStringLiteral("statsSectionDescription"));
     sectionHeaderLayout->addWidget(sectionDescription);
+    sectionDescriptions_.insert(section.key, sectionDescription);
     sectionHeaderLayout->addStretch(1);
     auto *count = new QLabel(QStringLiteral("%1 项").arg(section.cards.size()),
                              sectionHeader);
@@ -417,12 +450,38 @@ void DiagnosticsCardsWidget::Rebuild(
             [this, sectionContent, sectionToggle,
              sectionKey = section.key](bool expanded) {
               sectionExpanded_.insert(sectionKey, expanded);
+              if (expanded) PopulateSection(sectionContent, sectionKey);
               sectionContent->setVisible(expanded);
+              if (expanded) RefreshValues();
               sectionToggle->setArrowType(expanded ? Qt::DownArrow
                                                    : Qt::RightArrow);
               updateGeometry();
             });
 
+    if (sectionExpanded) PopulateSection(sectionContent, section.key);
+    sectionLayout->addWidget(sectionContent);
+    layout_->addWidget(sectionHost);
+  }
+  layout_->addStretch(1);
+  setUpdatesEnabled(true);
+  layout_->invalidate();
+  layout_->activate();
+  updateGeometry();
+  if (parentWidget()) {
+    parentWidget()->updateGeometry();
+  }
+  update();
+}
+
+
+// Materialize only expanded sections/cards. Collapsed groups retain their full
+// latest model (including copy text), without hundreds of hidden QLabel layouts.
+void DiagnosticsCardsWidget::PopulateSection(QWidget* sectionContent,
+                                             const QString& sectionKey) {
+  auto* sectionContentLayout = qobject_cast<QVBoxLayout*>(sectionContent->layout());
+  if (!sectionContentLayout || sectionContentLayout->count() != 0) return;
+  for (const auto& section : sections_) {
+    if (section.key != sectionKey) continue;
     for (const auto &card : section.cards) {
       auto *cardFrame = new QFrame(sectionContent);
       cardFrame->setObjectName(QStringLiteral("statsMetricCard"));
@@ -435,7 +494,7 @@ void DiagnosticsCardsWidget::Rebuild(
       cardHeaderLayout->setContentsMargins(0, 0, 0, 0);
       cardHeaderLayout->setSpacing(9);
       const QString cardPrefix = section.key + QLatin1Char('/') + card.key;
-      const bool cardExpanded = cardExpanded_.value(cardPrefix, true);
+      const bool cardExpanded = cardExpanded_.value(cardPrefix, card.initiallyExpanded);
       cardExpanded_.insert(cardPrefix, cardExpanded);
       auto *cardToggle = new QToolButton(cardHeader);
       cardToggle->setObjectName(QStringLiteral("statsCardToggle"));
@@ -451,7 +510,7 @@ void DiagnosticsCardsWidget::Rebuild(
       subtitle->setVisible(!card.subtitle.isEmpty());
       cardHeaderLayout->addWidget(subtitle);
       cardHeaderLayout->addStretch(1);
-      if (card.title == QStringLiteral("屏幕接收") ||
+      if (card.copyable || card.title == QStringLiteral("屏幕接收") ||
           card.title == QStringLiteral("屏幕发送")) {
         const bool outboundScreen = card.title == QStringLiteral("屏幕发送");
         auto *copyButton =
@@ -459,7 +518,7 @@ void DiagnosticsCardsWidget::Rebuild(
         copyButton->setObjectName(QStringLiteral("softButton"));
         copyButton->setCursor(Qt::PointingHandCursor);
         copyButton->setToolTip(
-            outboundScreen
+            card.copyable ? QStringLiteral("复制当前卡片中的全部指标") : outboundScreen
                 ? QStringLiteral("复制当前屏幕发送卡片中的全部指标")
                 : QStringLiteral("复制当前屏幕接收卡片中的全部指标"));
         connect(copyButton, &QPushButton::clicked, copyButton,
@@ -479,6 +538,31 @@ void DiagnosticsCardsWidget::Rebuild(
       textLabels_.insert(cardPrefix + "/subtitle", subtitle);
 
       auto *chipsHost = new QWidget(cardFrame);
+      if (cardExpanded) PopulateCard(chipsHost, cardPrefix);
+      chipsHost->setVisible(cardExpanded);
+      cardLayout->addWidget(chipsHost);
+      connect(
+          cardToggle, &QToolButton::toggled, cardFrame,
+          [this, chipsHost, cardToggle, cardKey = cardPrefix](bool expanded) {
+            cardExpanded_.insert(cardKey, expanded);
+            if (expanded) PopulateCard(chipsHost, cardKey);
+            chipsHost->setVisible(expanded);
+            if (expanded) RefreshValues();
+            cardToggle->setArrowType(expanded ? Qt::DownArrow : Qt::RightArrow);
+            updateGeometry();
+          });
+      sectionContentLayout->addWidget(cardFrame);
+    }
+    break;
+  }
+}
+
+void DiagnosticsCardsWidget::PopulateCard(QWidget* chipsHost,
+                                          const QString& cardPrefix) {
+  if (chipsHost->layout()) return;
+  for (const auto& section : sections_) {
+    for (const auto& card : section.cards) {
+      if (section.key + QLatin1Char('/') + card.key != cardPrefix) continue;
       auto *chips = new QGridLayout(chipsHost);
       chips->setContentsMargins(0, 0, 0, 0);
       chips->setHorizontalSpacing(9);
@@ -490,18 +574,26 @@ void DiagnosticsCardsWidget::Rebuild(
           ++row;
           column = 0;
         }
-        auto *chipFrame = new QFrame(cardFrame);
+        auto *chipFrame = new QFrame(chipsHost);
         chipFrame->setObjectName(QStringLiteral("statsMetricChip"));
         chipFrame->setProperty("tone", chip.tone);
-        auto *chipLayout = new QHBoxLayout(chipFrame);
+        chipFrame->setProperty("stackedMetrics", card.stackedMetrics);
+        QBoxLayout *chipLayout = card.stackedMetrics
+            ? static_cast<QBoxLayout *>(new QVBoxLayout(chipFrame))
+            : static_cast<QBoxLayout *>(new QHBoxLayout(chipFrame));
         chipLayout->setContentsMargins(11, 8, 11, 8);
         chipLayout->setSpacing(7);
         auto *chipLabel = new QLabel(chip.label, chipFrame);
         chipLabel->setObjectName(QStringLiteral("statsChipLabel"));
         auto *chipValue = new QLabel(chip.value, chipFrame);
+        chipValue->setTextFormat(Qt::PlainText);
         chipValue->setObjectName(QStringLiteral("statsChipValue"));
         chipValue->setTextInteractionFlags(Qt::TextSelectableByMouse);
-        chipValue->setWordWrap(chip.wide);
+        chipValue->setWordWrap(chip.wide || card.stackedMetrics);
+        const QString toolTip = DiagnosticsMetricToolTip(chip);
+        chipFrame->setToolTip(toolTip);
+        chipLabel->setToolTip(toolTip);
+        chipValue->setToolTip(toolTip);
         chipLayout->addWidget(chipLabel);
         chipLayout->addWidget(chipValue, 1);
 
@@ -523,30 +615,9 @@ void DiagnosticsCardsWidget::Rebuild(
       }
       chips->setColumnStretch(0, 1);
       chips->setColumnStretch(1, 1);
-      chipsHost->setVisible(cardExpanded);
-      cardLayout->addWidget(chipsHost);
-      connect(
-          cardToggle, &QToolButton::toggled, cardFrame,
-          [this, chipsHost, cardToggle, cardKey = cardPrefix](bool expanded) {
-            cardExpanded_.insert(cardKey, expanded);
-            chipsHost->setVisible(expanded);
-            cardToggle->setArrowType(expanded ? Qt::DownArrow : Qt::RightArrow);
-            updateGeometry();
-          });
-      sectionContentLayout->addWidget(cardFrame);
+      return;
     }
-    sectionLayout->addWidget(sectionContent);
-    layout_->addWidget(sectionHost);
   }
-  layout_->addStretch(1);
-  setUpdatesEnabled(true);
-  layout_->invalidate();
-  layout_->activate();
-  updateGeometry();
-  if (parentWidget()) {
-    parentWidget()->updateGeometry();
-  }
-  update();
 }
 
 } // namespace remote::controller::detail

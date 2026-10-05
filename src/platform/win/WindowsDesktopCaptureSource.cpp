@@ -8,10 +8,12 @@
 #include <algorithm>
 #include <cmath>
 #include <intrin.h>
+#include <limits>
 #include <utility>
 
 #include "api/make_ref_counted.h"
 #include "api/video/video_frame.h"
+#include "common_video/framerate_controller.h"
 #include "modules/desktop_capture/desktop_capture_options.h"
 #include "modules/desktop_capture/desktop_frame.h"
 #include "modules/desktop_capture/win/screen_capturer_win_directx.h"
@@ -320,15 +322,87 @@ float ChangedAreaRatio(
 
 }  // namespace
 
+class WindowsDesktopCaptureSource::FrameRateSinkProxy final
+    : public webrtc::VideoSinkInterface<webrtc::VideoFrame> {
+public:
+    explicit FrameRateSinkProxy(webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)
+        : sink_(sink) {}
+
+    void SetFrameRateLimit(int framesPerSecond) noexcept
+    {
+        // Capture itself is bounded to 120 FPS; unbounded sink wants do not
+        // need a higher delivery cadence.
+        maximumFrameRate_.store(std::clamp(framesPerSecond, 0, 120),
+            std::memory_order_release);
+    }
+
+    void OnFrame(const webrtc::VideoFrame& frame) override
+    {
+        const auto limit = maximumFrameRate_.load(std::memory_order_acquire);
+        const auto timestampUs = frame.timestamp_us();
+        if (limit != appliedFrameRate_ || !initialized_ || timestampUs < lastTimestampUs_) {
+            appliedFrameRate_ = limit;
+            initialized_ = true;
+            frameRateController_.Reset();
+            frameRateController_.SetMaxFramerate(limit);
+        }
+        // Reuse native stable-phase scheduling with half-period tolerance.
+        // Full-period slot boundaries turn a slightly early 80-FPS frame
+        // into a false duplicate and can reduce delivery to about 53 FPS.
+        const bool drop = frameRateController_.ShouldDropFrame(timestampUs * 1000);
+        lastTimestampUs_ = timestampUs;
+        if (drop) {
+            OnDiscardedFrame();
+            return;
+        }
+        if (updateInvalidated_) {
+            // Only metadata is copied. Both CPU and native GPU frame buffers
+            // keep their original ownership; skipped partial updates cannot
+            // disappear from this peer's next accepted desktop frame.
+            webrtc::VideoFrame fullUpdate(frame);
+            fullUpdate.clear_update_rect();
+            fullUpdate.set_is_repeat_frame(false);
+            updateInvalidated_ = false;
+            sink_->OnFrame(fullUpdate);
+        } else {
+            sink_->OnFrame(frame);
+        }
+    }
+
+    void OnDiscardedFrame() override
+    {
+        updateInvalidated_ = true;
+        sink_->OnDiscardedFrame();
+    }
+
+    void OnConstraintsChanged(const webrtc::VideoTrackSourceConstraints& constraints) override
+    {
+        sink_->OnConstraintsChanged(constraints);
+    }
+
+private:
+    webrtc::VideoSinkInterface<webrtc::VideoFrame>* const sink_;
+    std::atomic<int> maximumFrameRate_{120};
+    // VideoBroadcaster serializes callbacks; only this dispatch thread uses
+    // the phase/update state. Sink-wants updates publish an atomic limit.
+    int appliedFrameRate_ = -1;
+    bool initialized_ = false;
+    bool updateInvalidated_ = false;
+    std::int64_t lastTimestampUs_ = 0;
+    webrtc::FramerateController frameRateController_;
+};
+
 WindowsDesktopCaptureSource::WindowsDesktopCaptureSource(
     DesktopCaptureImplementation implementation,
     DisplayDescriptor captureTarget,
     bool contentAnalyzerEnabled,
-    std::uint32_t contentAnalyzerRateHz)
+    std::uint32_t contentAnalyzerRateHz,
+    std::shared_ptr<IRemoteVisionFrameAnalyzer> remoteVisionAnalyzer)
     : configuredImplementation_(implementation),
       captureTarget_(std::move(captureTarget)),
       contentAnalyzerRateHz_(
-          std::clamp(contentAnalyzerRateHz, 2u, 5u))
+          std::clamp(contentAnalyzerRateHz, 2u, 5u)),
+      remoteVisionAnalyzer_(std::move(remoteVisionAnalyzer))
 {
     if (contentAnalyzerEnabled) {
         media_intelligence::ContentAnalysisWorker::Config config;
@@ -342,6 +416,56 @@ WindowsDesktopCaptureSource::WindowsDesktopCaptureSource(
 WindowsDesktopCaptureSource::~WindowsDesktopCaptureSource()
 {
     StopCapture();
+    std::lock_guard lock(sinkProxyMutex_);
+    for (auto& [sink, proxy] : sinkProxies_) sinkBroadcaster_.RemoveSink(proxy.get());
+    sinkProxies_.clear();
+}
+
+void WindowsDesktopCaptureSource::AddOrUpdateSink(
+    webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink,
+    const webrtc::VideoSinkWants& wants)
+{
+    if (!sink) return;
+    std::lock_guard lock(sinkProxyMutex_);
+    auto& proxy = sinkProxies_[sink];
+    if (!proxy) proxy = std::make_unique<FrameRateSinkProxy>(sink);
+    proxy->SetFrameRateLimit(wants.max_framerate_fps);
+    sinkBroadcaster_.AddOrUpdateSink(proxy.get(), wants);
+    auto aggregate = sinkBroadcaster_.wants();
+    // FPS is enforced independently by each proxy. The broadcaster's MIN
+    // FPS must not throttle all peers before their individual dispatch.
+    aggregate.max_framerate_fps = std::numeric_limits<int>::max();
+    video_adapter()->OnSinkWants(aggregate);
+}
+
+void WindowsDesktopCaptureSource::RemoveSink(
+    webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink)
+{
+    std::lock_guard lock(sinkProxyMutex_);
+    const auto found = sinkProxies_.find(sink);
+    if (found == sinkProxies_.end()) return;
+    // Broadcaster waits for in-flight callbacks before releasing this proxy.
+    sinkBroadcaster_.RemoveSink(found->second.get());
+    sinkProxies_.erase(found);
+    auto aggregate = sinkBroadcaster_.wants();
+    aggregate.max_framerate_fps = std::numeric_limits<int>::max();
+    video_adapter()->OnSinkWants(aggregate);
+}
+
+bool WindowsDesktopCaptureSource::GetStats(Stats* stats)
+{
+    const auto dimensions = statsInputDimensions_.load(std::memory_order_acquire);
+    const auto width = static_cast<int>(dimensions >> 32);
+    const auto height = static_cast<int>(dimensions & 0xffffffffu);
+    if (!stats || width <= 0 || height <= 0) return false;
+    *stats = Stats{.input_width = width, .input_height = height};
+    return true;
+}
+
+void WindowsDesktopCaptureSource::ProcessConstraints(
+    const webrtc::VideoTrackSourceConstraints& constraints)
+{
+    sinkBroadcaster_.ProcessConstraints(constraints);
 }
 
 bool WindowsDesktopCaptureSource::StartCapture(
@@ -369,6 +493,11 @@ bool WindowsDesktopCaptureSource::StartCapture(
         nextContentAnalysisSubmitSteadyUs_.store(
             0, std::memory_order_release);
         contentAnalysisWorker_->Start(generation);
+    }
+    if (remoteVisionAnalyzer_) {
+        remoteVisionSessionToken_.store(
+            remoteVisionAnalyzer_->BeginSession(),
+            std::memory_order_release);
     }
     running_ = true;
     captureThread_ = std::jthread(
@@ -407,6 +536,13 @@ void WindowsDesktopCaptureSource::StopCapture()
     }
     if (contentAnalysisWorker_) {
         contentAnalysisWorker_->Stop();
+    }
+    if (remoteVisionAnalyzer_) {
+        const auto sessionToken = remoteVisionSessionToken_.exchange(
+            0, std::memory_order_acq_rel);
+        if (sessionToken != 0) {
+            remoteVisionAnalyzer_->EndSession(sessionToken);
+        }
     }
     {
         std::lock_guard lock(mutex_);
@@ -591,6 +727,9 @@ WindowsDesktopCaptureSource::CaptureRuntimeStats() const noexcept
         const auto snapshot = contentAnalysisWorker_->Snapshot(
             static_cast<std::uint64_t>(SteadyNowUs() / 1000));
         stats.contentAnalyzerEnabled = snapshot.running;
+        stats.contentAnalyzerBackend = snapshot.running
+            ? "rules"
+            : "disabled";
         stats.contentAnalysisGeneration = snapshot.generation;
         stats.contentState = snapshot.state;
         stats.contentStateAgeMs = snapshot.stateAgeMs;
@@ -601,6 +740,66 @@ WindowsDesktopCaptureSource::CaptureRuntimeStats() const noexcept
         stats.contentProcessedSamples = snapshot.processedSamples;
         stats.contentRejectedSamples = snapshot.rejectedSamples;
         stats.contentDiscardedResults = snapshot.discardedResults;
+    }
+    if (remoteVisionAnalyzer_) {
+        const auto remoteSnapshot = remoteVisionAnalyzer_->Snapshot();
+        stats.contentAnalyzerEnabled =
+            stats.contentAnalyzerEnabled || remoteSnapshot.running;
+        if (remoteSnapshot.running) {
+            stats.contentAnalyzerBackend = contentAnalysisWorker_
+                ? "rules+vision_api"
+                : "vision_api";
+        }
+        if (remoteSnapshot.classification.IsValid()) {
+            stats.contentState.semantic =
+                remoteSnapshot.classification.ResolvedSemantic();
+            stats.contentState.scene =
+                remoteSnapshot.classification.scene;
+            stats.contentState.semanticConfidence =
+                remoteSnapshot.classification.confidence;
+            stats.contentState.sourceFrameId =
+                remoteSnapshot.sourceFrameId;
+            stats.contentState.timestampMs =
+                remoteSnapshot.completedAtMs;
+            stats.contentState.inferenceTimeUs =
+                remoteSnapshot.latestAnalysisTimeUs;
+            stats.contentState.modelResultAvailable = true;
+            const auto nowMs = static_cast<std::uint64_t>(
+                SteadyNowUs() / 1000);
+            stats.contentStateAgeMs =
+                nowMs >= remoteSnapshot.completedAtMs
+                ? static_cast<std::uint32_t>((std::min)(
+                      nowMs - remoteSnapshot.completedAtMs,
+                      static_cast<std::uint64_t>(UINT32_MAX)))
+                : 0;
+        }
+        stats.contentLatestAnalysisTimeUs =
+            remoteSnapshot.latestAnalysisTimeUs;
+        stats.contentLatestScaleConvertTimeUs =
+            remoteSnapshot.latestScaleConvertTimeUs;
+        stats.contentLatestJpegEncodeTimeUs =
+            remoteSnapshot.latestJpegEncodeTimeUs;
+        stats.contentLatestJpegBytes =
+            remoteSnapshot.latestJpegBytes;
+        stats.contentLatestReturnedClassification =
+            remoteSnapshot.latestReturnedClassification;
+        if (remoteSnapshot.latestReturnedAtMs != 0) {
+            const auto nowMs = static_cast<std::uint64_t>(SteadyNowUs() / 1000);
+            stats.contentLatestReturnedAgeMs = static_cast<std::uint32_t>(
+                (std::min)(nowMs >= remoteSnapshot.latestReturnedAtMs
+                               ? nowMs - remoteSnapshot.latestReturnedAtMs : 0,
+                           static_cast<std::uint64_t>(UINT32_MAX)));
+        }
+        stats.contentSubmittedSamples =
+            remoteSnapshot.submittedSamples;
+        stats.contentReplacedSamples =
+            remoteSnapshot.replacedSamples;
+        stats.contentProcessedSamples =
+            remoteSnapshot.processedSamples;
+        stats.contentRejectedSamples =
+            remoteSnapshot.rejectedSamples;
+        stats.contentDiscardedResults =
+            remoteSnapshot.discardedResults;
     }
     return stats;
 }
@@ -636,6 +835,8 @@ void WindowsDesktopCaptureSource::PublishChangedAreaRatioWindow() noexcept
 void WindowsDesktopCaptureSource::MaybeSubmitContentAnalysis(
     float changedAreaRatio) noexcept
 {
+    // Motion is capture activity, not a semantic scene change. Only the remote
+    // classifier may replace its stable classification within this session.
     if (!contentAnalysisWorker_) {
         return;
     }
@@ -691,6 +892,16 @@ void WindowsDesktopCaptureSource::MaybeSubmitContentAnalysis(
     request.ruleSample.timestampMs =
         static_cast<std::uint64_t>(nowUs / 1000);
     contentAnalysisWorker_->Submit(std::move(request));
+}
+
+void WindowsDesktopCaptureSource::MaybeSubmitRemoteVisionFrame(
+    webrtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer) noexcept
+{
+    if (remoteVisionAnalyzer_ && buffer) {
+        remoteVisionAnalyzer_->SubmitFrame(
+            remoteVisionSessionToken_.load(std::memory_order_acquire),
+            std::move(buffer));
+    }
 }
 
 void WindowsDesktopCaptureSource::SignalCaptureSchedule()
@@ -844,6 +1055,16 @@ void WindowsDesktopCaptureSource::CaptureLoop(std::stop_token stopToken)
                     break;
                 }
                 if (nativeFrame) {
+                    // Fixed-rate native capture needs the same activity
+                    // publication as the continuous CPU path. Without this,
+                    // frames flow but policy observations stay kStarting.
+                    // This helper never suppresses native frames or changes
+                    // the capture schedule.
+                    const bool forceRefresh = ConsumeForcedRefreshFrame();
+                    FrameDeliveryReason deliveryReason;
+                    (void)ShouldDeliverFrame(
+                        result == DxgiNativeDesktopCapturer::Result::kSuccess,
+                        forceRefresh, std::chrono::steady_clock::now(), &deliveryReason);
                     RecordChangedAreaRatio(
                         frameMetadata.changedAreaRatio);
                     MaybeSubmitContentAnalysis(
@@ -857,17 +1078,6 @@ void WindowsDesktopCaptureSource::CaptureLoop(std::stop_token stopToken)
                         static_cast<std::uint32_t>(
                             nativeFrame->height()),
                         std::memory_order_release);
-                    const bool forceRefresh =
-                        ConsumeForcedRefreshFrame();
-                    const auto deliveryReason = forceRefresh
-                        ? FrameDeliveryReason::kForcedRefresh
-                        : result == DxgiNativeDesktopCapturer::Result::kSuccess
-                            ? FrameDeliveryReason::kDesktopChanged
-                            : FrameDeliveryReason::kScheduledRepeat;
-                    if (forceRefresh) {
-                        totalForcedRefreshFrames_.fetch_add(
-                            1, std::memory_order_relaxed);
-                    }
                     DeliverFrame(nativeFrame, deliveryReason);
                 }
 
@@ -1298,6 +1508,7 @@ void WindowsDesktopCaptureSource::ResetActivityTracking()
         CaptureActivityState::kStarting, std::memory_order_release);
     adaptiveFrameDeliveryEnabled_.store(false, std::memory_order_release);
     activityHasDeliveredFrame_ = false;
+    deliveryUpdateRegionInvalidated_ = false;
     inputBoostUntilSteadyUs_.store(0, std::memory_order_release);
     startupPrimeUntilSteadyUs_.store(0, std::memory_order_release);
     forcedRefreshFramesRemaining_.store(0, std::memory_order_release);
@@ -1424,13 +1635,46 @@ bool WindowsDesktopCaptureSource::ShouldDeliverLibWebRtcFrame(
     return false;
 }
 
+bool WindowsDesktopCaptureSource::AcceptFrameForDelivery(
+    const webrtc::scoped_refptr<webrtc::VideoFrameBuffer>& buffer,
+    std::int64_t timestampUs)
+{
+    // Capture readiness is independent of having a sender attached. During
+    // startup AdaptFrame can reject every frame because there is no sink yet.
+    {
+        std::lock_guard lock(mutex_);
+        firstFrameReady_ = true;
+        lastError_.clear();
+    }
+    firstFrameCondition_.notify_all();
+    // Keep semantic sampling at the capture cadence, even when the sender's
+    // network allocation reduces delivery FPS.
+    MaybeSubmitRemoteVisionFrame(buffer);
+    statsInputDimensions_.store((static_cast<std::uint64_t>(buffer->width()) << 32) |
+        static_cast<std::uint32_t>(buffer->height()), std::memory_order_release);
+    int outputWidth, outputHeight, cropWidth, cropHeight;
+    // Preserve aggregate spatial adaptation; each sender's FPS is enforced
+    // only in its proxy so a slower peer cannot throttle another sender.
+    // Spatial adaptation remains per sender/encoder: native textures stay intact.
+    const bool accepted = sinkBroadcaster_.frame_wanted() &&
+        video_adapter()->AdaptFrameResolution(buffer->width(), buffer->height(),
+            timestampUs * 1000, &cropWidth, &cropHeight, &outputWidth, &outputHeight);
+    if (!accepted) sinkBroadcaster_.OnDiscardedFrame();
+    if (!accepted) deliveryUpdateRegionInvalidated_ = true;
+    return accepted;
+}
+
 void WindowsDesktopCaptureSource::DeliverFrame(
     webrtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer,
-    FrameDeliveryReason reason)
+    FrameDeliveryReason reason,
+    std::int64_t timestampUs)
 {
     if (!buffer) {
         return;
     }
+    if (!timestampUs) timestampUs = webrtc::TimeMicros();
+    if (!AcceptFrameForDelivery(buffer, timestampUs)) return;
+    deliveryUpdateRegionInvalidated_ = false;
     totalDeliveredFrames_.fetch_add(1, std::memory_order_relaxed);
     if (reason == FrameDeliveryReason::kDesktopChanged) {
         totalChangedFrames_.fetch_add(1, std::memory_order_relaxed);
@@ -1441,26 +1685,23 @@ void WindowsDesktopCaptureSource::DeliverFrame(
     webrtc::VideoFrame videoFrame =
         webrtc::VideoFrame::Builder()
             .set_video_frame_buffer(std::move(buffer))
-            .set_timestamp_us(webrtc::TimeMicros())
+            .set_timestamp_us(timestampUs)
             .build();
-    OnFrame(videoFrame);
-    {
-        std::lock_guard lock(mutex_);
-        firstFrameReady_ = true;
-        lastError_.clear();
-    }
-    firstFrameCondition_.notify_all();
+    sinkBroadcaster_.OnFrame(videoFrame);
 }
 
 void WindowsDesktopCaptureSource::DeliverLibWebRtcFrame(
     webrtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer,
     FrameDeliveryReason reason,
     const FrameUpdateRegion& updateRegion,
-    bool repeatFrame)
+    bool repeatFrame,
+    std::int64_t timestampUs)
 {
     if (!buffer) {
         return;
     }
+    if (!timestampUs) timestampUs = webrtc::TimeMicros();
+    if (!AcceptFrameForDelivery(buffer, timestampUs)) return;
     totalDeliveredFrames_.fetch_add(1, std::memory_order_relaxed);
     if (reason == FrameDeliveryReason::kDesktopChanged) {
         totalChangedFrames_.fetch_add(1, std::memory_order_relaxed);
@@ -1469,24 +1710,32 @@ void WindowsDesktopCaptureSource::DeliverLibWebRtcFrame(
             1, std::memory_order_relaxed);
     }
     webrtc::VideoFrame::UpdateRect updateRect;
-    updateRect.offset_x = updateRegion.offsetX;
-    updateRect.offset_y = updateRegion.offsetY;
-    updateRect.width = updateRegion.width;
-    updateRect.height = updateRegion.height;
+    if (deliveryUpdateRegionInvalidated_) {
+        // Desktop regions refer only to the current capture. Dropping an
+        // earlier changed frame must not hide its pixels from the encoder.
+        updateRect.offset_x = updateRect.offset_y = 0;
+        updateRect.width = buffer->width();
+        updateRect.height = buffer->height();
+        repeatFrame = false;
+        deliveryUpdateRegionInvalidated_ = false;
+    } else {
+        updateRect.offset_x = updateRegion.offsetX;
+        updateRect.offset_y = updateRegion.offsetY;
+        updateRect.width = updateRegion.width;
+        updateRect.height = updateRegion.height;
+    }
     webrtc::VideoFrame videoFrame =
         webrtc::VideoFrame::Builder()
             .set_video_frame_buffer(std::move(buffer))
-            .set_timestamp_us(webrtc::TimeMicros())
+            .set_timestamp_us(timestampUs)
             .set_update_rect(updateRect)
             .set_is_repeat_frame(repeatFrame)
             .build();
-    OnFrame(videoFrame);
+    sinkBroadcaster_.OnFrame(videoFrame);
     std::function<void()> startupFrameDeliveredCallback;
     std::function<void()> startupBurstCompletedCallback;
     {
         std::lock_guard lock(mutex_);
-        firstFrameReady_ = true;
-        lastError_.clear();
         startupFrameDeliveredCallback =
             std::move(startupFrameDeliveredCallback_);
         if (startupCallbackFramesRemaining_ > 0 &&
@@ -1495,7 +1744,6 @@ void WindowsDesktopCaptureSource::DeliverLibWebRtcFrame(
                 std::move(startupBurstCompletedCallback_);
         }
     }
-    firstFrameCondition_.notify_all();
     if (startupFrameDeliveredCallback) {
         startupFrameDeliveredCallback();
     }

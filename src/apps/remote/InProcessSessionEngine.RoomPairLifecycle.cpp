@@ -49,6 +49,8 @@ void InProcessSessionEngine::OnRoomPairReady(
     pair->bridge = std::make_unique<RoomPairBridge>(*this, ready.pairId);
     pair->session = std::make_unique<LibWebRtcSession>(
         runtime_->PeerConnectionFactory());
+    pair->session->SetScreenVideoBitrateBppProvider(
+        options_.screenVideoBitrateBppProvider);
     if (ready.localIsOfferer) {
         pair->controller =
             std::make_unique<ControllerSessionController>(
@@ -66,6 +68,7 @@ void InProcessSessionEngine::OnRoomPairReady(
     pair->controller->SetObserver(pair->bridge.get());
 
     std::shared_ptr<RoomPairRuntime> pairToStart;
+    const auto initialQualityDeficitShare = ScreenQualityDeficitShareFromProvider();
     {
         std::lock_guard lock(mutex_);
         if (snapshot_.room.membership != RoomMembershipState::kActive ||
@@ -114,6 +117,8 @@ void InProcessSessionEngine::OnRoomPairReady(
                       return left.peerDeviceId < right.peerDeviceId;
                   });
 
+        pair->session->SetScreenQualityDeficitShare(
+            liveScreenQualityDeficitShare_.value_or(initialQualityDeficitShare));
         pairToStart = pair;
         roomPairs_.emplace(ready.pairId, std::move(pair));
     }

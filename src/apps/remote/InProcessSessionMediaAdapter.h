@@ -51,6 +51,9 @@ public:
     SessionCommandResult SetRemoteAudioPlaybackMuted(bool muted) override;
     SessionCommandResult SetDirectScreenStreamPreference(
         const ScreenStreamPreferenceRequest& preference) override;
+    SessionCommandResult QueueDirectScreenStreamPreference(
+        const ScreenStreamPreferenceRequest& preference,
+        std::function<void(SessionCommandResult)> completion) override;
     SessionCommandResult RequestDirectSharedDisplaySwitch(
         const std::string& stableDisplayKey) override;
     void SetPreferredHardwareDecoderName(std::string name) override;

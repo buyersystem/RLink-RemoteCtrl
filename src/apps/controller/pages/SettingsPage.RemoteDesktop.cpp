@@ -5,10 +5,11 @@
 #include "SettingsPageUi.h"
 
 #include <algorithm>
-#include <cstdint>
-
 #include <QByteArray>
 #include <QComboBox>
+#include <QDoubleSpinBox>
+#include <QLocale>
+#include <cmath>
 #include <QFrame>
 #include <QHBoxLayout>
 #include <QLabel>
@@ -19,13 +20,25 @@
 #include <QVariant>
 #include <QVBoxLayout>
 #include <QWidget>
+#include <QWheelEvent>
 
 #include "src/apps/controller/ControllerMainWindowSupport.h"
 #include "src/apps/controller/RemoteCComboBox.h"
 #include "src/platform/win/FfmpegHardwareH264Encoder.h"
+#include "src/core/ScreenStreamPolicy.h"
+#include "src/core/ScreenFrameQualityPolicy.h"
+#include "src/core/SessionDiagnostics.h"
+#include "src/webrtc/IWebRtcSession.h"
 
 namespace remote::controller {
 namespace {
+
+class ScreenReferenceBppInput final : public QDoubleSpinBox {
+public:
+    using QDoubleSpinBox::QDoubleSpinBox;
+protected:
+    void wheelEvent(QWheelEvent* event) override { event->ignore(); }
+};
 
 void ConfigurePreferenceSelector(QComboBox* selector,
                                  const QSettings& settings,
@@ -150,6 +163,91 @@ void SettingsPage::BuildRemoteDesktopSettingsPage()
     captureLayout->addWidget(
         controls_.desktopCaptureSelector, 0, Qt::AlignVCenter);
     layout->addWidget(captureRow);
+
+    const auto [bppRow, bppLayout] = CreateSettingsRow(
+        page, QStringLiteral("视频码率上限系数"),
+        QStringLiteral("数值越低，视频码率上限越低、更省流量，但画面可能稍模糊。\n不担心流量时，可适当提高。"));
+    // Keep the same text/control columns as the surrounding settings rows.
+    auto* bppTextHost = bppLayout->itemAt(0)->widget();
+    for (auto* label : bppTextHost->findChildren<QLabel*>()) {
+        if (label->property("muted").toBool()) label->setWordWrap(true);
+    }
+    auto* bppControls = new QWidget(bppRow);
+    bppControls->setFixedWidth(kSettingsControlWidth);
+    auto* bppControlsLayout = new QHBoxLayout(bppControls);
+    bppControlsLayout->setContentsMargins(0, 0, 0, 0);
+    bppControlsLayout->setSpacing(10);
+    controls_.screenVideoTrafficEstimate = new QLabel(bppControls);
+    controls_.screenVideoTrafficEstimate->setObjectName(QStringLiteral("screenVideoTrafficEstimate"));
+    controls_.screenVideoTrafficEstimate->setWordWrap(true);
+    controls_.screenVideoTrafficEstimate->setProperty("muted", true);
+    bppControlsLayout->addWidget(controls_.screenVideoTrafficEstimate, 1);
+    controls_.screenVideoBitrateBppInput = new ScreenReferenceBppInput(bppRow);
+    auto* bppInput = controls_.screenVideoBitrateBppInput;
+    bppInput->setObjectName(QStringLiteral("screenVideoBitrateBppInput"));
+    bppInput->setLocale(QLocale::c());
+    bppInput->setDecimals(2);
+    bppInput->setRange(kMinimumScreenVideoBitrateBppHundredths / 100.0,
+                       kMaximumScreenVideoBitrateBppHundredths / 100.0);
+    bppInput->setSingleStep(0.01);
+    bppInput->setKeyboardTracking(false);
+    bppInput->setButtonSymbols(QAbstractSpinBox::NoButtons);
+    bppInput->setToolTip(QStringLiteral("输入 0.03～0.50，最多两位小数；默认 0.15。发送端按回车或移开焦点后动态应用，通常在下一次统计更新时生效（约 1 秒），无需重新连接。控制视频码率上限，不保证固定流量。"));
+    const auto configuredBpp = NormalizeScreenVideoBitrateBppHundredths(
+        currentSettings.value(
+            QStringLiteral("media/screenVideoBitrateBppHundredths"),
+            kDefaultScreenVideoBitrateBppHundredths).toUInt());
+    bppInput->setValue(configuredBpp / 100.0);
+    bppInput->setFixedWidth(100);
+    connect(bppInput, &QDoubleSpinBox::valueChanged, this, [this](double value) {
+        QSettings settings;
+        settings.setValue(QStringLiteral("media/screenVideoBitrateBppHundredths"),
+                          static_cast<std::uint32_t>(std::lround(value * 100.0)));
+        RefreshScreenVideoTrafficEstimate();
+        emit ScreenVideoBitrateBppChanged(static_cast<std::uint32_t>(std::lround(value * 100.0)));
+    });
+    connect(bppInput, &QDoubleSpinBox::textChanged, this, [this](const QString& text) {
+        bool valid = false;
+        const auto value = text.toDouble(&valid);
+        RefreshScreenVideoTrafficEstimate(valid ? value : -1.0);
+    });
+    bppControlsLayout->addWidget(bppInput, 0, Qt::AlignVCenter);
+    bppLayout->addWidget(bppControls, 0, Qt::AlignVCenter);
+    RefreshScreenVideoTrafficEstimate();
+    layout->addWidget(bppRow);
+
+    const auto [qualityRow, qualityLayout] = CreateSettingsRow(
+        page, QStringLiteral("网络波动画质取舍系数"),
+        QStringLiteral("此值影响网络波动下的行为。越大，越优先保持 FPS；\n越小，越优先保持码率（画面清晰）。"));
+    for (auto* label : qualityLayout->itemAt(0)->widget()->findChildren<QLabel*>()) {
+        if (label->property("muted").toBool()) label->setWordWrap(true);
+    }
+    auto* qualityControls = new QWidget(qualityRow);
+    qualityControls->setFixedWidth(kSettingsControlWidth);
+    auto* qualityControlsLayout = new QHBoxLayout(qualityControls);
+    qualityControlsLayout->setContentsMargins(0, 0, 0, 0);
+    qualityControlsLayout->addStretch(1);
+    controls_.screenQualityDeficitShareInput = new ScreenReferenceBppInput(qualityControls);
+    auto* qualityInput = controls_.screenQualityDeficitShareInput;
+    qualityInput->setObjectName(QStringLiteral("screenQualityDeficitShareInput"));
+    qualityInput->setLocale(QLocale::c());
+    qualityInput->setDecimals(2);
+    qualityInput->setRange(0.00, 1.00);
+    qualityInput->setSingleStep(0.01);
+    qualityInput->setKeyboardTracking(false);
+    qualityInput->setButtonSymbols(QAbstractSpinBox::NoButtons);
+    qualityInput->setToolTip(QStringLiteral("输入 0.00～1.00，最多两位小数；默认 0.50。发送端按回车或移开焦点后动态应用，无需重新连接。"));
+    qualityInput->setValue(ConfiguredScreenQualityDeficitShareHundredths() / 100.0);
+    qualityInput->setFixedWidth(100);
+    connect(qualityInput, &QDoubleSpinBox::valueChanged, this, [this](double value) {
+        const auto hundredths = NormalizeScreenQualityDeficitShareHundredths(
+            static_cast<std::uint32_t>(std::lround(value * 100.0)));
+        QSettings().setValue(QStringLiteral("media/screenQualityDeficitShareHundredths"), hundredths);
+        emit ScreenQualityDeficitShareChanged(hundredths);
+    });
+    qualityControlsLayout->addWidget(qualityInput, 0, Qt::AlignVCenter);
+    qualityLayout->addWidget(qualityControls, 0, Qt::AlignVCenter);
+    layout->addWidget(qualityRow);
 
     const auto [encoderRow, encoderLayout] = CreateSettingsRow(
         page, QStringLiteral("视频编码器"),
@@ -332,6 +430,68 @@ void SettingsPage::BuildRemoteDesktopSettingsPage()
     layout->addWidget(restartHint);
     layout->addStretch(1);
     detailStack_->addWidget(page);
+}
+
+void SettingsPage::UpdateScreenVideoTrafficEstimate(const SessionDiagnosticsSnapshot& diagnostics)
+{
+    std::vector<std::array<std::uint32_t, 3>> specifications;
+    std::uint64_t measuredBps = 0;
+    bool measuredAvailable = false;
+    for (const auto& peer : diagnostics.peerConnections) {
+        for (const auto& stream : peer.stats.rtpStreams) {
+            if (stream.direction != RtpStreamDirection::kOutbound || stream.kind != "video" ||
+                stream.slot != kScreenMainVideoSlot || stream.sourceWidth == 0 ||
+                stream.configuredOutputWidth == 0 || stream.configuredOutputHeight == 0 ||
+                stream.configuredMaxFrameRate == 0) continue;
+            // One screen connection per peer; never count RTX/SSRC records twice.
+            specifications.push_back({stream.configuredOutputWidth,
+                stream.configuredOutputHeight, stream.configuredMaxFrameRate});
+            if (stream.sampleWindowMs > 0 && peer.stats.transport.collected) {
+                measuredBps += stream.bitrateBps;
+                measuredAvailable = true;
+            }
+            break;
+        }
+    }
+    if (screenTrafficSpecifications_ == specifications && screenMeasuredTrafficBps_ == measuredBps &&
+        screenMeasuredTrafficAvailable_ == measuredAvailable) return;
+    screenTrafficSpecifications_ = std::move(specifications);
+    screenMeasuredTrafficBps_ = measuredBps;
+    screenMeasuredTrafficAvailable_ = measuredAvailable;
+    RefreshScreenVideoTrafficEstimate();
+}
+
+void SettingsPage::RefreshScreenVideoTrafficEstimate(double previewBpp)
+{
+    auto* estimate = controls_.screenVideoTrafficEstimate;
+    auto* input = controls_.screenVideoBitrateBppInput;
+    if (!estimate || !input) return;
+    const auto bpp = std::isfinite(previewBpp) && previewBpp >= input->minimum() &&
+        previewBpp <= input->maximum() ? previewBpp : input->value();
+    const auto hundredths = static_cast<std::uint32_t>(std::lround(bpp * 100.0));
+    const auto capacityFor = [hundredths](const std::array<std::uint32_t, 3>& specification) {
+        return ResolveScreenStreamPolicy(specification[0], specification[1],
+            {specification[0], specification[1], specification[2], hundredths}).maxBitrateBps;
+    };
+    std::uint64_t bitsPerSecond = 0;
+    QString basis;
+    if (screenTrafficSpecifications_.empty()) {
+        bitsPerSecond = capacityFor({1920, 1080, 60});
+        basis = QStringLiteral("1080p60 示例");
+    } else {
+        for (const auto& specification : screenTrafficSpecifications_) bitsPerSecond += capacityFor(specification);
+        const auto& first = screenTrafficSpecifications_.front();
+        basis = screenTrafficSpecifications_.size() == 1
+            ? QStringLiteral("%1×%2 · %3 FPS").arg(first[0]).arg(first[1]).arg(first[2])
+            : QStringLiteral("%1 路屏幕合计").arg(screenTrafficSpecifications_.size());
+    }
+    const auto measurement = screenMeasuredTrafficAvailable_
+        ? QStringLiteral("实测 %1 MB/s").arg(screenMeasuredTrafficBps_ / 8'000'000.0, 0, 'f', 2)
+        : basis;
+    const auto text = QStringLiteral("上限 %1 MB/s\n%2")
+        .arg(bitsPerSecond / 8'000'000.0, 0, 'f', 2).arg(measurement);
+    if (estimate->text() != text) estimate->setText(text);
+    estimate->setToolTip(QStringLiteral("%1\n%2\n上限为屏幕视频码率上限；连接参考上限内部按它的 1.05 倍计算。实际发送会随网络、画面和场景策略变化。实测来自屏幕 RTP 采样，不等于任务管理器的全部网卡流量。").arg(text, basis));
 }
 
 }  // namespace remote::controller

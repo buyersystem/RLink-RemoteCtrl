@@ -126,6 +126,9 @@ QLabel#statsEmptyText,
 QLabel#offlineState {
     color: #A8B5C7;
 }
+QCheckBox#visionApiConsentCheckBox {
+    color: #DCE7F5;
+}
 QFrame[card="true"],
 QFrame#settingRow,
 QFrame#emptyState,
@@ -165,6 +168,8 @@ QPushButton#settingsCategoryButton:checked {
     color: #8EA5FF;
 }
 QLineEdit,
+QDoubleSpinBox#screenVideoBitrateBppInput,
+QDoubleSpinBox#screenQualityDeficitShareInput,
 QLineEdit#deviceIdInput,
 QLineEdit#roomIdInput,
 QLineEdit#assistDeviceIdInput,
@@ -177,6 +182,8 @@ QComboBox#capacitySelector {
     selection-background-color: #4962D7;
 }
 QLineEdit:hover,
+QDoubleSpinBox#screenVideoBitrateBppInput:hover,
+QDoubleSpinBox#screenQualityDeficitShareInput:hover,
 QLineEdit#assistDeviceIdInput:hover,
 QLineEdit#assistVerificationInput:hover,
 QComboBox:hover {
@@ -184,6 +191,8 @@ QComboBox:hover {
     border-color: #49617E;
 }
 QLineEdit:focus,
+QDoubleSpinBox#screenVideoBitrateBppInput:focus,
+QDoubleSpinBox#screenQualityDeficitShareInput:focus,
 QLineEdit#deviceIdInput:focus,
 QLineEdit#roomIdInput:focus,
 QLineEdit#assistDeviceIdInput:focus,
@@ -195,6 +204,8 @@ QComboBox#capacitySelector:focus {
     color: #F8FAFF;
 }
 QLineEdit:disabled,
+QDoubleSpinBox#screenVideoBitrateBppInput:disabled,
+QDoubleSpinBox#screenQualityDeficitShareInput:disabled,
 QComboBox:disabled,
 QComboBox#capacitySelector:disabled {
     background: #111A27;
@@ -293,6 +304,12 @@ QFrame#statsMetricChip {
 QFrame#statsMetricChip[tone="good"] {
     background: #102D27;
     border-color: #1E5948;
+}
+QFrame#statsMetricChip[stackedMetrics="true"][tone="good"] QLabel#statsChipValue {
+    color: #4ED89A;
+}
+QFrame#statsMetricChip[stackedMetrics="true"] QLabel#statsChipLabel {
+    color: #9AA8BB;
 }
 QFrame#statsMetricChip[tone="warning"] {
     background: #302718;

@@ -25,12 +25,14 @@
 #include "src/platform/win/MfH264EncoderCapabilityProbe.h"
 #include "src/webrtc/VideoDecoderRuntimeStatus.h"
 #include "src/webrtc/VideoEncoderRuntimeStatus.h"
+#include "media_intelligence/core/CalibratedStreamQualityModel.h"
 
 namespace remote {
 
 class WebRtcRuntime;
 class LibWebRtcSession;
 class WindowsCursorMonitor;
+class IRemoteVisionFrameAnalyzer;
 struct WindowsCursorObservation;
 struct RoomMemberActionEnvelope;
 
@@ -53,10 +55,21 @@ struct InProcessSessionEngineOptions {
     bool includeLoopbackAdapter = false;
     bool enableRealDesktopCapture = true;
     bool enableRealCameraCapture = true;
+    // Host-owned initial preference; live edits are published through the
+    // engine setter and applied on stats completion without capture work.
+    std::function<std::uint32_t()> screenVideoBitrateBppProvider;
+    std::function<std::uint32_t()> screenQualityDeficitShareProvider;
     DesktopCaptureImplementation desktopCaptureImplementation =
         DesktopCaptureImplementation::kNativeDxgi;
     bool contentAnalyzerEnabled = false;
     std::uint32_t contentAnalyzerRateHz = 3;
+    std::shared_ptr<IRemoteVisionFrameAnalyzer> remoteVisionAnalyzer;
+    // Optional immutable calibration measured for this codec/backend/profile.
+    // No built-in sample table or generic QP threshold is promoted to verified.
+    std::shared_ptr<const media_intelligence::CalibratedStreamQualityModel> screenQualityCalibration;
+    // Allow a shared H.264 reference curve when no matching measurement is
+    // available. Runtime QP/processing and user/network limits still gate it.
+    bool allowScreenReferenceQualityModel = true;
     VideoEncoderPreference videoEncoderPreference =
         VideoEncoderPreference::kAutomatic;
     FfmpegX264Preset ffmpegX264Preset = FfmpegX264Preset::kMedium;
@@ -117,6 +130,8 @@ public:
     SessionEngineSnapshot Snapshot() const override;
     SessionEngineCapabilities Capabilities() const override;
     SessionDiagnosticsSnapshot Diagnostics() const override;
+    SessionCommandResult SetScreenVideoBitrateBpp(std::uint32_t hundredths) override;
+    SessionCommandResult SetScreenQualityDeficitShare(std::uint32_t hundredths) override;
 
     SessionCommandResult ConnectDirectDevice(
         const DirectSessionConnectRequest& request) override;
@@ -172,6 +187,10 @@ public:
     SessionCommandResult SetRoomScreenStreamPreference(
         const std::string& pairId,
         const ScreenStreamPreferenceRequest& preference) override;
+    SessionCommandResult QueueRoomScreenStreamPreference(
+        const std::string& pairId,
+        const ScreenStreamPreferenceRequest& preference,
+        std::function<void(SessionCommandResult)> completion) override;
     SessionCommandResult RequestRemoteSharedDisplaySwitch(
         const std::string& pairId,
         const std::string& stableDisplayKey) override;
@@ -208,6 +227,14 @@ private:
         const ClipboardMessage& message);
     SessionCommandResult SetDirectScreenStreamPreference(
         const ScreenStreamPreferenceRequest& preference);
+    SessionCommandResult QueueDirectScreenStreamPreference(
+        const ScreenStreamPreferenceRequest& preference,
+        std::function<void(SessionCommandResult)> completion);
+    SessionCommandResult SendRoomScreenStreamPreference(
+        const std::string& pairId,
+        const ScreenStreamPreferenceRequest& preference,
+        bool queued,
+        std::function<void(SessionCommandResult)> completion);
     SessionCommandResult RequestDirectSharedDisplaySwitch(
         const std::string& stableDisplayKey);
     SessionCommandResult SetRemoteAudioPlaybackMuted(bool muted);
@@ -391,6 +418,8 @@ private:
     void StartStatsPolling();
     void StopStatsPolling();
     void PollStatsOnce();
+    bool DispatchScreenReceiverFeedback(const std::string& pairId, const std::string& label,
+        std::span<const std::uint8_t> payload);
 
     class RoomPairBridge;
     struct RoomPairRuntime;
@@ -416,8 +445,11 @@ private:
     std::unique_ptr<ISignalingClient> signaling_;
     SignalingClientConfig signalingConfig_;
     InProcessSessionEngineOptions options_;
+    std::optional<std::uint32_t> liveScreenQualityDeficitShare_;
+    std::uint32_t ScreenQualityDeficitShareFromProvider() const;
     std::unique_ptr<LibWebRtcSession> webRtcSession_;
     std::unique_ptr<SessionControllerBase> sessionController_;
+    std::uint64_t directSessionGeneration_ = 0;
     std::unordered_map<std::string, std::shared_ptr<RoomPairRuntime>>
         roomPairs_;
     std::vector<std::jthread> retiredRoomPairThreads_;

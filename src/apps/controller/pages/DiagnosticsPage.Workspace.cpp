@@ -13,6 +13,7 @@
 #include <QVBoxLayout>
 
 #include "DiagnosticsCardsWidget.h"
+#include "src/apps/controller/CurrentPageStack.h"
 #include "src/apps/controller/ControllerMainWindowSupport.h"
 #include "src/core/RemoteInputTelemetry.h"
 
@@ -104,12 +105,18 @@ void DiagnosticsPage::BuildWorkspace()
     makeCategory(QStringLiteral("鼠标与键盘"), 5);
     makeCategory(QStringLiteral("远程粘贴"), 6);
     makeCategory(QStringLiteral("最近错误"), 7);
+    makeCategory(QStringLiteral("视觉分析性能"), 8);
+    makeCategory(QStringLiteral("内容策略观察"), 9);
     debugCategoryLayout->addStretch(1);
     debugWorkspace->addWidget(debugCategories, 0, Qt::AlignTop);
 
-    auto* detailStack = new QStackedWidget(this);
+    // Let the outer scroll area's layout size the selected detail page.
+    // Fixed-height tracking is only for the animated room workspace.
+    auto* detailStack = new CurrentPageStack(this, false);
+    detailStack_ = detailStack;
     detailStack->setObjectName(QStringLiteral("settingsDetailStack"));
-    debugWorkspace->addWidget(detailStack, 1);
+    debugWorkspace->addItem(new detail::CurrentPageStackItem(detailStack));
+    debugWorkspace->setStretch(debugWorkspace->count() - 1, 1);
     const auto makeDetail =
         [this, detailStack](const QString& title,
                             const QString& description,
@@ -328,10 +335,62 @@ void DiagnosticsPage::BuildWorkspace()
              QStringLiteral("房间错误"), true);
     errorLayout->addStretch(1);
 
+    auto* visionPerformanceLayout = makeDetail(
+        QStringLiteral("视觉分析性能"),
+        QStringLiteral(
+            "显示实际远控最近一次远程视觉缩略图的处理开销；测试按钮的数据不计入。"));
+    addValue(
+        visionPerformanceLayout,
+        QStringLiteral("visionScaleConvertTime"),
+        QStringLiteral("缩放转换耗时"));
+    addValue(
+        visionPerformanceLayout,
+        QStringLiteral("visionJpegEncodeTime"),
+        QStringLiteral("JPEG 编码耗时"));
+    addValue(
+        visionPerformanceLayout,
+        QStringLiteral("visionJpegSize"),
+        QStringLiteral("JPEG 大小"));
+    addValue(
+        visionPerformanceLayout,
+        QStringLiteral("visionReturnedScene"),
+        QStringLiteral("最近返回场景"));
+    addValue(
+        visionPerformanceLayout,
+        QStringLiteral("visionReturnedConfidence"),
+        QStringLiteral("返回置信度"));
+    addValue(visionPerformanceLayout, QStringLiteral("visionAcceptedScene"),
+             QStringLiteral("当前采用场景"));
+    addValue(visionPerformanceLayout, QStringLiteral("visionResultAge"),
+             QStringLiteral("最近结果年龄"));
+    auto* visionResultHint = new QLabel(QStringLiteral(
+        "显示最近一次成功返回的分类，包括尚未通过稳定性过滤的结果。"));
+    visionResultHint->setWordWrap(true);
+    visionPerformanceLayout->addWidget(visionResultHint);
+    visionPerformanceLayout->addStretch(1);
+
+    auto* policyLayout = makeDetail(
+        QStringLiteral("内容策略观察"),
+        QStringLiteral("网络受限时按稳定场景分配码率、分辨率和发送帧率；区分候选与实际应用参数。"));
+    policyCardsWidget_ = new DiagnosticsCardsWidget(policyLayout->parentWidget());
+    policyCardsWidget_->setObjectName(QStringLiteral("contentPolicyCards"));
+    static_cast<DiagnosticsCardsWidget*>(policyCardsWidget_)->SetSections({},
+        QStringLiteral("暂无策略数据\n开启内容感知并共享屏幕后，按连接显示场景与执行状态。"));
+    policyLayout->addWidget(policyCardsWidget_);
+    auto* policyHint = new QLabel(QStringLiteral(
+        "网络无明显压力时保持当前规格。参考码率不是强制需求；受限候选经连续窗口确认后才会应用。"));
+    policyHint->setWordWrap(true);
+    policyHint->setProperty("muted", true);
+    policyLayout->addWidget(policyHint);
+    policyLayout->addStretch(1);
+
     connect(debugCategoryGroup, &QButtonGroup::idClicked, this,
             [this, detailStack](int index) {
                 detailStack->setCurrentIndex(index);
-                if (index == 2) emit RefreshRequested();
+                for (auto it = values_.cbegin(); it != values_.cend(); ++it) {
+                    ApplyValue(it.key());
+                }
+                emit RefreshRequested();
             });
     firstCategory->setChecked(true);
     detailStack->setCurrentIndex(0);

@@ -11,7 +11,7 @@
 #include <stop_token>
 #include <thread>
 
-#include "src/media_intelligence/core/ContentMotionAnalyzer.h"
+#include "media_intelligence/core/ContentMotionAnalyzer.h"
 
 namespace remote::media_intelligence {
 

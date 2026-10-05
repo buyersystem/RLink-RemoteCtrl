@@ -2,17 +2,25 @@
 // Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd)
 
 #include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <cstdint>
 #include <cstring>
 #include <functional>
 #include <memory>
 #include <thread>
+#include <utility>
 
 #include <Windows.h>
 
 #include <QApplication>
 #include <QAbstractItemView>
 #include <QCryptographicHash>
+#include <QDoubleSpinBox>
+#include <QComboBox>
+#include <QLineEdit>
+#include <QValidator>
+#include <cmath>
 #include <QDateTime>
 #include <QDir>
 #include <QEvent>
@@ -29,14 +37,18 @@
 #include <QLocalServer>
 #include <QLocalSocket>
 #include <QPointer>
+#include <QPushButton>
 #include <QRandomGenerator>
 #include <QScreen>
+#include <QScrollBar>
 #include <QSettings>
 #include <QStandardPaths>
 #include <QStringList>
 #include <QSysInfo>
 #include <QSystemTrayIcon>
+#include <QStackedWidget>
 #include <QTextStream>
+#include <QToolButton>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QUuid>
@@ -61,9 +73,16 @@
 #include "src/platform/win/FfmpegHardwareH264Encoder.h"
 #include "src/platform/win/VideoDecoderProbePolicy.h"
 #include "src/apps/controller/ControllerMainWindow.h"
+#include "src/apps/controller/pages/SettingsPage.h"
+#include "src/apps/controller/pages/DiagnosticsPage.h"
+#include "src/apps/controller/pages/ContentPolicyCards.h"
+#include "src/apps/controller/ControllerMainWindowSupport.h"
+#include "src/apps/controller/ui/RemoteCTheme.h"
 #include "src/apps/controller/RemoteCDialog.h"
 #include "src/apps/remote/RemoteCApplicationCoordinator.h"
+#include "src/apps/remote/adapters/VisionApiFrameAnalyzer.h"
 #include "src/auth/AuthConfig.h"
+#include "src/core/ScreenStreamPolicy.h"
 #include "src/auth/DpapiTokenStore.h"
 #include "src/signaling/QtWebSocketSignalingClient.h"
 
@@ -660,12 +679,16 @@ bool IsUtilityInvocation(const QStringList& arguments)
             argument == QStringLiteral(
                 "--screen-share-coordinator-self-test") ||
             argument == QStringLiteral("--theme-roundtrip-self-test") ||
+            argument == QStringLiteral("--content-policy-layout-preview") ||
+            argument == QStringLiteral("--screen-bpp-settings-self-test") ||
             argument == QStringLiteral("--signaling-policy-self-test") ||
             argument == QStringLiteral("--decoder-optimal-probe") ||
             argument.startsWith(
                 QStringLiteral("--encoder-optimal-probe=")) ||
             argument == QStringLiteral(
                 "--ffmpeg-x264-encoder-self-test") ||
+            argument.startsWith(
+                QStringLiteral("--ffmpeg-hardware-encoder-self-test=")) ||
             argument.startsWith(
                 QStringLiteral("--desktop-capture-self-test"))) {
             return true;
@@ -904,6 +927,15 @@ std::unique_ptr<remote::app::InProcessSessionEngine> CreateSessionEngine(
         hardwareProfile.graphicsEnumerationError;
     engineOptions.desktopCaptureImplementation =
         ConfiguredDesktopCaptureImplementation();
+    engineOptions.screenVideoBitrateBppProvider = [] {
+        return remote::NormalizeScreenVideoBitrateBppHundredths(
+            QSettings().value(
+                QStringLiteral("media/screenVideoBitrateBppHundredths"),
+                remote::kDefaultScreenVideoBitrateBppHundredths).toUInt());
+    };
+    engineOptions.screenQualityDeficitShareProvider = [] {
+        return remote::controller::detail::ConfiguredScreenQualityDeficitShareHundredths();
+    };
 #if defined(RLINK_ENABLE_CONTENT_ANALYZER) && \
     RLINK_ENABLE_CONTENT_ANALYZER
     engineOptions.contentAnalyzerEnabled = mediaSettings.value(
@@ -916,6 +948,111 @@ std::unique_ptr<remote::app::InProcessSessionEngine> CreateSessionEngine(
                 3).toInt(),
             2,
             5));
+#if defined(RLINK_ENABLE_REMOTE_VISION_API) && \
+    RLINK_ENABLE_REMOTE_VISION_API
+    const QString analyzerMode = mediaSettings.value(
+        QStringLiteral("media/contentAnalyzerMode"),
+        QStringLiteral("local")).toString();
+    const std::uint64_t configRevision = mediaSettings.value(
+        QStringLiteral("media/visionApiConfigRevision"),
+        0).toULongLong();
+    const std::uint64_t testedRevision = mediaSettings.value(
+        QStringLiteral("media/visionApiTestedRevision"),
+        0).toULongLong();
+    const std::uint64_t consentRevision = mediaSettings.value(
+        QStringLiteral("media/visionApiConsentRevision"),
+        0).toULongLong();
+    const QString credentialId = mediaSettings.value(
+        QStringLiteral("media/visionApiCredentialId")).toString();
+    if (engineOptions.contentAnalyzerEnabled &&
+        analyzerMode == QStringLiteral("vision_api") &&
+        configRevision != 0 && testedRevision == configRevision &&
+        consentRevision == 1 && !credentialId.isEmpty()) {
+        remote::media_intelligence::VisionApiRuntimeConfig visionConfig;
+        const QString visionProvider = mediaSettings.value(
+            QStringLiteral("media/visionApiProvider"),
+            QStringLiteral("openai_compatible")).toString();
+        if (visionProvider == QStringLiteral("deepseek")) {
+            visionConfig.endpoint =
+                remote::media_intelligence::DeepSeekVisionApiPreset();
+        }
+        visionConfig.endpoint.providerId = ToUtf8(visionProvider);
+        visionConfig.endpoint.baseUrl = ToUtf8(mediaSettings.value(
+            QStringLiteral("media/visionApiBaseUrl")).toString().trimmed());
+        visionConfig.endpoint.model = ToUtf8(mediaSettings.value(
+            QStringLiteral("media/visionApiModel")).toString().trimmed());
+        visionConfig.endpoint.credentialId = ToUtf8(credentialId);
+        visionConfig.endpoint.imageDetail =
+            remote::media_intelligence::VisionImageDetail::kLow;
+        visionConfig.endpoint.timeoutMs = 8000;
+        visionConfig.endpoint.maximumResponseBytes = 16 * 1024;
+        visionConfig.minimumRequestIntervalMs =
+            remote::media_intelligence::NormalizeVisionApiRequestIntervalMs(
+                mediaSettings.value(
+                    QStringLiteral("media/visionApiRequestIntervalSeconds"),
+                    remote::media_intelligence::kDefaultVisionApiRequestIntervalMs / 1000.0).toDouble());
+        visionConfig.maximumConsecutiveFailures = 3;
+        visionConfig.circuitBreakDurationMs = 5 * 60 * 1000;
+        const auto activationCheck = [configRevision] {
+            const QSettings current;
+            return current.value(
+                       QStringLiteral("media/contentAnalyzerEnabled"),
+                       false).toBool() &&
+                current.value(
+                       QStringLiteral("media/contentAnalyzerMode"),
+                       QStringLiteral("local")).toString() ==
+                    QStringLiteral("vision_api") &&
+                current.value(
+                       QStringLiteral("media/visionApiConsentRevision"),
+                       0).toULongLong() == 1 &&
+                current.value(
+                       QStringLiteral("media/visionApiConfigRevision"),
+                       0).toULongLong() == configRevision &&
+                current.value(
+                       QStringLiteral("media/visionApiTestedRevision"),
+                       0).toULongLong() == configRevision;
+        };
+        engineOptions.remoteVisionAnalyzer =
+            remote::app::VisionApiFrameAnalyzer::Create(
+                std::move(visionConfig),
+                {
+                    .activationCheck = activationCheck,
+                    .encodingOptionsProvider = [] {
+                        const QSettings current;
+                        return remote::app::VisionApiFrameAnalyzer::
+                            FrameEncodingOptions{
+                                static_cast<std::uint32_t>(std::clamp(
+                                    current.value(
+                                        QStringLiteral(
+                                            "media/visionApiMaximumImageDimension"),
+                                        remote::media_intelligence::kDefaultVisionApiMaximumImageDimension).toInt(),
+                                    256,
+                                    1280)),
+                                std::clamp(
+                                    current.value(
+                                        QStringLiteral(
+                                            "media/visionApiJpegQuality"),
+                                        60).toInt(),
+                                    30,
+                                    90)};
+                    },
+                    .maximumImageDimension =
+                        static_cast<std::uint32_t>(std::clamp(
+                            mediaSettings.value(
+                                QStringLiteral(
+                                    "media/visionApiMaximumImageDimension"),
+                                remote::media_intelligence::kDefaultVisionApiMaximumImageDimension).toInt(),
+                            256,
+                            1280)),
+                    .jpegQuality = std::clamp(
+                        mediaSettings.value(
+                            QStringLiteral("media/visionApiJpegQuality"),
+                            60).toInt(),
+                        30,
+                        90),
+                });
+    }
+#endif
 #endif
     engineOptions.videoEncoderPreference =
         ConfiguredVideoEncoderPreference();
@@ -1831,6 +1968,20 @@ int main(int argc, char* argv[])
     if (application.arguments().contains(
             QStringLiteral("--desktop-capture-self-test")) ||
         !desktopCaptureSelfTestBackend.isEmpty()) {
+        class CaptureSmokeSink final : public webrtc::VideoSinkInterface<webrtc::VideoFrame> {
+        public:
+            void OnFrame(const webrtc::VideoFrame&) override { ++frames; }
+            std::atomic<std::uint64_t> frames{0};
+        } smokeSink;
+        unsigned testFps = 60;
+        for (const QString& argument : application.arguments()) {
+            constexpr auto prefix = "--desktop-capture-self-test-fps=";
+            if (argument.startsWith(QString::fromLatin1(prefix))) {
+                bool valid = false;
+                testFps = argument.mid(static_cast<int>(std::char_traits<char>::length(prefix))).toUInt(&valid);
+                if (!valid || testFps < 5 || testFps > 120) return 1;
+            }
+        }
         auto implementation = ConfiguredDesktopCaptureImplementation();
         if (desktopCaptureSelfTestBackend == QStringLiteral("libwebrtc")) {
             implementation =
@@ -1843,7 +1994,13 @@ int main(int argc, char* argv[])
         auto source =
             webrtc::make_ref_counted<remote::WindowsDesktopCaptureSource>(
                 implementation);
+        source->SetTargetFrameRate(testFps);
+        webrtc::VideoSinkWants smokeWants;
+        smokeWants.max_framerate_fps = testFps;
+        source->AddOrUpdateSink(&smokeSink, smokeWants);
         const bool ready = source->StartCapture();
+        bool activityReady = false;
+        bool deliveryReady = false;
         QTextStream output(stdout);
         output << "DESKTOP_CAPTURE_FIRST_FRAME="
                << (ready ? "YES" : "NO") << Qt::endl;
@@ -1876,8 +2033,30 @@ int main(int argc, char* argv[])
                    << Qt::endl;
         }
         if (ready) {
+            const auto deliveredBefore = smokeSink.frames.load();
+            const auto dispatchBefore = source->CaptureRuntimeStats().totalDeliveredFrames;
+            const auto deliveryStarted = std::chrono::steady_clock::now();
             std::this_thread::sleep_for(std::chrono::seconds(3));
+            const double duration = std::chrono::duration<double>(
+                std::chrono::steady_clock::now() - deliveryStarted).count();
+            const auto sinkFrames = smokeSink.frames.load() - deliveredBefore;
             const auto stats = source->CaptureRuntimeStats();
+            const auto dispatchFrames = stats.totalDeliveredFrames - dispatchBefore;
+            const double sinkFps = sinkFrames / duration;
+            const double dispatchFps = dispatchFrames / duration;
+            // Libwebrtc's static-desktop suppression may produce fewer input
+            // frames by design. Judge proxy loss against actual dispatch,
+            // rather than falsely requiring static capture to run at its cap.
+            deliveryReady = sinkFrames + 1 >= dispatchFrames * .98 &&
+                sinkFrames <= dispatchFrames + 1 && sinkFps <= testFps * 1.10;
+            if (implementation == remote::DesktopCaptureImplementation::kNativeDxgi)
+                deliveryReady = deliveryReady && sinkFps >= testFps * .90;
+            output << "DESKTOP_CAPTURE_USER_TARGET_FPS=" << testFps << Qt::endl;
+            output << "DESKTOP_CAPTURE_DISPATCH_INPUT_FPS=" << QString::number(dispatchFps, 'f', 3) << Qt::endl;
+            output << "DESKTOP_CAPTURE_ACTUAL_SINK_FPS=" << QString::number(sinkFps, 'f', 3) << Qt::endl;
+            output << "DESKTOP_CAPTURE_NO_SPURIOUS_SINK_DROPS=" << (deliveryReady ? "PASS" : "FAIL") << Qt::endl;
+            activityReady = stats.totalDeliveredFrames > 0 && stats.activityState !=
+                remote::WindowsDesktopCaptureSource::CaptureActivityState::kStarting;
             QString activity = QStringLiteral("STARTING");
             if (stats.activityState ==
                 remote::WindowsDesktopCaptureSource::
@@ -1890,6 +2069,8 @@ int main(int argc, char* argv[])
             }
             output << "DESKTOP_CAPTURE_ACTIVITY=" << activity
                    << Qt::endl;
+            output << "DESKTOP_CAPTURE_ACTIVITY_INITIALIZED="
+                   << (activityReady ? "PASS" : "FAIL") << Qt::endl;
             output << "DESKTOP_CAPTURE_ATTEMPT_FPS="
                    << QString::number(
                           stats.captureAttemptsPerSecond, 'f', 3)
@@ -1920,10 +2101,11 @@ int main(int argc, char* argv[])
                    << Qt::endl;
         }
         source->StopCapture();
+        source->RemoveSink(&smokeSink);
         output << "DESKTOP_CAPTURE_STOPPED=YES" << Qt::endl;
         source = nullptr;
         output << "DESKTOP_CAPTURE_SOURCE_RELEASED=YES" << Qt::endl;
-        return ready ? 0 : 1;
+        return ready && activityReady && deliveryReady ? 0 : 1;
     }
 
     if (application.arguments().contains(QStringLiteral("--status-once"))) {
@@ -1955,6 +2137,428 @@ int main(int argc, char* argv[])
         }
         engine.Stop();
         return ready ? 0 : 1;
+    }
+
+    if (application.arguments().contains(QStringLiteral("--screen-bpp-settings-self-test"))) {
+        // Exercise actual input validation/persistence without changing user settings.
+        QTemporaryDir testSettingsDirectory;
+        if (!testSettingsDirectory.isValid()) return 1;
+        QSettings::setDefaultFormat(QSettings::IniFormat);
+        QSettings::setPath(QSettings::IniFormat, QSettings::UserScope,
+                           testSettingsDirectory.path());
+        application.setOrganizationName(QStringLiteral("RLinkSelfTests"));
+        application.setApplicationName(QStringLiteral("ScreenConnectionBpp"));
+        auto testEngine = std::make_unique<remote::app::InProcessSessionEngine>();
+        auto* testMedia = testEngine->MediaAccess();
+        remote::controller::ControllerMainWindow testWindow(
+            std::move(testEngine), false, testMedia);
+        testWindow.setAttribute(Qt::WA_DontShowOnScreen, true);
+        testWindow.resize(1600, 1000);
+        auto* settingsPage = testWindow.findChild<remote::controller::SettingsPage*>();
+        if (!settingsPage) return 1;
+        auto& page = *settingsPage;
+        if (auto* pages = qobject_cast<QStackedWidget*>(page.parentWidget())) pages->setCurrentWidget(&page);
+        page.setAttribute(Qt::WA_DontShowOnScreen, true);
+        page.DetailStack()->setCurrentIndex(1);
+        testWindow.show();
+        page.show();
+        QCoreApplication::processEvents(QEventLoop::AllEvents);
+        auto* input = page.Controls().screenVideoBitrateBppInput;
+        bool passed = input && input->minimum() == 0.03 && input->maximum() == 0.50 &&
+            input->decimals() == 2 && input->value() == 0.15;
+        QTextStream output(stdout);
+        output << "SCREEN_BPP_INPUT_RANGE_AND_DEFAULT=" << (passed ? "PASS" : "FAIL") << Qt::endl;
+        auto* lineEdit = input ? input->findChild<QLineEdit*>() : nullptr;
+        bool validationPassed = lineEdit && lineEdit->validator();
+        if (validationPassed) {
+            for (const QString& value : {QStringLiteral("0.03"), QStringLiteral("0.17"), QStringLiteral("0.50")}) {
+                QString text = value;
+                int position = text.size();
+                validationPassed = validationPassed && lineEdit->validator()->validate(text, position) == QValidator::Acceptable;
+            }
+            for (const QString& value : {QStringLiteral("0.02"), QStringLiteral("0.51"), QStringLiteral("0.031"), QStringLiteral("abc")}) {
+                QString text = value;
+                int position = text.size();
+                validationPassed = validationPassed && lineEdit->validator()->validate(text, position) != QValidator::Acceptable;
+            }
+        }
+        passed = passed && validationPassed;
+        output << "SCREEN_BPP_INPUT_REJECTS_OUT_OF_RANGE_AND_EXTRA_DECIMALS=" << (validationPassed ? "PASS" : "FAIL") << Qt::endl;
+        std::uint32_t lastPublishedBpp = 0;
+        unsigned publishedBppCount = 0;
+        QObject::connect(&page, &remote::controller::SettingsPage::ScreenVideoBitrateBppChanged,
+            &page, [&](std::uint32_t value) { lastPublishedBpp = value; ++publishedBppCount; });
+        for (const auto hundredths : {3u, 10u, 17u, 20u, 25u, 30u, 40u, 50u}) {
+            if (input) input->setValue(hundredths / 100.0);
+            QSettings settings;
+            settings.sync();
+            passed = passed && settings.value(
+                QStringLiteral("media/screenVideoBitrateBppHundredths")).toUInt() == hundredths;
+        }
+        passed = passed && lastPublishedBpp == 50 && publishedBppCount == 8;
+        output << "SCREEN_BPP_INPUT_PERSISTS_CUSTOM_VALUES=" << (passed ? "PASS" : "FAIL") << Qt::endl;
+        page.close();
+        remote::controller::SettingsPage restoredPage;
+        passed = passed && restoredPage.Controls().screenVideoBitrateBppInput->value() == 0.50;
+        output << "SCREEN_BPP_SETTINGS_RELOAD=" << (passed ? "PASS" : "FAIL") << Qt::endl;
+        auto* qualityInput = page.Controls().screenQualityDeficitShareInput;
+        bool qualityPassed = qualityInput && qualityInput->minimum() == 0.00 &&
+            qualityInput->maximum() == 1.00 && qualityInput->decimals() == 2 &&
+            qualityInput->singleStep() == 0.01 && qualityInput->value() == 0.50 &&
+            !qualityInput->keyboardTracking() &&
+            remote::controller::detail::ConfiguredScreenQualityDeficitShareHundredths() == 50;
+        output << "SCREEN_QUALITY_DEFICIT_RANGE_AND_DEFAULT=" <<
+            (qualityPassed ? "PASS" : "FAIL") << Qt::endl;
+        auto* qualityEdit = qualityInput ? qualityInput->findChild<QLineEdit*>() : nullptr;
+        bool qualityValidationPassed = qualityEdit && qualityEdit->validator();
+        if (qualityValidationPassed) {
+            for (const QString& value : {QStringLiteral("0"), QStringLiteral("0.00"), QStringLiteral("0.03"), QStringLiteral("0.23"), QStringLiteral("0.80"), QStringLiteral("0.99"), QStringLiteral("1"), QStringLiteral("1.00")}) {
+                QString text = value;
+                int position = text.size();
+                qualityValidationPassed = qualityValidationPassed &&
+                    qualityEdit->validator()->validate(text, position) == QValidator::Acceptable;
+            }
+            for (const QString& value : {QStringLiteral("-0.01"), QStringLiteral("1.01"), QStringLiteral("1.001"), QStringLiteral("0.201"), QStringLiteral("abc")}) {
+                QString text = value;
+                int position = text.size();
+                qualityValidationPassed = qualityValidationPassed &&
+                    qualityEdit->validator()->validate(text, position) != QValidator::Acceptable;
+            }
+        }
+        qualityPassed = qualityPassed && qualityValidationPassed;
+        output << "SCREEN_QUALITY_DEFICIT_INPUT_VALIDATION=" <<
+            (qualityValidationPassed ? "PASS" : "FAIL") << Qt::endl;
+        std::uint32_t lastPublishedQualityShare = 0;
+        unsigned publishedQualityShareCount = 0;
+        QObject::connect(&page, &remote::controller::SettingsPage::ScreenQualityDeficitShareChanged,
+            &page, [&](std::uint32_t value) { lastPublishedQualityShare = value; ++publishedQualityShareCount; });
+        for (const auto hundredths : {0u, 19u, 50u, 100u}) {
+            if (qualityInput) qualityInput->setValue(hundredths / 100.0);
+            qualityPassed = qualityPassed &&
+                remote::controller::detail::ConfiguredScreenQualityDeficitShareHundredths() == hundredths;
+        }
+        qualityPassed = qualityPassed && lastPublishedQualityShare == 100 && publishedQualityShareCount == 4;
+        if (qualityEdit) qualityEdit->setText(QStringLiteral("0.23"));
+        qualityPassed = qualityPassed && publishedQualityShareCount == 4 &&
+            remote::controller::detail::ConfiguredScreenQualityDeficitShareHundredths() == 100;
+        if (qualityInput) qualityInput->interpretText();
+        qualityPassed = qualityPassed && lastPublishedQualityShare == 23 && publishedQualityShareCount == 5 &&
+            remote::controller::detail::ConfiguredScreenQualityDeficitShareHundredths() == 23 &&
+            QSettings().value(QStringLiteral("media/screenVideoBitrateBppHundredths")).toUInt() == 50;
+        output << "SCREEN_QUALITY_DEFICIT_PERSISTENCE_AND_COMMIT_SIGNAL=" <<
+            (qualityPassed ? "PASS" : "FAIL") << Qt::endl;
+        {
+            remote::controller::SettingsPage qualityReloadPage;
+            qualityPassed = qualityPassed && qualityReloadPage.Controls().screenQualityDeficitShareInput->value() == 0.23;
+        }
+        for (const auto hundredths : {0u, 3u, 100u}) {
+            QSettings().setValue(QStringLiteral("media/screenQualityDeficitShareHundredths"), hundredths);
+            remote::controller::SettingsPage endpointReloadPage;
+            qualityPassed = qualityPassed &&
+                remote::controller::detail::ConfiguredScreenQualityDeficitShareHundredths() == hundredths &&
+                endpointReloadPage.Controls().screenQualityDeficitShareInput->value() == hundredths / 100.0;
+        }
+        QSettings().setValue(QStringLiteral("media/screenQualityDeficitShareHundredths"), 101u);
+        qualityPassed = qualityPassed && remote::controller::detail::ConfiguredScreenQualityDeficitShareHundredths() == 100;
+        if (qualityInput) qualityInput->setValue(0.50);
+        qualityPassed = qualityPassed && remote::controller::detail::ConfiguredScreenQualityDeficitShareHundredths() == 50;
+        output << "SCREEN_QUALITY_DEFICIT_RELOAD_AND_INVALID_SETTINGS_CLAMP=" <<
+            (qualityPassed ? "PASS" : "FAIL") << Qt::endl;
+        passed = passed && qualityPassed;
+        if (input) input->setValue(0.20);
+        auto* traffic = page.Controls().screenVideoTrafficEstimate;
+        bool trafficPassed = traffic && traffic->text().contains(QStringLiteral("3.11 MB/s")) &&
+            traffic->text().contains(QStringLiteral("示例"));
+        remote::SessionDiagnosticsSnapshot trafficDiagnostics;
+        remote::PeerConnectionDiagnosticsSnapshot sendingPeer;
+        remote::RtpStreamStatsSnapshot screenStream;
+        screenStream.kind = "video";
+        screenStream.slot = remote::kScreenMainVideoSlot;
+        screenStream.sourceWidth = screenStream.configuredOutputWidth = 1920;
+        screenStream.sourceHeight = screenStream.configuredOutputHeight = 1080;
+        screenStream.configuredMaxFrameRate = 30;
+        sendingPeer.stats.rtpStreams.push_back(screenStream);
+        trafficDiagnostics.peerConnections.push_back(sendingPeer);
+        page.UpdateScreenVideoTrafficEstimate(trafficDiagnostics);
+        trafficPassed = trafficPassed && traffic->text().contains(QStringLiteral("1.56 MB/s")) &&
+            traffic->text().contains(QStringLiteral("30 FPS")) && !traffic->text().contains(QStringLiteral("示例"));
+        if (input) input->setValue(0.30);
+        trafficPassed = trafficPassed && traffic->text().contains(QStringLiteral("2.33 MB/s"));
+        trafficDiagnostics.peerConnections.front().stats.rtpStreams.push_back(screenStream);
+        sendingPeer.stats.rtpStreams.front().configuredMaxFrameRate = 60;
+        trafficDiagnostics.peerConnections.push_back(sendingPeer);
+        page.UpdateScreenVideoTrafficEstimate(trafficDiagnostics);
+        trafficPassed = trafficPassed && traffic->text().contains(QStringLiteral("7.00 MB/s")) &&
+            traffic->text().contains(QStringLiteral("2 路"));
+        auto& measuredPeer = trafficDiagnostics.peerConnections.front();
+        measuredPeer.stats.transport.collected = true;
+        measuredPeer.stats.rtpStreams.front().sampleWindowMs = 1000;
+        measuredPeer.stats.rtpStreams.front().bitrateBps = 8'800'000;
+        page.UpdateScreenVideoTrafficEstimate(trafficDiagnostics);
+        trafficPassed = trafficPassed && traffic->text().contains(QStringLiteral("实测 1.10 MB/s")) &&
+            traffic->text().contains(QStringLiteral("7.00 MB/s"));
+        measuredPeer.stats.rtpStreams.front().bitrateBps = 4'000'000;
+        page.UpdateScreenVideoTrafficEstimate(trafficDiagnostics);
+        trafficPassed = trafficPassed && traffic->text().contains(QStringLiteral("实测 0.50 MB/s"));
+        page.UpdateScreenVideoTrafficEstimate({});
+        if (input) input->setValue(0.03);
+        trafficPassed = trafficPassed && traffic->text().contains(QStringLiteral("0.47 MB/s")) &&
+            traffic->text().contains(QStringLiteral("示例"));
+        if (input) input->setValue(0.15);
+        trafficPassed = trafficPassed && traffic->text().contains(QStringLiteral("2.33 MB/s"));
+        passed = passed && trafficPassed;
+        output << "SCREEN_BPP_VIDEO_CAP_AND_MEASURED_TRAFFIC=" <<
+            (trafficPassed ? "PASS" : "FAIL") << Qt::endl;
+        page.show();
+        QCoreApplication::processEvents(QEventLoop::AllEvents);
+        const auto screenshot = QDir(QCoreApplication::applicationDirPath()).absoluteFilePath(
+            QStringLiteral("../../build/screen-bpp-settings.png"));
+        auto* themeInput = page.Controls().themeModeSelector;
+        themeInput->setCurrentIndex(themeInput->findData(QStringLiteral("light")));
+        QCoreApplication::processEvents(QEventLoop::AllEvents);
+        const bool capturedLight = page.grab().save(screenshot);
+        themeInput->setCurrentIndex(themeInput->findData(QStringLiteral("dark")));
+        QCoreApplication::processEvents(QEventLoop::AllEvents);
+        const bool capturedDark = page.grab().save(QDir(QCoreApplication::applicationDirPath()).absoluteFilePath(
+            QStringLiteral("../../build/screen-bpp-settings-dark.png")));
+        const bool captured = capturedLight && capturedDark;
+        passed = passed && captured;
+        output << "SCREEN_BPP_SETTINGS_LAYOUT_CAPTURE=" << (captured ? "PASS" : "FAIL") << Qt::endl;
+        return passed ? 0 : 1;
+    }
+
+    if (application.arguments().contains(QStringLiteral("--content-policy-layout-preview"))) {
+        // Render synthetic diagnostics without starting a connection or changing settings.
+        using namespace remote::controller;
+        using namespace remote::controller::detail;
+        DiagnosticsPage page;
+        page.setAttribute(Qt::WA_DontShowOnScreen, true);
+        page.resize(1340, 1080);
+        auto* cards = static_cast<DiagnosticsCardsWidget*>(page.PolicyCardsWidget());
+        for (auto* button : page.findChildren<QPushButton*>()) {
+            if (button->text() == QStringLiteral("内容策略观察")) button->click();
+        }
+        remote::RtpStreamStatsSnapshot stream;
+        stream.statsId = "outbound-current";
+        stream.direction = remote::RtpStreamDirection::kOutbound;
+        stream.slot = "screen-main";
+        stream.kind = "video";
+        stream.codec = "video/H264";
+        stream.sampleWindowMs = 1000;
+        stream.bitrateBps = 12'000'000;
+        stream.bytes = 100;
+        stream.contentScene = "web_app";
+        stream.contentAnalyzerBackend = "vision_api";
+        stream.frameWidth = 1920;
+        stream.frameHeight = 1080;
+        stream.encodedFramesPerSecond = 59.8;
+        stream.configuredMaxFrameRate = 60;
+        stream.effectiveNetworkFrameRate = 60;
+        stream.configuredMaxBitrateBps = 18'662'400;
+        stream.userVideoBitrateBppHundredths = 15;
+        stream.userVideoBitrateLimitBps = 18'662'400;
+        stream.windowQpAvailable = true;
+        stream.windowQp = 24;
+        stream.contentQualityMetricAvailable = stream.contentQualityVerified = true;
+        stream.contentProcessingEvidenceAvailable = true;
+        stream.contentProcessingHealthy = false;
+        stream.contentPolicyShadow = {.observed = true, .hasRecommendation = true,
+            .estimatedFeasible = true, .modelReference = true, .width = 1920,
+            .height = 1080, .senderMaxFps = 60, .estimatedSafeVideoBudgetBps = 18'050'000,
+            .requiredVideoBitrateBps = 21'460'000, .desiredVideoBitrateBps = 18'662'400,
+            .senderMaxBitrateBps = 18'662'400, .reason = "healthy_hold"};
+        stream.contentPolicyExecution.observed = true;
+        stream.contentPolicyExecution.status = "healthy_hold";
+        stream.contentPolicyExecution.networkStatus = "normal";
+        stream.contentPolicyExecution.userSpecificationVerifiedBitrateBps = 12'500'000;
+        stream.googCc.controllerObserved = stream.googCc.delayObserved = true;
+        stream.googCc.feedbackFresh = true;
+        stream.googCc.delayState = "normal";
+        stream.googCc.feedbackAtMs = 1000;
+        stream.googCc.feedbackAgeMs = 180;
+        stream.googCc.targetRateBps = stream.googCc.effectiveTargetRateBps = 19'000'000;
+        stream.googCc.roundTripTimeMs = 25;
+        stream.googCc.lossPercent = 0.03;
+        stream.receiverFeedbackAvailable = true;
+        stream.receiverFeedbackAgeMs = 293;
+        stream.receiverFeedbackWidth = 1920;
+        stream.receiverFeedbackHeight = 1080;
+        stream.receiverFeedbackDecodedFrames = 60;
+        stream.receiverFeedbackDecodeTimeAvailable = true;
+        stream.receiverFeedbackDecodeTimeMs = 0.53;
+        stream.receiverFeedbackProcessingTimeAvailable = true;
+        stream.receiverFeedbackProcessingTimeMs = 9.22;
+        const auto selected = MakeContentPolicySections("peer-a", "916955702", {stream});
+        auto inactive = stream;
+        inactive.statsId = "outbound-inactive";
+        inactive.bitrateBps = 0;
+        inactive.sampleWindowMs = 0;
+        inactive.encodedFramesPerSecond = inactive.sentFramesPerSecond = 0;
+        inactive.frameWidth = 640;
+        inactive.frameHeight = 360;
+        inactive.bytes = 1'000'000;
+        auto inbound = stream;
+        inbound.statsId = "inbound-mirror";
+        inbound.direction = remote::RtpStreamDirection::kInbound;
+        auto repair = stream;
+        repair.statsId = "outbound-rtx";
+        repair.codec = "video/rtx";
+        repair.bytes = 2'000'000;
+        auto audio = stream;
+        audio.statsId = "outbound-audio";
+        audio.kind = "audio";
+        auto duplicate = MakeContentPolicySections("peer-a", "916955702",
+            {inactive, inbound, repair, audio, stream});
+        auto noDimensions = stream;
+        noDimensions.statsId = "outbound-missing-size";
+        noDimensions.frameWidth = noDimensions.frameHeight = 0;
+        noDimensions.bytes = 3'000'000;
+        auto smallerCounter = stream;
+        smallerCounter.statsId = "outbound-other-primary";
+        smallerCounter.bytes = 99;
+        smallerCounter.encodedFramesPerSecond = 25;
+        const auto qualified = MakeContentPolicySections("peer-a", "916955702",
+            {noDimensions, smallerCounter, stream});
+        auto secondSlot = stream;
+        secondSlot.slot = "camera-main";
+        const auto distinctSlots = MakeContentPolicySections("peer-a", "916955702", {stream, secondSlot});
+        auto restarted = stream;
+        restarted.statsId = "outbound-after-restart";
+        const auto stable = MakeContentPolicySections("peer-a", "916955702", {restarted});
+        const auto otherPeer = MakeContentPolicySections("peer-b", "916955702", {stream});
+        const auto copyText = ContentPolicyCopyText(selected);
+        const bool selectionPassed = selected.size() == 1 && duplicate.size() == 1 &&
+            ContentPolicyCopyText(duplicate) == copyText && qualified.size() == 1 &&
+            ContentPolicyCopyText(qualified) == copyText && distinctSlots.size() == 2 &&
+            distinctSlots[0].key != distinctSlots[1].key && stable.size() == 1 &&
+            stable[0].key == selected[0].key && otherPeer.size() == 1 &&
+            otherPeer[0].key != selected[0].key;
+        auto missingUserSettings = stream;
+        missingUserSettings.userVideoBitrateBppHundredths = 0;
+        missingUserSettings.userVideoBitrateLimitBps = 0;
+        const auto missingCopy = ContentPolicyCopyText(
+            MakeContentPolicySections("peer-a", "916955702", {missingUserSettings}));
+        const bool userCapPassed = copyText.contains(QStringLiteral("用户视频系数：0.15")) &&
+            copyText.contains(QStringLiteral("用户目标帧率：60 FPS")) &&
+            copyText.contains(QStringLiteral("用户视频总上限：%1").arg(FormatBitrate(18'662'400))) &&
+            missingCopy.contains(QStringLiteral("用户视频系数：未报告")) &&
+            missingCopy.contains(QStringLiteral("用户视频总上限：未报告"));
+        auto confirming = stream;
+        confirming.contentPolicyExecution.status = "observing";
+        confirming.contentPolicyExecution.networkPressure = true;
+        confirming.contentPolicyExecution.networkStatus = "episode_retained";
+        confirming.contentPolicyExecution.confirmationBlock = "awaiting_stable_time";
+        confirming.contentPolicyExecution.confirmObservedSamples = 2;
+        confirming.contentPolicyExecution.confirmRequiredSamples = 3;
+        confirming.contentPolicyExecution.confirmationRemainingMs = 1000;
+        const auto confirmationCopy = ContentPolicyCopyText(
+            MakeContentPolicySections("peer-a", "916955702", {confirming}));
+        const bool timingCopyPassed = confirmationCopy.contains(QStringLiteral("当前负载已稳定，仍按受限预算运行")) &&
+            !confirmationCopy.contains(QStringLiteral("拥塞已缓解")) &&
+            confirmationCopy.contains(QStringLiteral("连续确认窗口：2 / 3")) &&
+            confirmationCopy.contains(QStringLiteral("内部确认剩余时间：1.0 秒（不含等待网络预算）"));
+        auto emergency = confirming;
+        emergency.contentPolicyShadow.reason = "emergency_network_reduction";
+        emergency.contentPolicyShadow.estimatedFeasible = false;
+        emergency.contentPolicyExecution.status = "observing_emergency";
+        const auto emergencyCopy = ContentPolicyCopyText(
+            MakeContentPolicySections("peer-a", "916955702", {emergency}));
+        const bool emergencyCopyPassed = emergencyCopy.contains(QStringLiteral("正在确认按场景逐步降级")) &&
+            emergencyCopy.contains(QStringLiteral("当前预算仍不足以满足参考画质")) &&
+            !emergencyCopy.contains(QStringLiteral("候选符合估算预算"));
+        auto restoring = emergency;
+        restoring.contentPolicyShadow.reason = "user_specification_restore";
+        restoring.contentPolicyExecution.status = "observing_user_restore";
+        const auto restoreCopy = ContentPolicyCopyText(
+            MakeContentPolicySections("peer-a", "916955702", {restoring}));
+        const bool restoreCopyPassed = restoreCopy.contains(QStringLiteral("正在确认恢复用户原规格")) &&
+            restoreCopy.contains(QStringLiteral("参考画质仍待验证")) &&
+            !restoreCopy.contains(QStringLiteral("候选符合估算预算"));
+        QTextStream(stdout) << "CONTENT_POLICY_PER_PEER_SLOT_SELECTION=" <<
+            (selectionPassed ? "PASS" : "FAIL") << Qt::endl;
+        QTextStream(stdout) << "CONTENT_POLICY_USER_BPP_CAP_DIAGNOSTICS=" <<
+            (userCapPassed ? "PASS" : "FAIL") << Qt::endl;
+        QTextStream(stdout) << "CONTENT_POLICY_CONFIRMATION_AND_LIMITED_QUEUE_TEXT=" <<
+            (timingCopyPassed ? "PASS" : "FAIL") << Qt::endl;
+        QTextStream(stdout) << "CONTENT_POLICY_EMERGENCY_QUALITY_TEXT=" <<
+            (emergencyCopyPassed ? "PASS" : "FAIL") << Qt::endl;
+        QTextStream(stdout) << "CONTENT_POLICY_USER_RESTORE_QUALITY_TEXT=" <<
+            (restoreCopyPassed ? "PASS" : "FAIL") << Qt::endl;
+        cards->SetSections({MakeContentPolicySection("preview", "916955702", stream)}, {});
+        page.show();
+        bool saved = true;
+        const auto capture = [&](const QString& name, bool dark) {
+            page.setStyleSheet(QString::fromUtf8(kMainStyle) + ui::RemoteCTheme::MainWindowColorOverrides(dark));
+            QCoreApplication::processEvents(QEventLoop::AllEvents);
+            return page.grab().save(QDir(application.applicationDirPath()).filePath(
+                QStringLiteral("../../build/content-policy-%1.png").arg(name)));
+        };
+        saved &= capture("light", false);
+        saved &= capture("dark", true);
+        // Detailed measurements remain available in collapsed reference cards.
+        for (auto* button : cards->findChildren<QToolButton*>()) {
+            if (button->text() == QStringLiteral("质量与耗时参考") ||
+                button->text() == QStringLiteral("网络测量参考") ||
+                button->text() == QStringLiteral("接收端反馈")) button->setChecked(true);
+        }
+        page.resize(1080, 1400);
+        saved &= capture("details", true);
+        page.verticalScrollBar()->setValue(page.verticalScrollBar()->maximum());
+        saved &= capture("feedback", true);
+        page.verticalScrollBar()->setValue(0);
+        stream.contentPolicyShadow.width = 1920;
+        stream.contentPolicyShadow.height = 1080;
+        stream.contentPolicyShadow.senderMaxFps = 20;
+        stream.contentPolicyShadow.reason = "protect_resolution";
+        stream.contentPolicyExecution.status = "observing";
+        stream.contentPolicyExecution.confirmationBlock = "awaiting_samples";
+        stream.contentPolicyExecution.confirmObservedSamples = 1;
+        stream.contentPolicyExecution.confirmRequiredSamples = 2;
+        stream.contentPolicyExecution.confirmationRemainingMs = 500;
+        stream.contentPolicyExecution.networkPressure = true;
+        stream.contentPolicyExecution.networkStatus = "delay_and_congestion_window";
+        stream.contentPolicyExecution.networkTrigger = "delay_and_congestion_window";
+        stream.googCc.delayState = "overuse";
+        stream.googCc.congestionWindowReduction = 0.12;
+        stream.googCc.targetRateBps = 12'000'000;
+        stream.googCc.effectiveTargetRateBps = 10'560'000;
+        stream.contentPolicyShadow.estimatedSafeVideoBudgetBps = 10'032'000;
+        stream.contentPolicyShadow.requiredVideoBitrateBps = 7'153'920;
+        stream.contentPolicyShadow.desiredVideoBitrateBps = 10'032'000;
+        stream.contentPolicyShadow.senderMaxBitrateBps = 10'032'000;
+        cards->SetSections({MakeContentPolicySection("preview", "916955702", stream)}, {});
+        page.resize(1080, 1000);
+        saved &= capture("weak-network", false);
+        stream.contentPolicyExecution.networkStatus = "episode_retained";
+        stream.googCc.delayState = "normal";
+        stream.googCc.congestionWindowReduction = 0;
+        stream.googCc.targetRateBps = stream.googCc.effectiveTargetRateBps = 10'000'000;
+        stream.effectiveNetworkFrameRate = 20;
+        stream.encodedFramesPerSecond = 20;
+        stream.configuredMaxBitrateBps = 9'500'000;
+        stream.contentPolicyShadow.estimatedSafeVideoBudgetBps = 9'500'000;
+        stream.contentPolicyShadow.desiredVideoBitrateBps = 9'500'000;
+        stream.contentPolicyShadow.senderMaxBitrateBps = 9'500'000;
+        cards->SetSections({MakeContentPolicySection("preview", "916955702", stream)}, {});
+        saved &= capture("low-budget-normal", true);
+        stream.contentPolicyExecution.networkStatus = "stale_feedback";
+        stream.contentPolicyExecution.status = "awaiting_network_evidence";
+        stream.contentPolicyShadow.reason = "capacity_unavailable";
+        stream.googCc.feedbackFresh = false;
+        stream.googCc.feedbackAgeMs = 4200;
+        cards->SetSections({MakeContentPolicySection("preview", "916955702", stream)}, {});
+        saved &= capture("stale-feedback", false);
+        stream.contentPolicyExecution.networkPressure = false;
+        stream.contentPolicyExecution.networkStatus = "unavailable";
+        stream.contentPolicyExecution.networkTrigger.clear();
+        stream.googCc = {};
+        cards->SetSections({MakeContentPolicySection("preview", "916955702", stream)}, {});
+        saved &= capture("unknown-network", false);
+        cards->SetSections({}, QStringLiteral("暂无策略数据\n开启内容感知并共享屏幕后，按连接显示场景与执行状态。"));
+        page.resize(1080, 850);
+        saved &= capture("empty", false);
+        QTextStream(stdout) << "CONTENT_POLICY_LAYOUT_CAPTURE=" << (saved ? "PASS" : "FAIL") << Qt::endl;
+        return saved && selectionPassed && userCapPassed && timingCopyPassed && emergencyCopyPassed && restoreCopyPassed ? 0 : 1;
     }
 
     if (application.arguments().contains(

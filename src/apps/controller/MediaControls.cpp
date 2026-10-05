@@ -136,14 +136,26 @@ void SetMediaStateButton(QPushButton *button, MediaStateIcon type, bool active,
     return;
   }
   button->setText({});
-  button->setIcon(CreateMediaStateIcon(type, active));
-  button->setIconSize(QSize(25, 25));
   const QString effectiveToolTip =
       button->property("deviceMenu").toBool()
           ? toolTip + QStringLiteral("；点击右侧箭头选择设备")
           : toolTip;
   button->setToolTip(effectiveToolTip);
   button->setAccessibleName(effectiveToolTip);
+
+  const bool dark =
+      ui::RemoteCTheme::IsDark(ui::RemoteCTheme::LoadPreference());
+  const int iconState = 1 + static_cast<int>(type) * 4 +
+      (active ? 2 : 0) + (dark ? 1 : 0);
+  // Room snapshots often change unrelated state. Keep the current morph
+  // frame instead of repainting/parsing this unchanged icon several times.
+  if (button->property("remoteCMediaIconState").toInt() == iconState &&
+      button->iconSize() == QSize(25, 25)) {
+    return;
+  }
+  button->setProperty("remoteCMediaIconState", iconState);
+  button->setIcon(CreateMediaStateIcon(type, active));
+  button->setIconSize(QSize(25, 25));
 
   QString source;
   QString target;
@@ -165,8 +177,6 @@ void SetMediaStateButton(QPushButton *button, MediaStateIcon type, bool active,
     target = QStringLiteral("screen-share-off");
     break;
   }
-  const bool dark =
-      ui::RemoteCTheme::IsDark(ui::RemoteCTheme::LoadPreference());
   auto *morph = remotec::ui::morph::MorphIconButtonBinding::attach(
       button, QStringLiteral(":/ui/icons/lucide/base/%1.svg").arg(source),
       QStringLiteral(":/ui/icons/lucide/base/%1.svg").arg(target),
@@ -183,12 +193,19 @@ void SetCameraGalleryStateButton(QPushButton *button, bool camerasAvailable,
   if (!button)
     return;
   button->setText({});
-  button->setIcon(QIcon(QStringLiteral(":/ui/icons/lucide/base/eye-off.svg")));
-  button->setIconSize(QSize(25, 25));
   button->setToolTip(toolTip);
   button->setAccessibleName(toolTip);
   const bool dark =
       ui::RemoteCTheme::IsDark(ui::RemoteCTheme::LoadPreference());
+  const int iconState = 1 + (camerasAvailable ? 4 : 0) +
+      (galleryVisible ? 2 : 0) + (dark ? 1 : 0);
+  if (button->property("remoteCGalleryIconState").toInt() == iconState &&
+      button->iconSize() == QSize(25, 25)) {
+    return;
+  }
+  button->setProperty("remoteCGalleryIconState", iconState);
+  button->setIcon(QIcon(QStringLiteral(":/ui/icons/lucide/base/eye-off.svg")));
+  button->setIconSize(QSize(25, 25));
   const QColor stateColor(
       camerasAvailable
           ? (dark ? QStringLiteral("#4FF0B5") : QStringLiteral("#168A5B"))

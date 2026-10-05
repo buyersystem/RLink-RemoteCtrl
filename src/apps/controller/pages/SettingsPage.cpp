@@ -23,6 +23,7 @@
 #include <QWidget>
 
 #include "src/apps/controller/ControllerMainWindowSupport.h"
+#include "src/apps/controller/CurrentPageStack.h"
 #include "src/apps/controller/FramelessWindow.h"
 #include "src/apps/controller/RemoteCComboBox.h"
 #include "src/apps/controller/RemoteCToast.h"
@@ -62,7 +63,7 @@ SettingsPage::SettingsPage(QWidget* parent)
     auto* categories = new QFrame(content);
     categories->setObjectName(QStringLiteral("settingsCategoryPanel"));
     categories->setFixedWidth(120);
-    categories->setFixedHeight(486);
+    categories->setFixedHeight(549);
     auto* categoryLayout = new QVBoxLayout(categories);
     categoryLayout->setContentsMargins(10, 12, 10, 12);
     categoryLayout->setSpacing(5);
@@ -89,19 +90,24 @@ SettingsPage::SettingsPage(QWidget* parent)
     auto* generalCategoryButton = makeCategoryButton(
         QStringLiteral("常规"), 0);
     makeCategoryButton(QStringLiteral("远程桌面"), 1);
-    makeCategoryButton(QStringLiteral("音视频设备"), 2);
-    makeCategoryButton(QStringLiteral("文件传输"), 3);
-    makeCategoryButton(QStringLiteral("远程粘贴"), 4);
-    makeCategoryButton(QStringLiteral("快捷键"), 5);
+    makeCategoryButton(QStringLiteral("内容感知"), 2);
+    makeCategoryButton(QStringLiteral("音视频设备"), 3);
+    makeCategoryButton(QStringLiteral("文件传输"), 4);
+    makeCategoryButton(QStringLiteral("远程粘贴"), 5);
+    makeCategoryButton(QStringLiteral("快捷键"), 6);
     categoryLayout->addStretch(1);
     workspace->addWidget(categories, 0, Qt::AlignTop);
 
-    detailStack_ = new QStackedWidget(content);
+    // Hidden codec summaries and long-text categories must not participate in
+    // sizing the visible category. Let the scroll area track its natural height.
+    auto* currentDetailStack = new CurrentPageStack(content, false);
+    detailStack_ = currentDetailStack;
     detailStack_->setObjectName(QStringLiteral("settingsDetailStack"));
     detailStack_->setMinimumWidth(0);
     detailStack_->setSizePolicy(
         QSizePolicy::Ignored, QSizePolicy::Expanding);
-    workspace->addWidget(detailStack_, 1);
+    workspace->addItem(new CurrentPageStackItem(currentDetailStack));
+    workspace->setStretch(workspace->count() - 1, 1);
     contentLayout_->addLayout(workspace, 1);
 
     connect(categoryGroup_, &QButtonGroup::idClicked,
@@ -111,6 +117,7 @@ SettingsPage::SettingsPage(QWidget* parent)
             });
     BuildGeneralSettingsPage();
     BuildRemoteDesktopSettingsPage();
+    BuildContentAwarenessSettingsPage();
     BuildAudioVideoSettingsPage();
     BuildFileTransferSettingsPage();
     BuildRemotePasteSettingsPage();

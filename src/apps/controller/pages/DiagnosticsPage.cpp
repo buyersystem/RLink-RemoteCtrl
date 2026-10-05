@@ -8,6 +8,7 @@
 #include <QHBoxLayout>
 #include <QPushButton>
 #include <QStackedWidget>
+#include <QStyle>
 #include <QVBoxLayout>
 #include <QWidget>
 
@@ -93,6 +94,7 @@ void DiagnosticsPage::AddValue(QVBoxLayout* layout,
     titleLabel->setFixedWidth(expanded ? 140 : 170);
     titleLabel->setAlignment(expanded ? Qt::AlignTop : Qt::AlignVCenter);
     auto* valueLabel = new QLabel(QStringLiteral("正在获取…"), row);
+    valueLabel->setTextFormat(Qt::PlainText);
     valueLabel->setObjectName(QStringLiteral("debugValue"));
     valueLabel->setProperty("tone", "muted");
     valueLabel->setWordWrap(expanded);
@@ -114,6 +116,46 @@ QLabel* DiagnosticsPage::ValueLabel(const QString& key) const
     return valueLabels_.value(key, nullptr);
 }
 
+void DiagnosticsPage::SetValue(const QString& key, const QString& value,
+                               const QByteArray& tone)
+{
+    const auto existing = values_.constFind(key);
+    if (existing != values_.cend() && existing->text == value &&
+        existing->tone == tone) {
+        return;
+    }
+    values_.insert(key, Value{value, tone});
+    ApplyValue(key);
+}
+
+void DiagnosticsPage::ApplyValue(const QString& key)
+{
+    auto* label = ValueLabel(key);
+    const auto value = values_.constFind(key);
+    // Hidden categories retain the latest model, but must not trigger text
+    // layout or stylesheet polish until the user actually opens them.
+    if (!label || value == values_.cend() || !label->isVisibleTo(widget())) return;
+    if (label->text() != value->text) label->setText(value->text);
+    if (label->toolTip() != value->text) label->setToolTip(value->text);
+    if (label->property("tone").toByteArray() != value->tone) {
+        label->setProperty("tone", value->tone);
+        label->style()->unpolish(label);
+        label->style()->polish(label);
+        label->update();
+    }
+}
+
+int DiagnosticsPage::CurrentCategory() const
+{
+    return detailStack_ ? detailStack_->currentIndex() : 0;
+}
+
+bool DiagnosticsPage::NeedsRealtimeDiagnostics() const
+{
+    const int category = CurrentCategory();
+    return category == 2 || category == 5 || category == 8 || category == 9;
+}
+
 bool DiagnosticsPage::HasValues() const
 {
     return !valueLabels_.isEmpty();
@@ -132,6 +174,11 @@ bool DiagnosticsPage::InputEventStatsEnabled() const
 QWidget* DiagnosticsPage::StatsCardsWidget() const
 {
     return statsCardsWidget_;
+}
+
+QWidget* DiagnosticsPage::PolicyCardsWidget() const
+{
+    return policyCardsWidget_;
 }
 
 QPushButton* DiagnosticsPage::CopyAllButton() const

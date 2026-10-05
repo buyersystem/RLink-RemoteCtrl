@@ -99,6 +99,34 @@ foreach ($directory in @($buildRoot, $prefixRoot, $temporaryRoot, $homeRoot)) {
     New-Item -ItemType Directory -Force -Path $directory | Out-Null
 }
 
+# Patch a workspace-local copy; never modify the WebRTC dependency checkout.
+# Robocopy preserves source mtimes so unchanged files remain incremental.
+$preparedSource = Join-Path $dependencyRoot 'source'
+New-Item -ItemType Directory -Force -Path $preparedSource | Out-Null
+& robocopy.exe $FfmpegSource $preparedSource /E /XJ /XD .git /NFL /NDL /NJH /NJS /NP
+if ($LASTEXITCODE -ge 8) { throw 'Could not prepare the FFmpeg source copy.' }
+# The local copy lives inside RLink's Git checkout. Pin VERSION explicitly so
+# FFmpeg's version.sh cannot accidentally report RLink's parent commit.
+if (Test-Path -LiteralPath (Join-Path $FfmpegSource 'VERSION')) {
+    $sourceVersion = (Get-Content -LiteralPath (Join-Path $FfmpegSource 'VERSION') -Raw).Trim()
+} elseif (Test-Path -LiteralPath (Join-Path $FfmpegSource '.git')) {
+    $sourceVersion = (& git -c "safe.directory=$FfmpegSource" -C $FfmpegSource log -1 --format=git-%cd-%h --date=short).Trim()
+    if ($LASTEXITCODE -ne 0) { throw 'Could not identify the FFmpeg source revision.' }
+} else {
+    $sourceVersion = (Get-Content -LiteralPath (Join-Path $FfmpegSource 'RELEASE') -Raw).Trim()
+}
+[System.IO.File]::WriteAllText((Join-Path $preparedSource 'VERSION'),
+    "$sourceVersion-rlink-nvenc-fps1`n", [System.Text.UTF8Encoding]::new($false))
+Push-Location $repositoryRoot
+try {
+    $patchPath = Join-Path $repositoryRoot 'patches\ffmpeg\nvenc-dynamic-fps.patch'
+    & git apply --check --ignore-space-change --directory=third_party/ffmpeg_d3d11va/source $patchPath
+    if ($LASTEXITCODE -ne 0) { throw 'NVENC patch does not match this FFmpeg revision.' }
+    & git apply --ignore-space-change --directory=third_party/ffmpeg_d3d11va/source $patchPath
+    if ($LASTEXITCODE -ne 0) { throw 'Could not apply the NVENC dynamic FPS patch.' }
+} finally { Pop-Location }
+$FfmpegSource = $preparedSource
+
 $sourceMsys = Convert-ToMsysPath $FfmpegSource
 $buildMsys = Convert-ToMsysPath $buildRoot
 $prefixMsys = Convert-ToMsysPath $prefixRoot
@@ -181,13 +209,13 @@ if (-not $x264Runtime) {
     throw "Expected x264 runtime was not found under $X264Prefix\bin."
 }
 Copy-Item -LiteralPath $x264Runtime.FullName `
-    -Destination (Join-Path $prefixRoot 'bin' $x264Runtime.Name) -Force
+    -Destination (Join-Path (Join-Path $prefixRoot 'bin') $x264Runtime.Name) -Force
 
 $requiredOutputs = @(
     (Join-Path $prefixRoot 'bin\avcodec-62.dll'),
     (Join-Path $prefixRoot 'bin\avutil-60.dll'),
     (Join-Path $prefixRoot 'bin\libwinpthread-1.dll'),
-    (Join-Path $prefixRoot 'bin' $x264Runtime.Name)
+    (Join-Path (Join-Path $prefixRoot 'bin') $x264Runtime.Name)
 )
 if ($hardwareInputs.QSV) {
     $vplRuntime = Get-ChildItem -LiteralPath (Join-Path $OneVplPrefix 'bin') `
@@ -196,8 +224,8 @@ if ($hardwareInputs.QSV) {
         throw "oneVPL pkg-config was found but its dispatcher DLL is missing."
     }
     Copy-Item -LiteralPath $vplRuntime.FullName `
-        -Destination (Join-Path $prefixRoot 'bin' $vplRuntime.Name) -Force
-    $requiredOutputs += Join-Path $prefixRoot 'bin' $vplRuntime.Name
+        -Destination (Join-Path (Join-Path $prefixRoot 'bin') $vplRuntime.Name) -Force
+    $requiredOutputs += Join-Path (Join-Path $prefixRoot 'bin') $vplRuntime.Name
 }
 foreach ($output in $requiredOutputs) {
     if (-not (Test-Path -LiteralPath $output)) {

@@ -74,6 +74,7 @@ void InProcessSessionEngine::DisposeClosedSession()
 
 void InProcessSessionEngine::ResetSessionStateLocked()
 {
+    ++directSessionGeneration_;
     snapshot_.state = SessionEngineState::kReady;
     snapshot_.purpose = SessionPurpose::kNone;
     snapshot_.origin = SessionOrigin::kNone;
@@ -96,6 +97,7 @@ void InProcessSessionEngine::ResetSessionStateLocked()
     snapshot_.direct.remoteScreenShareGeneration = 0;
     snapshot_.direct.screenPreferencePending = false;
     snapshot_.direct.screenPreferenceSequence = 0;
+    snapshot_.direct.screenPreferenceAcceptedSequence = 0;
     snapshot_.direct.screenWidth = 0;
     snapshot_.direct.screenHeight = 0;
     snapshot_.direct.screenFramesPerSecond = kDefaultScreenFrameRate;

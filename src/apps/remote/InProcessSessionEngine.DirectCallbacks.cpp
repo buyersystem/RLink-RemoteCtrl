@@ -372,6 +372,7 @@ void InProcessSessionEngine::OnSessionPending(
 void InProcessSessionEngine::OnSessionReady(
     const SignalingSessionReady& ready)
 {
+    const auto initialQualityDeficitShare = ScreenQualityDeficitShareFromProvider();
     SessionControllerConfig controllerConfig;
     controllerConfig.negotiationTimeout = options_.negotiationTimeout;
     controllerConfig.reconnectTimeout = options_.reconnectTimeout;
@@ -410,6 +411,10 @@ void InProcessSessionEngine::OnSessionReady(
         if (!sessionController_) {
             auto session = std::make_unique<LibWebRtcSession>(
                 runtime_->PeerConnectionFactory());
+            session->SetScreenVideoBitrateBppProvider(
+                options_.screenVideoBitrateBppProvider);
+            session->SetScreenQualityDeficitShare(
+                liveScreenQualityDeficitShare_.value_or(initialQualityDeficitShare));
             std::unique_ptr<SessionControllerBase> controller;
             if (directSession_.localIsOfferer_) {
                 controller =
@@ -430,6 +435,7 @@ void InProcessSessionEngine::OnSessionReady(
             }
             webRtcSession_ = std::move(session);
             sessionController_ = std::move(controller);
+            ++directSessionGeneration_;
             sessionController_->SetObserver(this);
             sessionController_->Start(controllerConfig);
             if (directSession_.pendingRemoteDescription_) {

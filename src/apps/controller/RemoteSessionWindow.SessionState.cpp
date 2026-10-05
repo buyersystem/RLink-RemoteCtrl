@@ -56,6 +56,15 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
             QStringLiteral("正在建立远程会话");
         if (sessionControl_ && binding_.IsDirect()) {
             const auto snapshot = sessionControl_->Snapshot();
+            if (directPreferenceShareGeneration_ !=
+                    snapshot.direct.remoteScreenShareGeneration) {
+                directPreferenceShareGeneration_ =
+                    snapshot.direct.remoteScreenShareGeneration;
+                // The new capture generation invalidates sends/ACK latches
+                // from the previous stream. Keep existing direct selection
+                // reconciliation and do not introduce an automatic resend.
+                ResetStreamPreferenceRequests();
+            }
             CompleteMediaDeviceSelections(snapshot.media.localMediaDevices);
             const bool directActive =
                 snapshot.state == SessionEngineState::kActive &&
@@ -150,7 +159,8 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
                 const auto [requestedWidth, requestedHeight] =
                     ScreenQualityBounds(selectedQuality_);
                 const bool showRequested =
-                    snapshot.direct.screenPreferencePending &&
+                    (snapshot.direct.screenPreferencePending ||
+                     streamPreferenceRequests_.HasPending()) &&
                     requestedWidth > 0 && requestedHeight > 0;
                 const int shownWidth = showRequested
                     ? static_cast<int>(requestedWidth)
@@ -171,7 +181,8 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
                 qualityButton_->setEnabled(
                     directActive &&
                     snapshot.direct.controlReliableChannelOpen &&
-                    !snapshot.direct.screenPreferencePending);
+                    !snapshot.direct.screenPreferencePending &&
+                    !streamPreferenceRequests_.HasPending());
                 qualityButton_->setToolTip(
                     snapshot.direct.screenPreferencePending
                         ? QStringLiteral("正在请求远端调整输出画质")
@@ -186,7 +197,13 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
                 reportedRemoteMaximumFrameRate_ = directMaximumFrameRate;
                 RebuildFrameRateMenu();
             }
-            if (!snapshot.direct.screenPreferencePending &&
+            const bool mayApplyDirectPreference =
+                !snapshot.direct.screenPreferencePending &&
+                streamPreferenceRequests_.CanApplyAcknowledged(
+                    snapshot.direct.screenPreferenceAcceptedSequence,
+                    snapshot.direct.screenPreferenceSequence,
+                    snapshot.error.code == "direct_screen_preference_rejected");
+            if (mayApplyDirectPreference &&
                 snapshot.direct.screenFramesPerSecond > 0 &&
                 selectedFrameRate_ !=
                     snapshot.direct.screenFramesPerSecond) {
@@ -197,11 +214,21 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
                         ->SetTargetFrameRate(selectedFrameRate_);
                 }
             }
+            if (mayApplyDirectPreference) {
+                ScreenStreamPreferenceRequest acknowledged;
+                const auto [width, height] = ScreenQualityBounds(selectedQuality_);
+                acknowledged.maxWidth = width;
+                acknowledged.maxHeight = height;
+                acknowledged.framesPerSecond = selectedFrameRate_;
+                acknowledged.quality = selectedQuality_;
+                streamPreferenceRequests_.UpdateAcknowledged(acknowledged);
+            }
             if (frameRateButton_) {
                 frameRateButton_->setEnabled(
                     directActive &&
                     snapshot.direct.controlReliableChannelOpen &&
-                    !snapshot.direct.screenPreferencePending);
+                    !snapshot.direct.screenPreferencePending &&
+                    !streamPreferenceRequests_.HasPending());
                 frameRateButton_->setText(
                     QStringLiteral("目标帧率\n%1 FPS")
                         .arg(selectedFrameRate_));
@@ -543,7 +570,8 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
                 if (newShareNeedsPreference &&
                     preferenceRequestedScreenShareEpoch_ ==
                         snapshot.room.screenShareEpoch &&
-                    !pair->screenPreferencePending) {
+                    !pair->screenPreferencePending &&
+                    !streamPreferenceRequests_.HasPending()) {
                     if (pair->errorCode ==
                         "screen_stream_preference_rejected") {
                         // The sharer can acknowledge the new lease before its
@@ -582,6 +610,7 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
                      (pair->screenWidth <= savedWidth &&
                       pair->screenHeight <= savedHeight));
                 if (newShareNeedsPreference &&
+                    !streamPreferenceRequests_.HasPending() &&
                     !pair->screenPreferencePending &&
                     pair->screenFramesPerSecond ==
                         selectedFrameRate_ &&
@@ -598,7 +627,13 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
                         snapshot.room.screenShareEpoch;
                     newShareNeedsPreference = false;
                 }
-                if (!pair->screenPreferencePending &&
+                const bool mayApplyRoomPreference =
+                    !pair->screenPreferencePending &&
+                    streamPreferenceRequests_.CanApplyAcknowledged(
+                        pair->screenPreferenceAcceptedSequence,
+                        pair->screenPreferenceSequence,
+                        pair->errorCode == "screen_stream_preference_rejected");
+                if (mayApplyRoomPreference &&
                     pair->screenPreferenceGeneration ==
                         snapshot.room.screenShareEpoch &&
                     pair->errorCode !=
@@ -613,7 +648,7 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
                         static_cast<int>(selectedQuality_));
                 }
                 if (!newShareNeedsPreference &&
-                    !pair->screenPreferencePending &&
+                    mayApplyRoomPreference &&
                     pair->screenFramesPerSecond > 0 &&
                     selectedFrameRate_ !=
                         pair->screenFramesPerSecond) {
@@ -633,10 +668,20 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
                             .arg(selectedFrameRate_));
                     }
                 }
+                if (mayApplyRoomPreference && !newShareNeedsPreference) {
+                    ScreenStreamPreferenceRequest acknowledged;
+                    const auto [width, height] = ScreenQualityBounds(selectedQuality_);
+                    acknowledged.maxWidth = width;
+                    acknowledged.maxHeight = height;
+                    acknowledged.framesPerSecond = selectedFrameRate_;
+                    acknowledged.quality = selectedQuality_;
+                    streamPreferenceRequests_.UpdateAcknowledged(acknowledged);
+                }
                 if (qualityButton_) {
                     const auto [requestedWidth, requestedHeight] =
                         ScreenQualityBounds(selectedQuality_);
-                    const bool showRequested = pair->screenPreferencePending &&
+                    const bool showRequested =
+                        (pair->screenPreferencePending || streamPreferenceRequests_.HasPending()) &&
                         requestedWidth > 0 && requestedHeight > 0;
                     const int shownWidth = showRequested
                         ? static_cast<int>(requestedWidth)
@@ -695,6 +740,7 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
                 // Apply this generation's 60-FPS default exactly once unless
                 // the user changes it after the share becomes active.
                 if (newShareNeedsPreference &&
+                    !streamPreferenceRequests_.HasPending() &&
                     !pair->screenPreferencePending &&
                     preferenceRequestedScreenShareEpoch_ !=
                         snapshot.room.screenShareEpoch &&

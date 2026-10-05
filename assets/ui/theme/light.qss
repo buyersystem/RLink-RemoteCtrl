@@ -40,13 +40,13 @@ QPushButton[variant="danger"] {
     color: #B4232F;
 }
 QPushButton[variant="danger"]:hover { background: #FFE4E7; border-color: #E9A8B0; }
-QLineEdit, QComboBox {
+QLineEdit, QComboBox, QDoubleSpinBox#screenVideoBitrateBppInput, QDoubleSpinBox#screenQualityDeficitShareInput {
     background: #F8F7F3;
     border: 1px solid #DDE0E4;
     color: #172033;
     padding: 0 12px;
     selection-background-color: #5365F5;
 }
-QLineEdit:hover, QComboBox:hover { border-color: #BCC7D6; }
-QLineEdit:focus, QComboBox:focus { background: #FFFEFB; border: 1px solid #5365F5; }
-QLineEdit:disabled, QComboBox:disabled { background: #EEEFEF; color: #667085; border-color: #DDE0E4; }
+QLineEdit:hover, QComboBox:hover, QDoubleSpinBox#screenVideoBitrateBppInput:hover, QDoubleSpinBox#screenQualityDeficitShareInput:hover { border-color: #BCC7D6; }
+QLineEdit:focus, QComboBox:focus, QDoubleSpinBox#screenVideoBitrateBppInput:focus, QDoubleSpinBox#screenQualityDeficitShareInput:focus { background: #FFFEFB; border: 1px solid #5365F5; }
+QLineEdit:disabled, QComboBox:disabled, QDoubleSpinBox#screenVideoBitrateBppInput:disabled, QDoubleSpinBox#screenQualityDeficitShareInput:disabled { background: #EEEFEF; color: #667085; border-color: #DDE0E4; }

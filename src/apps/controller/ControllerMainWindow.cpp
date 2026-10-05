@@ -5,6 +5,7 @@
 #include "ControllerMainWindowSupport.h"
 
 #include <QAction>
+#include <QAbstractItemModel>
 #include <QApplication>
 #include <QGuiApplication>
 #include <QCloseEvent>
@@ -29,6 +30,7 @@
 #include <QStackedWidget>
 #include <QStyleHints>
 #include <QStringList>
+#include <QTextStream>
 #include <QTimer>
 #include <QSystemTrayIcon>
 #include <QToolButton>
@@ -272,9 +274,7 @@ ControllerMainWindow::ControllerMainWindow(
         ApplyAuthenticationAvailability(false);
     }
     const QSettings decoderProbeSettings;
-    const QString currentHardwareFingerprint =
-        QString::fromStdString(
-            BuildWindowsHardwareFingerprint());
+    const QString currentHardwareFingerprint = HardwareFingerprintForUi();
     const bool decoderProbeCacheValid =
         decoderProbeSettings.value(
             QString::fromLatin1(
@@ -651,8 +651,8 @@ void ControllerMainWindow::ApplyInterfaceTheme(bool showFeedback)
     }
     // Benchmark summaries use rich text, so QSS cannot recolor their inline
     // spans. Rebuild them whenever the theme changes.
-    RefreshEncoderBenchmarkSummary();
-    RefreshDecoderBenchmarkSummary();
+    RefreshEncoderBenchmarkSummary(false);
+    RefreshDecoderBenchmarkSummary(false);
     for (auto* widget : QApplication::topLevelWidgets()) {
         if (auto* login = dynamic_cast<LoginWindow*>(widget)) {
             login->RefreshThemeStyle();
@@ -739,7 +739,29 @@ bool ControllerMainWindow::RunThemeRoundTripSelfTest(QString* errorMessage)
     const bool hadOriginal = settings.contains(key);
     const QVariant original = settings.value(key);
     const int originalPage = pageStack_ ? pageStack_->currentIndex() : -1;
-    if (pageStack_) pageStack_->setCurrentIndex(5);
+    const int originalCategory = settingsPage_
+        ? settingsPage_->DetailStack()->currentIndex() : -1;
+    const auto measureSettingsNavigation = [this](const char* phase) {
+        QElapsedTimer elapsed;
+        elapsed.start();
+        if (pageStack_) pageStack_->setCurrentIndex(5);
+        const double switchMs = elapsed.nsecsElapsed() / 1.0e6;
+        QCoreApplication::processEvents(QEventLoop::AllEvents);
+        const double layoutMs = elapsed.nsecsElapsed() / 1.0e6;
+        if (settingsPage_) {
+            // Include initial layout/text painting, not just setCurrentIndex.
+            const auto rendered = settingsPage_->viewport()->grab();
+            (void)rendered;
+        }
+        QTextStream(stdout) << "SETTINGS_NAV_" << phase << "_MS="
+                            << elapsed.nsecsElapsed() / 1.0e6
+                            << " SWITCH=" << switchMs
+                            << " EVENTS=" << layoutMs - switchMs << '\n';
+    };
+    measureSettingsNavigation("COLD");
+    if (pageStack_ && originalPage >= 0) pageStack_->setCurrentIndex(originalPage);
+    QCoreApplication::processEvents(QEventLoop::AllEvents);
+    measureSettingsNavigation("WARM");
 
     const auto settle = [this] {
         QCoreApplication::processEvents(QEventLoop::AllEvents);
@@ -801,7 +823,7 @@ bool ControllerMainWindow::RunThemeRoundTripSelfTest(QString* errorMessage)
     apply(ui::ThemePreference::kLight);
     const QStringList lightAfter = fingerprint();
 
-    const bool passed = !lightBefore.isEmpty() &&
+    bool passed = !lightBefore.isEmpty() &&
                         lightBefore == dark &&
                         lightBefore == lightAfter;
     if (!passed && errorMessage) {
@@ -826,9 +848,103 @@ bool ControllerMainWindow::RunThemeRoundTripSelfTest(QString* errorMessage)
         }
     }
 
+    // Exercise every real settings category, including long codec summaries,
+    // without triggering device enumeration or clipboard configuration actions.
+    if (settingsPage_) {
+        auto* stack = settingsPage_->DetailStack();
+        for (int category = 0; passed && category < stack->count(); ++category) {
+            stack->setCurrentIndex(category);
+            settingsPage_->verticalScrollBar()->setValue(0);
+            apply(ui::ThemePreference::kLight);
+            const QStringList before = fingerprint();
+            apply(ui::ThemePreference::kDark);
+            const QStringList during = fingerprint();
+            apply(ui::ThemePreference::kLight);
+            const QStringList after = fingerprint();
+            bool fits = true;
+            for (auto* row : stack->currentWidget()->findChildren<QWidget*>(
+                     QStringLiteral("settingRow"))) {
+                if (!row->isVisibleTo(stack)) continue;
+                // File-transfer/paste categories already own an inner scroll
+                // area. Their rows must fit that content, not the outer viewport.
+                QScrollArea* scroll = settingsPage_;
+                for (auto* parent = row->parentWidget(); parent; parent = parent->parentWidget()) {
+                    if (auto* owner = qobject_cast<QScrollArea*>(parent)) {
+                        scroll = owner;
+                        break;
+                    }
+                }
+                const QPoint top = row->mapTo(scroll->widget(), QPoint());
+                fits = fits && (row->minimumHeight() != row->maximumHeight() ||
+                                row->height() == row->minimumHeight()) &&
+                       top.y() + row->height() <= scroll->widget()->height() &&
+                       top.y() + row->height() <= scroll->verticalScrollBar()->maximum() +
+                                                     scroll->viewport()->height();
+                scroll->verticalScrollBar()->setValue(scroll->verticalScrollBar()->maximum());
+            }
+            settingsPage_->verticalScrollBar()->setValue(
+                settingsPage_->verticalScrollBar()->maximum());
+            QCoreApplication::processEvents(QEventLoop::AllEvents);
+            const auto rendered = settingsPage_->viewport()->grab();
+            fits = fits && !rendered.isNull();
+            passed = fits && !before.isEmpty() &&
+                     before == during && before == after;
+            QTextStream(stdout) << "SETTINGS_CATEGORY_" << category
+                                << "_LAYOUT=" << (passed ? "PASS" : "FAIL") << '\n';
+            if (!passed && errorMessage) {
+                *errorMessage = QStringLiteral(
+                    "settings category %1 theme geometry or scroll extent mismatch (fits=%2)")
+                    .arg(category).arg(fits);
+                for (int index = 0; index < before.size(); ++index) {
+                    const auto d = during.value(index, QStringLiteral("<missing>"));
+                    const auto a = after.value(index, QStringLiteral("<missing>"));
+                    if (before[index] != d || before[index] != a) {
+                        *errorMessage += QStringLiteral("\nLIGHT_1=%1\nDARK=%2\nLIGHT_2=%3")
+                            .arg(before[index], d, a);
+                        break;
+                    }
+                }
+            }
+        }
+        if (originalCategory >= 0) stack->setCurrentIndex(originalCategory);
+
+        auto* capacity = settingsPage_->Controls().clipboardCacheCapacitySelector;
+        if (capacity) {
+            const auto optionFingerprint = [capacity] {
+                QStringList result;
+                for (int index = 0; index < capacity->count(); ++index) {
+                    result.push_back(capacity->itemText(index) + QLatin1Char('|') +
+                                     capacity->itemData(index).toString());
+                }
+                return result;
+            };
+            settingsPage_->RefreshClipboardCacheCapacityOptions();
+            const auto before = optionFingerprint();
+            const QVariant selectedBefore = capacity->currentData();
+            const bool enabledBefore = capacity->isEnabled();
+            int resets = 0;
+            const auto connection = connect(capacity->model(),
+                &QAbstractItemModel::modelReset, this, [&resets] { ++resets; });
+            settingsPage_->RefreshClipboardCacheCapacityOptions();
+            disconnect(connection);
+            // A real disk-capacity change is allowed to rebuild the options.
+            const bool unchanged = before == optionFingerprint();
+            const bool capacityPassed = !unchanged ||
+                (resets == 0 && selectedBefore == capacity->currentData() &&
+                 enabledBefore == capacity->isEnabled());
+            passed = passed && capacityPassed;
+            QTextStream(stdout) << "SETTINGS_CAPACITY_REFRESH="
+                                << (capacityPassed ? "PASS" : "FAIL") << '\n';
+            if (!capacityPassed && errorMessage) {
+                *errorMessage = QStringLiteral("unchanged clipboard capacity options rebuilt");
+            }
+        }
+    }
+
     if (hadOriginal) settings.setValue(key, original);
     else settings.remove(key);
     settings.sync();
+    ui::RemoteCTheme::ReloadPreference();
     ApplyInterfaceTheme(false);
     if (pageStack_ && originalPage >= 0) {
         pageStack_->setCurrentIndex(originalPage);

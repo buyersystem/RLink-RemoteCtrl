@@ -29,6 +29,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <mutex>
 
 #include "api/video/video_frame.h"
 #include "api/video/video_sink_interface.h"
@@ -172,6 +173,9 @@ public:
 
     void SetName(const QString& name)
     {
+        if (name_ == name) {
+            return;
+        }
         name_ = name;
         nameLabel_->setText(name);
         nameLabel_->adjustSize();
@@ -182,7 +186,13 @@ public:
 
     void SetPresentation(bool thumbnail, bool overview)
     {
+        if (presentationInitialized_ && thumbnail_ == thumbnail &&
+            overview_ == overview) {
+            return;
+        }
+        presentationInitialized_ = true;
         thumbnail_ = thumbnail;
+        overview_ = overview;
         setProperty("thumbnail", thumbnail);
         if (thumbnail) {
             setMinimumSize(160, 90);
@@ -219,13 +229,23 @@ public:
                 i420->width(), i420->height()) != 0) {
             return;
         }
-        QMetaObject::invokeMethod(
-            this,
-            [this, image = std::move(image)]() mutable {
-                frame_ = std::move(image);
-                update();
-            },
-            Qt::QueuedConnection);
+        // Presentation needs the newest frame, not every intermediate frame.
+        // Keep the image outside the queued functor so a busy GUI cannot retain
+        // an unbounded queue of full-resolution images. Media conversion and
+        // sink attachment/removal remain on their existing paths.
+        bool dispatch = false;
+        {
+            std::lock_guard lock(pendingFrameMutex_);
+            pendingFrame_ = std::move(image);
+            if (!frameDispatchPending_) {
+                frameDispatchPending_ = true;
+                dispatch = true;
+            }
+        }
+        if (dispatch) {
+            QMetaObject::invokeMethod(
+                this, [this] { ApplyPendingFrame(); }, Qt::QueuedConnection);
+        }
     }
 
 protected:
@@ -290,9 +310,28 @@ protected:
     }
 
 private:
+    void ApplyPendingFrame()
+    {
+        QImage image;
+        {
+            std::lock_guard lock(pendingFrameMutex_);
+            image = std::move(pendingFrame_);
+            frameDispatchPending_ = false;
+        }
+        if (!image.isNull()) {
+            frame_ = std::move(image);
+            update();
+        }
+    }
+
     QString name_;
     bool local_ = false;
     bool thumbnail_ = false;
+    bool overview_ = false;
+    bool presentationInitialized_ = false;
+    std::mutex pendingFrameMutex_;
+    QImage pendingFrame_;
+    bool frameDispatchPending_ = false;
     QImage frame_;
     QLabel* nameLabel_ = nullptr;
     QLabel* badgeLabel_ = nullptr;
@@ -311,7 +350,13 @@ public:
 
     void SetPresentation(bool thumbnail, bool overview)
     {
+        if (presentationInitialized_ && thumbnail_ == thumbnail &&
+            overview_ == overview) {
+            return;
+        }
+        presentationInitialized_ = true;
         thumbnail_ = thumbnail;
+        overview_ = overview;
         tile_->SetPresentation(thumbnail, overview);
         if (thumbnail_) {
             setFixedSize(168, 98);
@@ -349,6 +394,8 @@ private:
 
     RoomCameraTile* tile_ = nullptr;
     bool thumbnail_ = false;
+    bool overview_ = false;
+    bool presentationInitialized_ = false;
 };
 
 RoomCameraWindow::RoomCameraWindow(app::ISessionMediaAccess* media,
@@ -619,6 +666,15 @@ QRect RoomCameraWindow::ConstrainResizeGeometry(
 
 void RoomCameraWindow::RebuildLayout()
 {
+    if (layoutInitialized_ && layoutDeviceIds_ == orderedDeviceIds_ &&
+        layoutFocusedDeviceId_ == focusedDeviceId_ &&
+        layoutOverviewMode_ == overviewMode_) {
+        return;
+    }
+    layoutInitialized_ = true;
+    layoutDeviceIds_ = orderedDeviceIds_;
+    layoutFocusedDeviceId_ = focusedDeviceId_;
+    layoutOverviewMode_ = overviewMode_;
     UpdateSingleParticipantMode(orderedDeviceIds_.size());
     countLabel_->setText(
         QStringLiteral("%1 人开启").arg(orderedDeviceIds_.size()));
@@ -854,6 +910,7 @@ void RoomCameraWindow::RemoveTile(const QString& deviceId)
     if (!tile) {
         return;
     }
+    layoutInitialized_ = false;
     const QString pairId = pairBindings_.take(deviceId);
     if (!pairId.isEmpty() && media_) {
         media_->SetRoomRemoteVideoSink(

@@ -14,9 +14,11 @@
 
 #include "api/audio/create_audio_device_module.h"
 #include "api/audio/audio_device_defines.h"
+#include "api/audio/builtin_audio_processing_builder.h"
 #include "api/audio_codecs/builtin_audio_decoder_factory.h"
 #include "api/audio_codecs/builtin_audio_encoder_factory.h"
-#include "api/create_peerconnection_factory.h"
+#include "api/create_modular_peer_connection_factory.h"
+#include "api/enable_media.h"
 #include "api/environment/environment_factory.h"
 #include "api/video/render_resolution.h"
 #include "api/video/video_codec_type.h"
@@ -41,6 +43,7 @@
 #include "src/platform/win/FfmpegHardwareH264EncoderFactory.h"
 #include "src/platform/win/H264EncoderBenchmark.h"
 #include "src/platform/win/QualityOpenH264Encoder.h"
+#include "GoogCcTelemetry.h"
 
 namespace remote {
 namespace {
@@ -443,7 +446,7 @@ WebRtcRuntime::~WebRtcRuntime()
     Shutdown();
 }
 
-bool WebRtcRuntime::Initialize()
+bool WebRtcRuntime::Initialize(bool enableScreenRecoveryHints)
 {
     if (factory_) {
         return true;
@@ -820,19 +823,39 @@ bool WebRtcRuntime::Initialize()
         videoDecoderFactory->HasSoftwareDecoderFor(
             webrtc::SdpVideoFormat::H264());
 
-    factory_ = webrtc::CreatePeerConnectionFactory(
-        networkThread_.get(),
-        workerThread_.get(),
-        signalingThread_.get(),
-        audioDeviceModule_,
-        std::move(audioEncoderFactory),
-        std::move(audioDecoderFactory),
-        std::move(videoEncoderFactory),
-        std::move(videoDecoderFactory),
-        nullptr,
-        nullptr,
-        nullptr,
-        nullptr);
+    // Equivalent to upstream CreatePeerConnectionFactory's dependencies,
+    // including its event-log and audio-processing defaults. Observation keeps
+    // native outputs intact; recovery invitations are optional and can be
+    // disabled with the matching field-trial override for reference runs.
+    webrtc::PeerConnectionFactoryDependencies dependencies;
+    dependencies.network_thread = networkThread_.get();
+    dependencies.worker_thread = workerThread_.get();
+    dependencies.signaling_thread = signalingThread_.get();
+    dependencies.socket_factory = networkThread_->socketserver();
+    // PeerConnectionFactory otherwise silently ignores network_controller_factory
+    // in this SDK. This gate selects our transparent GoogCC wrapper; all other
+    // trials and the original environment utilities retain their existing values.
+    dependencies.env = CreateGoogCcTelemetryEnvironment(webrtc::CreateEnvironment(), enableScreenRecoveryHints);
+    dependencies.adm = audioDeviceModule_;
+    dependencies.audio_encoder_factory = std::move(audioEncoderFactory);
+    dependencies.audio_decoder_factory = std::move(audioDecoderFactory);
+#ifndef WEBRTC_EXCLUDE_AUDIO_PROCESSING_MODULE
+    dependencies.audio_processing_builder =
+        std::make_unique<webrtc::BuiltinAudioProcessingBuilder>();
+#endif
+    dependencies.video_encoder_factory = std::move(videoEncoderFactory);
+    dependencies.video_decoder_factory = std::move(videoDecoderFactory);
+    googCcTelemetryContext_ = std::make_shared<GoogCcTelemetryFactoryContext>(
+        signalingThread_.get());
+    dependencies.event_log_factory =
+        CreateGoogCcTelemetryEventLogFactory(googCcTelemetryContext_);
+    dependencies.network_controller_factory =
+        CreateGoogCcTelemetryControllerFactory(googCcTelemetryContext_, enableScreenRecoveryHints);
+    webrtc::EnableMedia(dependencies);
+    factory_ = webrtc::CreateModularPeerConnectionFactory(std::move(dependencies));
+    if (factory_) {
+        RegisterGoogCcTelemetryFactory(factory_.get(), googCcTelemetryContext_);
+    }
 
     report_.factoryCreated = factory_ != nullptr;
     if (!factory_) {
@@ -846,7 +869,11 @@ bool WebRtcRuntime::Initialize()
 
 void WebRtcRuntime::Shutdown()
 {
+    if (factory_) {
+        UnregisterGoogCcTelemetryFactory(factory_.get());
+    }
     factory_ = nullptr;
+    googCcTelemetryContext_.reset();
     videoEncoderFactory_ = nullptr;
     videoDecoderFactory_ = nullptr;
 

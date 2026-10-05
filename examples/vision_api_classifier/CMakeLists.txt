@@ -1,0 +1,12 @@
+cmake_minimum_required(VERSION 3.24)
+
+project(RLinkVisionApiClassifierExample LANGUAGES CXX)
+
+find_package(RLinkMediaIntelligence CONFIG REQUIRED)
+
+add_executable(vision_api_classifier main.cpp)
+target_compile_features(vision_api_classifier PRIVATE cxx_std_20)
+set_target_properties(vision_api_classifier PROPERTIES
+  INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
+target_link_libraries(vision_api_classifier PRIVATE
+  RLinkMediaIntelligence::openai_compatible)

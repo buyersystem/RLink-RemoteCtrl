@@ -34,6 +34,15 @@ SessionCommandResult Failure(std::string code, std::string message)
 SessionCommandResult InProcessSessionEngine::SetDirectScreenStreamPreference(
     const ScreenStreamPreferenceRequest& preference)
 {
+    // The legacy direct API already returned queue acceptance. Keep that
+    // behavior while sharing validation and state with the completion API.
+    return QueueDirectScreenStreamPreference(preference, {});
+}
+
+SessionCommandResult InProcessSessionEngine::QueueDirectScreenStreamPreference(
+    const ScreenStreamPreferenceRequest& preference,
+    std::function<void(SessionCommandResult)> completion)
+{
     const bool originalSize = preference.maxWidth == 0 &&
         preference.maxHeight == 0;
     const bool boundedSize = preference.maxWidth > 0 &&
@@ -48,6 +57,8 @@ SessionCommandResult InProcessSessionEngine::SetDirectScreenStreamPreference(
     }
 
     SessionControllerBase* controller = nullptr;
+    std::uint64_t sessionGeneration = 0;
+    std::uint64_t shareGeneration = 0;
     ScreenStreamPreferenceRequest request = preference;
     {
         std::lock_guard lock(mutex_);
@@ -75,27 +86,93 @@ SessionCommandResult InProcessSessionEngine::SetDirectScreenStreamPreference(
         request.sequence = ++directSession_.nextScreenControlSequence;
         snapshot_.direct.screenPreferencePending = true;
         snapshot_.direct.screenPreferenceSequence = request.sequence;
+        // A previous ACK rejection must not be mistaken for this request's
+        // rejection while its asynchronous send/ACK is still in flight.
+        if (snapshot_.error.code == "direct_screen_preference_rejected") {
+            snapshot_.error = {};
+        }
         controller = sessionController_.get();
+        sessionGeneration = directSessionGeneration_;
+        shareGeneration = snapshot_.direct.remoteScreenShareGeneration;
     }
+    const auto isCurrent =
+        [this, controller, sessionId = request.roomId,
+         localDeviceId = request.senderDeviceId, sessionGeneration, shareGeneration,
+         sequence = request.sequence] {
+            return sessionController_.get() == controller &&
+                directSessionGeneration_ == sessionGeneration &&
+                snapshot_.state == SessionEngineState::kActive &&
+                snapshot_.purpose == SessionPurpose::kRemoteControl &&
+                snapshot_.remoteControlRole == RemoteControlRole::kController &&
+                !directSession_.sessionCloseRequested_ &&
+                snapshot_.sessionId == sessionId &&
+                snapshot_.localDeviceId == localDeviceId &&
+                snapshot_.direct.remoteScreenShareGeneration == shareGeneration &&
+                snapshot_.direct.screenPreferenceSequence == sequence;
+        };
+    const auto finish = [this, isCurrent](SendResult sendResult) {
+        {
+            std::lock_guard lock(mutex_);
+            if (!isCurrent()) {
+                return Failure("screen_stream_request_stale",
+                               "The direct screen stream request has been superseded.");
+            }
+            if (sendResult != SendResult::kSent) {
+                snapshot_.direct.screenPreferencePending = false;
+            }
+        }
+        if (sendResult != SendResult::kSent) {
+            PublishSnapshot();
+        }
+        switch (sendResult) {
+        case SendResult::kSent:
+            PublishSnapshot();
+            return Success();
+        case SendResult::kChannelNotFound:
+            return Failure("direct_screen_stream_channel_not_found",
+                           "The reliable control channel was not negotiated.");
+        case SendResult::kChannelNotOpen:
+            return Failure("direct_screen_stream_channel_not_open",
+                           "The reliable control channel is not open.");
+        case SendResult::kSessionNotStarted:
+            return Failure("direct_screen_stream_session_not_started",
+                           "The direct P2P session is not active.");
+        case SendResult::kSendFailed:
+            return Failure("direct_screen_stream_send_failed",
+                           "WebRTC rejected the screen stream request.");
+        }
+        return Failure("direct_screen_stream_send_failed",
+                       "The direct screen stream request could not be sent.");
+    };
     std::vector<std::uint8_t> encoded;
     std::string error;
     if (!EncodeScreenStreamPreferenceRequest(request, &encoded, &error)) {
-        std::lock_guard lock(mutex_);
-        if (snapshot_.direct.screenPreferenceSequence == request.sequence) {
-            snapshot_.direct.screenPreferencePending = false;
-        }
+        (void)finish(SendResult::kSendFailed);
         return Failure("direct_screen_stream_encode_failed", error);
     }
-    if (!controller->QueueData(
-            std::string(kControlReliableChannel), encoded, true)) {
+    bool accepted = false;
+    {
+        // Holding the engine mutex across this nonblocking post protects the
+        // uniquely owned direct controller from concurrent session disposal.
         std::lock_guard lock(mutex_);
-        if (snapshot_.direct.screenPreferenceSequence == request.sequence) {
-            snapshot_.direct.screenPreferencePending = false;
+        if (!isCurrent()) {
+            return Failure("screen_stream_request_stale",
+                           "The direct screen stream request has been superseded.");
         }
+        accepted = controller->QueueData(
+            std::string(kControlReliableChannel), encoded, true,
+            [finish, completion = std::move(completion)](SendResult result) {
+                const auto commandResult = finish(result);
+                if (completion) {
+                    completion(commandResult);
+                }
+            });
+    }
+    if (!accepted) {
+        (void)finish(SendResult::kSessionNotStarted);
         return Failure("direct_screen_stream_send_failed",
                        "The screen stream request could not be queued.");
     }
-    PublishSnapshot();
     return Success();
 }
 
@@ -247,7 +324,8 @@ SessionCommandResult InProcessSessionEngine::SwitchLocalDirectDisplay(
             options_.desktopCaptureImplementation,
             *selected,
             options_.contentAnalyzerEnabled,
-            options_.contentAnalyzerRateHz);
+            options_.contentAnalyzerRateHz,
+            options_.remoteVisionAnalyzer);
     if (!replacement->SetTargetFrameRate(targetFrameRate) ||
         !replacement->StartCapture()) {
         const std::string error = replacement->LastError();
@@ -373,6 +451,12 @@ bool InProcessSessionEngine::DispatchDirectScreenData(
             snapshot_.direct.remoteDisplayCatalogReported = true;
             snapshot_.direct.remoteDisplayCatalogLayoutVersion =
                 catalog.layoutVersion;
+            if (snapshot_.direct.remoteScreenShareGeneration !=
+                    catalog.screenShareGeneration) {
+                // The old send completion and ACK belong to another capture
+                // generation. Keep the applied policy, but release its wait.
+                snapshot_.direct.screenPreferencePending = false;
+            }
             snapshot_.direct.remoteScreenShareGeneration =
                 catalog.screenShareGeneration;
             snapshot_.direct.remoteDisplays = std::move(catalog.displays);
@@ -475,6 +559,8 @@ bool InProcessSessionEngine::DispatchDirectScreenData(
             }
             snapshot_.direct.screenPreferencePending = false;
             if (applied.accepted) {
+                snapshot_.direct.screenPreferenceAcceptedSequence =
+                    applied.requestSequence;
                 snapshot_.direct.screenWidth = applied.width;
                 snapshot_.direct.screenHeight = applied.height;
                 snapshot_.direct.screenFramesPerSecond =
@@ -528,19 +614,21 @@ bool InProcessSessionEngine::DispatchDirectScreenData(
         } else {
             const auto effective = ScreenShareCoordinator::ResolvePolicy(
                 source->CapturedWidth(), source->CapturedHeight(), request);
+            const auto previousCaptureFrameRate = source->TargetFrameRate();
             const bool captureAccepted =
                 source->SetTargetFrameRate(effective.framesPerSecond);
+            ScreenStreamPolicyResult appliedPolicy;
             const auto policy = captureAccepted
                 ? session->SetVideoSlotEncodingPolicy(
                       kScreenMainVideoSlot, effective.framesPerSecond,
-                      effective.width, effective.height)
+                      effective.width, effective.height, &appliedPolicy)
                 : webrtc::RTCError(webrtc::RTCErrorType::INVALID_STATE,
                                    "The desktop capturer rejected the frame rate.");
             response.accepted = policy.ok();
             response.width = effective.width;
             response.height = effective.height;
             response.framesPerSecond = effective.framesPerSecond;
-            response.maxBitrateBps = effective.maxBitrateBps;
+            response.maxBitrateBps = policy.ok() ? appliedPolicy.maxBitrateBps : 0;
             response.scaleBackend = ScreenScaleBackend::kWebRtc;
             response.error = policy.ok() ? std::string{}
                                          : std::string(policy.message());
@@ -548,6 +636,17 @@ bool InProcessSessionEngine::DispatchDirectScreenData(
                 std::lock_guard lock(mutex_);
                 directSession_.screenPreferenceApplied = true;
                 directSession_.screenPreference = request;
+            } else if (captureAccepted) {
+                bool restoreCapture = false;
+                {
+                    std::lock_guard lock(mutex_);
+                    restoreCapture = screenShare_.CaptureSource() == source &&
+                        snapshot_.screenShare.generation == generation &&
+                        source->TargetFrameRate() == effective.framesPerSecond;
+                }
+                if (restoreCapture) {
+                    (void)source->SetTargetFrameRate(previousCaptureFrameRate);
+                }
             }
         }
         ScreenCaptureCapability captureCapability;

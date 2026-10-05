@@ -5,6 +5,7 @@
 #include "DataChannelManager.h"
 #include "MediaSlotManager.h"
 #include "PeerNegotiator.h"
+#include "GoogCcTelemetry.h"
 
 namespace remote {
 using namespace webrtc_session_detail;
@@ -15,6 +16,7 @@ LibWebRtcSession::LibWebRtcSession(
       factory_(std::move(factory)),
       statsCollector_(
           std::make_unique<PeerConnectionStatsCollector>()),
+      googCcTelemetry_(std::make_shared<GoogCcTelemetryState>()),
       dataChannelManager_(std::make_unique<DataChannelManager>(
           [this](const DataChannelInfo& info) {
               if (auto* observer = Observer()) {
@@ -71,7 +73,9 @@ LibWebRtcSession::LibWebRtcSession(
                   }
               }})),
       mediaSlots_(std::make_unique<MediaSlotManager>())
-{}
+{
+    googCcTelemetry_->SetScreenQualityDeficitShare(screenQualityDeficitShareHundredths_);
+}
 
 LibWebRtcSession::~LibWebRtcSession()
 {
@@ -143,8 +147,9 @@ OperationId LibWebRtcSession::Start(const WebRtcSessionConfig& config)
         rtcConfiguration.servers.push_back(std::move(server));
     }
 
-    auto peerOrError = factory_->CreatePeerConnectionOrError(
-        rtcConfiguration, webrtc::PeerConnectionDependencies(this));
+    auto peerOrError = CreatePeerConnectionWithGoogCcTelemetry(
+        factory_, rtcConfiguration, webrtc::PeerConnectionDependencies(this),
+        googCcTelemetry_);
     if (!peerOrError.ok()) {
         ChangeState(WebRtcSessionState::kFailed);
         FailOperation(operationId, "peer_connection_create_failed",

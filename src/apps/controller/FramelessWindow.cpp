@@ -4,7 +4,9 @@
 #include "FramelessWindow.h"
 
 #include <algorithm>
+#include <atomic>
 #include <cmath>
+#include <mutex>
 
 #include <QEvent>
 #include <QApplication>
@@ -39,6 +41,26 @@
 
 namespace remote::controller {
 namespace {
+
+struct UiAnimationLevelCache {
+    std::atomic<int> value{-1};
+    std::mutex updateMutex;
+};
+
+UiAnimationLevelCache& AnimationLevelCache()
+{
+    static UiAnimationLevelCache cache;
+    return cache;
+}
+
+int ReadUiAnimationLevel()
+{
+    const QSettings settings;
+    const int legacyLevel = settings.value(
+        QStringLiteral("ui/animationsEnabled"), true).toBool() ? 2 : 0;
+    return std::clamp(settings.value(
+        QStringLiteral("ui/animationLevel"), legacyLevel).toInt(), 0, 2);
+}
 
 QToolButton* MakeCaptionButton(const QString& iconResource,
                                const QString& objectName,
@@ -384,11 +406,36 @@ QString ScaleUiStyleSheet(const QString& styleSheet)
 
 int CurrentUiAnimationLevel()
 {
-    const QSettings settings;
-    const int legacyLevel = settings.value(
-        QStringLiteral("ui/animationsEnabled"), true).toBool() ? 2 : 0;
-    return std::clamp(settings.value(
-        QStringLiteral("ui/animationLevel"), legacyLevel).toInt(), 0, 2);
+    auto& cache = AnimationLevelCache();
+    int value = cache.value.load(std::memory_order_acquire);
+    if (value < 0) {
+        const std::lock_guard lock(cache.updateMutex);
+        value = cache.value.load(std::memory_order_relaxed);
+        if (value < 0) {
+            value = ReadUiAnimationLevel();
+            cache.value.store(value, std::memory_order_release);
+        }
+    }
+    return value;
+}
+
+void SaveUiAnimationLevel(int level)
+{
+    level = std::clamp(level, 0, 2);
+    auto& cache = AnimationLevelCache();
+    const std::lock_guard lock(cache.updateMutex);
+    QSettings settings;
+    settings.setValue(QStringLiteral("ui/animationLevel"), level);
+    // Preserve compatibility with older builds sharing the same settings.
+    settings.setValue(QStringLiteral("ui/animationsEnabled"), level > 0);
+    cache.value.store(level, std::memory_order_release);
+}
+
+void ReloadUiAnimationLevel()
+{
+    auto& cache = AnimationLevelCache();
+    const std::lock_guard lock(cache.updateMutex);
+    cache.value.store(ReadUiAnimationLevel(), std::memory_order_release);
 }
 
 namespace {

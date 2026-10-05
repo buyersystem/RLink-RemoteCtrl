@@ -14,6 +14,9 @@
 #include "api/video/video_frame.h"
 #include "api/video/video_sink_interface.h"
 #include "src/core/ScreenNetworkPolicy.h"
+#include "src/core/SessionDiagnostics.h"
+#include "media_intelligence/core/ContentAwareStreamPolicy.h"
+#include "media_intelligence/core/GoogCcNetworkPressure.h"
 
 namespace remote {
 
@@ -22,6 +25,7 @@ class LibWebRtcSession;
 class MediaSlotManager final {
 private:
     friend class LibWebRtcSession;
+    friend class ContentAwareStreamExecutionTestAccess;
 
     struct VideoSlotBinding {
         webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver;
@@ -32,6 +36,32 @@ private:
         std::uint32_t configuredOutputHeight = 0;
         std::uint64_t configuredStartBitrateBps = 0;
         std::uint64_t configuredMaxBitrateBps = 0;
+        std::uint64_t configuredNetworkProbeMaxBitrateBps = 0;
+        std::uint32_t configuredVideoBppHundredths = 15;
+        std::uint32_t effectiveWidth = 0;
+        std::uint32_t effectiveHeight = 0;
+        std::uint32_t effectiveMaxFps = 0;
+        std::uint64_t effectiveDesiredBitrateBps = 0;
+        std::uint64_t effectiveMaxBitrateBps = 0;
+        media_intelligence::ContentAwareStreamPolicyState contentPolicyState;
+        media_intelligence::GoogCcNetworkPressureState contentNetworkPressure;
+        media_intelligence::ScreenScene verifiedUserScene = media_intelligence::ScreenScene::kUnknown;
+        std::uint64_t verifiedUserBitrateBps = 0;
+        std::uint64_t verifiedUserLastSampleMs = 0;
+        std::uint64_t verifiedUserRouteRevision = 0;
+        std::uint64_t verifiedUserFirstSampleMs = 0;
+        std::uint32_t verifiedUserSamples = 0;
+        std::uint32_t verifiedUserWidth = 0, verifiedUserHeight = 0, verifiedUserFps = 0;
+        std::uint64_t verifiedUserVideoCeilingBps = 0;
+        ContentPolicyShadowSnapshot contentPolicyRecommendation;
+        ContentPolicyExecutionSnapshot contentPolicyExecution;
+        std::uint64_t contentPolicyRevision = 0;
+        bool contentPolicyNeedsRestore = false;
+        std::uint64_t contentPolicyEvidenceNotBeforeMs = 0;
+        bool contentQualityMetricAvailable = false;
+        bool contentQualityVerified = false;
+        bool contentProcessingEvidenceAvailable = false;
+        bool contentProcessingHealthy = false;
         AdaptiveScreenFrameRateState adaptiveFrameRate;
         std::uint64_t adaptiveFrameRateRevision = 0;
         std::string adaptiveFrameRateError;

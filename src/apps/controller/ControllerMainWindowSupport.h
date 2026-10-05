@@ -83,6 +83,7 @@ extern const int kSettingsControlWidth;
 extern const char kMainStyle[];
 
 bool IsNineDigitPublicId(const QString& value);
+std::uint32_t ConfiguredScreenQualityDeficitShareHundredths();
 QString LocalizedDirectSessionError(
     const std::string& errorCode,
     const std::string& fallbackMessage,
@@ -110,6 +111,9 @@ bool SetWindowsAutoStartEnabled(bool enabled);
 std::pair<std::uint32_t, std::uint32_t> SavedScreenQualityBounds(
     ScreenQualityTier quality);
 QString FormatBitrate(std::uint64_t bitsPerSecond);
+QString ContentSceneDisplayText(const std::string& scene);
+QString ContentPolicyReasonDisplayText(const std::string& reason);
+QString ContentPolicyExecutionDisplayText(const std::string& status);
 QString FormatByteCount(std::uint64_t bytes);
 QString SampleWindowSuffix(std::uint32_t windowMs);
 QString LatestFrameTimingText(

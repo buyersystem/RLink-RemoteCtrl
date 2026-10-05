@@ -20,6 +20,10 @@ namespace remote::controller {
 QIcon CreateRemoteCIcon();
 QString ScaleUiStyleSheet(const QString& styleSheet);
 int CurrentUiAnimationLevel();
+// Runtime changes must update both the persisted preference and its process
+// cache. Reload is reserved for explicit external settings updates.
+void SaveUiAnimationLevel(int level);
+void ReloadUiAnimationLevel();
 void EnableSmoothWheelScrolling(QAbstractScrollArea* scrollArea);
 
 class FramelessMainWindow : public QMainWindow {

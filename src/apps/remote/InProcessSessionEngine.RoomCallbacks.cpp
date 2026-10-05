@@ -141,6 +141,8 @@ void InProcessSessionEngine::OnRoomState(const RoomSnapshot& room)
                 peer.screenPreferencePending = false;
                 peer.screenPreferenceSequence = 0;
                 peer.screenPreferenceGeneration = 0;
+                peer.screenPreferenceAcceptedSequence = 0;
+                peer.screenPreferenceAcceptedGeneration = 0;
                 peer.screenWidth = 0;
                 peer.screenHeight = 0;
                 peer.screenFramesPerSecond = kDefaultScreenFrameRate;

@@ -10,10 +10,12 @@
 #include <QAction>
 #include <QActionGroup>
 #include <QApplication>
+#include <QCoreApplication>
 #include <QCloseEvent>
 #include <QDialog>
 #include <QLabel>
 #include <QMenu>
+#include <QMetaObject>
 #include <QTimer>
 #include <QToolButton>
 
@@ -59,6 +61,7 @@ namespace remote::controller {
         }
 
         if (!liveRemoteControl) {
+            ResetStreamPreferenceRequests();
             FramelessMainWindow::closeEvent(event);
             return;
         }
@@ -86,6 +89,7 @@ namespace remote::controller {
         ReleaseRemoteInputs();
         if (disconnectHandler_) disconnectHandler_();
         event->accept();
+        ResetStreamPreferenceRequests();
         FramelessMainWindow::closeEvent(event);
     }
 
@@ -333,7 +337,7 @@ namespace remote::controller {
     void RemoteSessionWindow::HandleFrameRateSelection(
         std::uint32_t framesPerSecond)
     {
-        if (!sessionControl_ || !binding_.IsValid() || !frameRateButton_) {
+        if (!sessionControl_ || !sessionMedia_ || !binding_.IsValid() || !frameRateButton_) {
             return;
         }
         if (framesPerSecond > remoteMaximumFrameRate_) {
@@ -344,53 +348,24 @@ namespace remote::controller {
                 RemoteCToast::Tone::kInformation);
             return;
         }
-        const std::uint32_t previous = selectedFrameRate_;
         selectedFrameRate_ = framesPerSecond;
         if (desktopCanvas_) {
             static_cast<RemoteDesktopCanvas*>(desktopCanvas_)
                 ->SetTargetFrameRate(selectedFrameRate_);
         }
-        if (!RequestStreamPreference()) {
-            selectedFrameRate_ = previous;
-            if (desktopCanvas_) {
-                static_cast<RemoteDesktopCanvas*>(desktopCanvas_)
-                    ->SetTargetFrameRate(selectedFrameRate_);
-            }
-            if (frameRateMenu_) {
-                for (QAction* action : frameRateMenu_->actions()) {
-                    action->setChecked(
-                        action->data().toUInt() == selectedFrameRate_);
-                }
-            }
-            return;
-        }
         frameRateButton_->setText(
             QStringLiteral("目标帧率\n%1 FPS").arg(framesPerSecond));
-        RemoteCToast::ShowAbove(
-            frameRateButton_,
+        (void)RequestStreamPreference(true,
             QStringLiteral("已请求远端切换到 %1 FPS")
-            .arg(framesPerSecond),
-            RemoteCToast::Tone::kSuccess);
+                .arg(framesPerSecond), frameRateButton_);
     }
 
     void RemoteSessionWindow::HandleQualitySelection(ScreenQualityTier quality)
     {
-        if (!sessionControl_ || !binding_.IsValid() || !qualityButton_) {
+        if (!sessionControl_ || !sessionMedia_ || !binding_.IsValid() || !qualityButton_) {
             return;
         }
-        const ScreenQualityTier previous = selectedQuality_;
         selectedQuality_ = quality;
-        if (!RequestStreamPreference()) {
-            selectedQuality_ = previous;
-            if (qualityMenu_) {
-                for (QAction* action : qualityMenu_->actions()) {
-                    action->setChecked(
-                        action->data().toInt() ==
-                        static_cast<int>(selectedQuality_));
-                }
-            }
-            return;
-        }
         const auto [width, height] = ScreenQualityBounds(quality);
         qualityButton_->setText(
             width > 0 && height > 0
@@ -398,14 +373,56 @@ namespace remote::controller {
             .arg(width)
             .arg(height)
             : QStringLiteral("分辨率\n原始画质"));
-        RemoteCToast::ShowAbove(
-            qualityButton_,
+        (void)RequestStreamPreference(true,
             QStringLiteral("已请求远端切换到%1")
-            .arg(ScreenQualityText(quality)),
-            RemoteCToast::Tone::kSuccess);
+                .arg(ScreenQualityText(quality)), qualityButton_);
     }
 
-    bool RemoteSessionWindow::RequestStreamPreference(bool showError)
+    void RemoteSessionWindow::ResetStreamPreferenceRequests()
+    {
+        ScreenStreamPreferenceRequest preference;
+        const auto [width, height] = ScreenQualityBounds(selectedQuality_);
+        preference.maxWidth = width;
+        preference.maxHeight = height;
+        preference.framesPerSecond = selectedFrameRate_;
+        preference.quality = selectedQuality_;
+        streamPreferenceRequests_.Reset(preference);
+        streamPreferenceQueue_.clear();
+        streamPreferenceSendInFlight_ = false;
+    }
+
+    void RemoteSessionWindow::RefreshSelectedStreamPreferenceUi()
+    {
+        selectedFrameRate_ = (std::min)(selectedFrameRate_, remoteMaximumFrameRate_);
+        if (desktopCanvas_) {
+            static_cast<RemoteDesktopCanvas*>(desktopCanvas_)
+                ->SetTargetFrameRate(selectedFrameRate_);
+        }
+        if (frameRateMenu_) {
+            for (QAction* action : frameRateMenu_->actions()) {
+                action->setChecked(action->data().toUInt() == selectedFrameRate_);
+            }
+        }
+        if (qualityMenu_) {
+            for (QAction* action : qualityMenu_->actions()) {
+                action->setChecked(action->data().toInt() ==
+                                   static_cast<int>(selectedQuality_));
+            }
+        }
+        if (frameRateButton_) {
+            frameRateButton_->setText(
+                QStringLiteral("目标帧率\n%1 FPS").arg(selectedFrameRate_));
+        }
+        if (qualityButton_) {
+            const auto [width, height] = ScreenQualityBounds(selectedQuality_);
+            qualityButton_->setText(width > 0 && height > 0
+                ? QStringLiteral("分辨率\n%1 × %2").arg(width).arg(height)
+                : QStringLiteral("分辨率\n原始画质"));
+        }
+    }
+
+    bool RemoteSessionWindow::RequestStreamPreference(
+        bool showError, QString successMessage, QWidget* successAnchor)
     {
         if (!sessionControl_ || !sessionMedia_ || !binding_.IsValid()) {
             return false;
@@ -416,22 +433,114 @@ namespace remote::controller {
         request.maxHeight = height;
         request.framesPerSecond = selectedFrameRate_;
         request.quality = selectedQuality_;
+        streamPreferenceQueue_.push_back({request,
+            streamPreferenceRequests_.Generation(), streamPreferenceRequests_.Begin(),
+            showError, std::move(successMessage), successAnchor});
+        DispatchNextStreamPreference();
+        return true;
+    }
+
+    void RemoteSessionWindow::DispatchNextStreamPreference()
+    {
+        if (streamPreferenceSendInFlight_ || streamPreferenceQueue_.empty() ||
+            !sessionControl_ || !sessionMedia_ || !binding_.IsValid()) {
+            return;
+        }
+        streamPreferenceSendInFlight_ = true;
+        const PendingStreamPreference pending = streamPreferenceQueue_.front();
+        streamPreferenceQueue_.pop_front();
+        const RemoteSessionBinding expectedBinding = binding_;
+        const auto* expectedControl = sessionControl_;
+        const auto* expectedMedia = sessionMedia_;
+        const auto expectedSession = sessionControl_->Snapshot();
+        const QPointer<RemoteSessionWindow> self(this);
+        // The application outlives the engine and its transport executors.
+        // Never dereference a window QPointer from the transport thread.
+        auto* dispatcher = QCoreApplication::instance();
+        const auto complete = [self, dispatcher, expectedBinding, expectedControl,
+                               expectedMedia, expectedSessionId = expectedSession.sessionId,
+                               expectedRoomId = expectedSession.room.roomId,
+                               expectedRoomEpoch = expectedSession.room.screenShareEpoch,
+                               pending](SessionCommandResult result) {
+            QMetaObject::invokeMethod(dispatcher,
+                [self, expectedBinding, expectedControl, expectedMedia,
+                 expectedSessionId, expectedRoomId, expectedRoomEpoch, pending,
+                 result = std::move(result)] {
+                    if (!self || self->sessionControl_ != expectedControl ||
+                        self->sessionMedia_ != expectedMedia ||
+                        !self->binding_.SameTransport(expectedBinding) ||
+                        self->streamPreferenceRequests_.Generation() != pending.generation) {
+                        return;
+                    }
+                    const auto snapshot = self->sessionControl_->Snapshot();
+                    if ((self->binding_.IsDirect() && snapshot.sessionId != expectedSessionId) ||
+                        (self->binding_.IsRoom() &&
+                         (snapshot.room.roomId != expectedRoomId ||
+                          snapshot.room.screenShareEpoch != expectedRoomEpoch))) {
+                        // Snapshot delivery can lag behind the transport
+                        // completion. Check identity again before any toast,
+                        // rollback or dispatch into a replacement session.
+                        self->ResetStreamPreferenceRequests();
+                        return;
+                    }
+                    if (self->binding_.IsDirect() &&
+                        self->directPreferenceShareGeneration_ !=
+                            snapshot.direct.remoteScreenShareGeneration) {
+                        self->directPreferenceShareGeneration_ =
+                            snapshot.direct.remoteScreenShareGeneration;
+                        self->ResetStreamPreferenceRequests();
+                        return;
+                    }
+                    self->streamPreferenceSendInFlight_ = false;
+                    const auto completion = self->streamPreferenceRequests_.Complete(
+                        pending.generation, pending.sequence, pending.request, result.accepted);
+                    if (result.accepted) {
+                        if (self->binding_.IsDirect()) {
+                            self->streamPreferenceRequests_.MarkSentTransportSequence(
+                                snapshot.direct.screenPreferenceSequence);
+                        } else {
+                            const auto pair = std::find_if(
+                                snapshot.roomActivity.peerConnections.begin(),
+                                snapshot.roomActivity.peerConnections.end(),
+                                [&expectedBinding](const auto& current) {
+                                    return current.pairId == expectedBinding.roomPairId.toStdString();
+                                });
+                            if (pair != snapshot.roomActivity.peerConnections.end()) {
+                                self->streamPreferenceRequests_.MarkSentTransportSequence(
+                                    pair->screenPreferenceSequence);
+                            }
+                        }
+                    }
+                    const bool transportStale = result.errorCode == "screen_stream_request_stale";
+                    if (completion == StreamPreferenceRequestState::Completion::kFailed) {
+                        // A failed automatic preference must permit the existing
+                        // generation-bound retry to try again on a later snapshot.
+                        self->preferenceRequestedScreenShareEpoch_ = 0;
+                        if (!transportStale && pending.showError) {
+                            const auto& successful = self->streamPreferenceRequests_.LastSuccessful();
+                            self->selectedFrameRate_ = successful.framesPerSecond;
+                            self->selectedQuality_ = successful.quality;
+                            self->RefreshSelectedStreamPreferenceUi();
+                            QWidget* anchor = self->qualityButton_
+                                ? static_cast<QWidget*>(self->qualityButton_)
+                                : static_cast<QWidget*>(self->frameRateButton_);
+                            RemoteCToast::ShowAbove(anchor,
+                                QString::fromStdString(result.errorMessage),
+                                RemoteCToast::Tone::kError);
+                        }
+                    } else if (completion == StreamPreferenceRequestState::Completion::kSucceeded &&
+                               !pending.successMessage.isEmpty() && pending.successAnchor) {
+                        RemoteCToast::ShowAbove(pending.successAnchor,
+                            pending.successMessage, RemoteCToast::Tone::kSuccess);
+                    }
+                    self->DispatchNextStreamPreference();
+                }, Qt::QueuedConnection);
+        };
         const auto result = binding_.IsDirect()
-            ? sessionMedia_->SetDirectScreenStreamPreference(request)
-            : sessionControl_->SetRoomScreenStreamPreference(
-                  binding_.roomPairId.toStdString(), request);
-        if (result.accepted) {
-            return true;
-        }
-        if (showError) {
-            QWidget* anchor = qualityButton_
-                ? static_cast<QWidget*>(qualityButton_)
-                : static_cast<QWidget*>(frameRateButton_);
-            RemoteCToast::ShowAbove(
-                anchor, QString::fromStdString(result.errorMessage),
-                RemoteCToast::Tone::kError);
-        }
-        return false;
+            ? sessionMedia_->QueueDirectScreenStreamPreference(pending.request, complete)
+            : sessionControl_->QueueRoomScreenStreamPreference(
+                  binding_.roomPairId.toStdString(), pending.request, complete);
+        if (!result.accepted) complete(result);
     }
 
     void RemoteSessionWindow::ToggleRemoteSound()

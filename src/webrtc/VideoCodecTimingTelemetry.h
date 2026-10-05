@@ -14,6 +14,7 @@
 #include <unordered_map>
 #include <utility>
 #include <vector>
+#include "src/core/ScreenFrameQualityPolicy.h"
 
 namespace remote {
 
@@ -39,6 +40,8 @@ struct VideoDecodePipelineTimingSnapshot {
 };
 
 struct VideoCodecFrameTimingSnapshot {
+    bool screenQualityProtectionAvailable = false;
+    ScreenFrameQualityDecision screenQuality;
     bool valid = false;
     std::uint64_t instanceId = 0;
     VideoCodecTimingDirection direction =
@@ -160,6 +163,16 @@ public:
         if (found != instances_.end()) {
             ++found->second.droppedFrames;
         }
+    }
+
+    void RecordScreenQualityRates(std::uint64_t id, bool available,
+                                 ScreenFrameQualityDecision decision)
+    {
+        std::lock_guard lock(mutex_);
+        const auto found = instances_.find(id);
+        if (found == instances_.end()) return;
+        found->second.screenQualityProtectionAvailable = available;
+        found->second.screenQuality = decision;
     }
 
     std::optional<VideoCodecFrameTimingSnapshot>

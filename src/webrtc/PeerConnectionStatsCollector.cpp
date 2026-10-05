@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 #include <cstdint>
 #include <limits>
 #include <mutex>
@@ -111,6 +112,10 @@ WindowAverage CalculateWindowAverage(
         result.value =
             (total - previous->second.total) * scale /
             static_cast<double>(deltaCount);
+        if (!std::isfinite(result.value)) {
+            result.available = false;
+            result.value = 0.0;
+        }
         result.windowMs = static_cast<std::uint32_t>(
             (std::min<std::int64_t>)(
                 (timestampUs - previous->second.timestampUs) / 1000,
@@ -118,6 +123,42 @@ WindowAverage CalculateWindowAverage(
     }
     history[key] = {timestampUs, total, count};
     return result;
+}
+
+template <typename Total, typename Count>
+WindowAverage CalculateOptionalWindowAverage(
+    std::unordered_map<std::string, AggregateSample>& history,
+    const std::string& key,
+    const std::optional<Total>& total,
+    const std::optional<Count>& count,
+    std::int64_t timestampUs,
+    double scale)
+{
+    if (!total || !count ||
+        !std::isfinite(static_cast<double>(*total)) ||
+        static_cast<double>(*total) < 0.0 ||
+        static_cast<double>(*count) < 0.0) {
+        // Losing a counter breaks continuity. Otherwise a future report could
+        // turn the missing field into a zero-duration or multi-window sample.
+        history.erase(key);
+        return {};
+    }
+    return CalculateWindowAverage(history, key,
+        static_cast<double>(*total), static_cast<std::uint64_t>(*count),
+        timestampUs, scale);
+}
+
+template <typename Total, typename Count>
+double OptionalCumulativeAverage(const std::optional<Total>& total,
+                                const std::optional<Count>& count,
+                                double scale)
+{
+    if (!total || !count || *count == 0 ||
+        static_cast<double>(*count) < 0.0 ||
+        !std::isfinite(static_cast<double>(*total)) ||
+        static_cast<double>(*total) < 0.0) return 0.0;
+    const auto value = static_cast<double>(*total) / static_cast<double>(*count) * scale;
+    return std::isfinite(value) ? value : 0.0;
 }
 
 void ApplyLatestFrameTiming(
@@ -136,6 +177,15 @@ void ApplyLatestFrameTiming(
     }
 
     implementation = timing->implementation;
+    stream.screenQualityProtectionAvailable = timing->screenQualityProtectionAvailable;
+    stream.screenQualityProtectionActive = timing->screenQuality.protecting;
+    stream.screenQualityProtectionLimited = timing->screenQuality.qualityLimited;
+    stream.screenQualityNetworkBudgetBps = timing->screenQuality.networkBudgetBps;
+    stream.screenQualityEncoderAdjustedBudgetBps = timing->screenQuality.encoderAdjustedBudgetBps;
+    stream.screenQualityBandwidthAllocationBps = timing->screenQuality.bandwidthAllocationBps;
+    stream.screenQualityEncoderReferenceBps = timing->screenQuality.encoderReferenceBps;
+    stream.screenQualityReferenceBps = timing->screenQuality.referenceBps;
+    stream.screenQualityDeficitShareHundredths = timing->screenQuality.deficitShareHundredths;
     stream.latestFrameTimingAvailable = true;
     stream.latestFrameTimeMs =
         static_cast<double>(timing->latestFrameDurationUs) / 1000.0;
@@ -343,6 +393,9 @@ void PeerConnectionStatsCollector::ProcessReport(
     WebRtcSessionStatsSnapshot next;
     next.transport.collected = true;
     next.transport.timestampMs = report->timestamp().ms();
+    next.transport.receivedAtSteadyMs = static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
 
     const webrtc::RTCTransportStats* selectedTransport = nullptr;
     const webrtc::RTCIceCandidatePairStats* selectedPair = nullptr;
@@ -495,20 +548,15 @@ void PeerConnectionStatsCollector::ProcessReport(
             timestampUs);
         stream.keyFrames =
             outbound->key_frames_encoded.value_or(0);
-        if (stream.framesEncoded > 0) {
-            stream.averageEncodeTimeMs =
-                outbound->total_encode_time.value_or(0.0) *
-                1000.0 / stream.framesEncoded;
-            stream.averageQp =
-                static_cast<double>(
-                    outbound->qp_sum.value_or(0)) /
-                stream.framesEncoded;
-        }
-        const auto windowEncode = CalculateWindowAverage(
+        stream.averageEncodeTimeMs = OptionalCumulativeAverage(
+            outbound->total_encode_time, outbound->frames_encoded, 1000.0);
+        stream.averageQp = OptionalCumulativeAverage(
+            outbound->qp_sum, outbound->frames_encoded, 1.0);
+        const auto windowEncode = CalculateOptionalWindowAverage(
             state->aggregateHistory,
             "encode:" + stream.statsId,
-            outbound->total_encode_time.value_or(0.0),
-            stream.framesEncoded,
+            outbound->total_encode_time,
+            outbound->frames_encoded,
             timestampUs,
             1000.0);
         stream.windowEncodeTimeAvailable = windowEncode.available;
@@ -516,17 +564,11 @@ void PeerConnectionStatsCollector::ProcessReport(
         if (stream.sampleWindowMs == 0) {
             stream.sampleWindowMs = windowEncode.windowMs;
         }
-        if (outbound->qp_sum) {
-            const auto windowQp = CalculateWindowAverage(
-                state->aggregateHistory,
-                "qp:out:" + stream.statsId,
-                static_cast<double>(*outbound->qp_sum),
-                stream.framesEncoded,
-                timestampUs,
-                1.0);
-            stream.windowQpAvailable = windowQp.available;
-            stream.windowQp = windowQp.value;
-        }
+        const auto windowQp = CalculateOptionalWindowAverage(
+            state->aggregateHistory, "qp:out:" + stream.statsId,
+            outbound->qp_sum, outbound->frames_encoded, timestampUs, 1.0);
+        stream.windowQpAvailable = windowQp.available;
+        stream.windowQp = windowQp.value;
         if (outbound->media_source_id) {
             const auto* source =
                 report->GetAs<webrtc::RTCVideoSourceStats>(
@@ -600,25 +642,22 @@ void PeerConnectionStatsCollector::ProcessReport(
             inbound->frames_decoded.value_or(0);
         stream.framesDropped =
             inbound->frames_dropped.value_or(0);
+        stream.receiverFrameCountersAvailable =
+            inbound->frames_decoded.has_value() &&
+            inbound->frames_dropped.has_value();
         stream.keyFrames =
             inbound->key_frames_decoded.value_or(0);
-        if (stream.framesDecoded > 0) {
-            stream.averageDecodeTimeMs =
-                inbound->total_decode_time.value_or(0.0) *
-                1000.0 / stream.framesDecoded;
-            stream.averageProcessingDelayMs =
-                inbound->total_processing_delay.value_or(0.0) *
-                1000.0 / stream.framesDecoded;
-            stream.averageQp =
-                static_cast<double>(
-                    inbound->qp_sum.value_or(0)) /
-                stream.framesDecoded;
-        }
-        const auto windowDecode = CalculateWindowAverage(
+        stream.averageDecodeTimeMs = OptionalCumulativeAverage(
+            inbound->total_decode_time, inbound->frames_decoded, 1000.0);
+        stream.averageProcessingDelayMs = OptionalCumulativeAverage(
+            inbound->total_processing_delay, inbound->frames_decoded, 1000.0);
+        stream.averageQp = OptionalCumulativeAverage(
+            inbound->qp_sum, inbound->frames_decoded, 1.0);
+        const auto windowDecode = CalculateOptionalWindowAverage(
             state->aggregateHistory,
             "decode:" + stream.statsId,
-            inbound->total_decode_time.value_or(0.0),
-            stream.framesDecoded,
+            inbound->total_decode_time,
+            inbound->frames_decoded,
             timestampUs,
             1000.0);
         stream.windowDecodeTimeAvailable = windowDecode.available;
@@ -626,39 +665,29 @@ void PeerConnectionStatsCollector::ProcessReport(
         if (stream.sampleWindowMs == 0) {
             stream.sampleWindowMs = windowDecode.windowMs;
         }
-        const auto windowProcessing = CalculateWindowAverage(
+        const auto windowProcessing = CalculateOptionalWindowAverage(
             state->aggregateHistory,
             "processing:" + stream.statsId,
-            inbound->total_processing_delay.value_or(0.0),
-            stream.framesDecoded,
+            inbound->total_processing_delay,
+            inbound->frames_decoded,
             timestampUs,
             1000.0);
         stream.windowProcessingDelayAvailable =
             windowProcessing.available;
         stream.windowProcessingDelayMs = windowProcessing.value;
-        if (inbound->qp_sum) {
-            const auto windowQp = CalculateWindowAverage(
-                state->aggregateHistory,
-                "qp:in:" + stream.statsId,
-                static_cast<double>(*inbound->qp_sum),
-                stream.framesDecoded,
-                timestampUs,
-                1.0);
-            stream.windowQpAvailable = windowQp.available;
-            stream.windowQp = windowQp.value;
-        }
-        const auto jitterBufferEmitted =
-            inbound->jitter_buffer_emitted_count.value_or(0);
-        if (jitterBufferEmitted > 0) {
-            stream.averageJitterBufferDelayMs =
-                inbound->jitter_buffer_delay.value_or(0.0) *
-                1000.0 / jitterBufferEmitted;
-        }
-        const auto windowJitterBuffer = CalculateWindowAverage(
+        const auto windowQp = CalculateOptionalWindowAverage(
+            state->aggregateHistory, "qp:in:" + stream.statsId,
+            inbound->qp_sum, inbound->frames_decoded, timestampUs, 1.0);
+        stream.windowQpAvailable = windowQp.available;
+        stream.windowQp = windowQp.value;
+        stream.averageJitterBufferDelayMs = OptionalCumulativeAverage(
+            inbound->jitter_buffer_delay, inbound->jitter_buffer_emitted_count,
+            1000.0);
+        const auto windowJitterBuffer = CalculateOptionalWindowAverage(
             state->aggregateHistory,
             "jitter-buffer:" + stream.statsId,
-            inbound->jitter_buffer_delay.value_or(0.0),
-            jitterBufferEmitted,
+            inbound->jitter_buffer_delay,
+            inbound->jitter_buffer_emitted_count,
             timestampUs,
             1000.0);
         stream.windowJitterBufferDelayAvailable =

@@ -804,16 +804,26 @@ void FileTransferWindow::SyncPeers(
     const QRect& mainWindowGeometry)
 {
     anchorGeometry_ = mainWindowGeometry;
-    const QString selected = peerSelector_->currentData().toString();
-    peerSelector_->clear();
-    for (const auto& peer : peers) {
-        peerSelector_->addItem(
-            peer.displayName,
-            QString::fromStdString(peer.deviceId));
+    bool peersChanged =
+        peerSelector_->count() != static_cast<int>(peers.size());
+    for (int index = 0; !peersChanged && index < peerSelector_->count(); ++index) {
+        const auto& peer = peers[static_cast<std::size_t>(index)];
+        peersChanged = peerSelector_->itemText(index) != peer.displayName ||
+            peerSelector_->itemData(index).toString() !=
+                QString::fromStdString(peer.deviceId);
     }
-    const int previous = peerSelector_->findData(selected);
-    if (previous >= 0) {
-        peerSelector_->setCurrentIndex(previous);
+    if (peersChanged) {
+        const QString selected = peerSelector_->currentData().toString();
+        peerSelector_->clear();
+        for (const auto& peer : peers) {
+            peerSelector_->addItem(
+                peer.displayName,
+                QString::fromStdString(peer.deviceId));
+        }
+        const int previous = peerSelector_->findData(selected);
+        if (previous >= 0) {
+            peerSelector_->setCurrentIndex(previous);
+        }
     }
     const bool hasPeer = peerSelector_->count() > 0;
     sendButton_->setEnabled(hasPeer);

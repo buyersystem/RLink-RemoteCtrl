@@ -3,6 +3,8 @@
 
 #pragma once
 
+#include <functional>
+
 #include "SessionEngineTypes.h"
 
 namespace remote {
@@ -22,6 +24,20 @@ public:
     virtual SessionCommandResult SetRoomScreenStreamPreference(
         const std::string& pairId,
         const ScreenStreamPreferenceRequest& preference) = 0;
+    // accepted means the request was queued. The completion reports the
+    // transport send result, not the remote preference ACK, and may run on a
+    // controller/cleanup thread. Rejected requests do not invoke completion.
+    virtual SessionCommandResult QueueRoomScreenStreamPreference(
+        const std::string& pairId,
+        const ScreenStreamPreferenceRequest& preference,
+        std::function<void(SessionCommandResult)> completion)
+    {
+        (void)pairId;
+        (void)preference;
+        (void)completion;
+        return {false, "screen_stream_queue_unsupported",
+                "Queued screen stream preferences are not supported."};
+    }
     virtual SessionCommandResult RequestRemoteSharedDisplaySwitch(
         const std::string& pairId,
         const std::string& stableDisplayKey) = 0;

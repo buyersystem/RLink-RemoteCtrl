@@ -4,6 +4,7 @@
 #include "LibWebRtcSession.Internal.h"
 #include "DataChannelManager.h"
 #include "MediaSlotManager.h"
+#include "GoogCcTelemetry.h"
 
 namespace remote {
 using namespace webrtc_session_detail;
@@ -11,25 +12,41 @@ using namespace webrtc_session_detail;
 void LibWebRtcSession::RequestStats()
 {
     if (statsCollector_) {
+        std::uint64_t observationEpoch;
+        std::uint64_t feedbackEpoch;
+        {
+            std::lock_guard lock(mutex_);
+            observationEpoch = screenContentPolicyEpoch_;
+            feedbackEpoch = receiverFeedbackEpoch_;
+        }
         const auto gate = callbackGate_;
         statsCollector_->Request(
             PeerConnection(),
-            [gate] {
+            [gate, observationEpoch, feedbackEpoch] {
                 const auto lease = gate ? gate->Enter()
                                         : CallbackGate::Lease{};
                 if (auto* owner = lease.Owner()) {
-                    owner->HandleCompletedStatsSample();
+                    owner->HandleCompletedStatsSample(observationEpoch, feedbackEpoch);
                 }
             });
     }
 }
 
-void LibWebRtcSession::HandleCompletedStatsSample()
+void LibWebRtcSession::HandleCompletedStatsSample(std::uint64_t observationEpoch, std::uint64_t feedbackEpoch)
 {
+    // A user edit is applied before consuming an old allocation sample.
+    // No capture restart, SDP renegotiation or startup bitrate prior.
+    if (ApplyPendingScreenVideoBitrateBpp()) return;
+    {
+        std::lock_guard lock(mutex_);
+        if (observationEpoch != screenContentPolicyEpoch_) return;
+        UpdateScreenQualityProtectionLocked();
+    }
     const auto snapshot = StatsSnapshot();
     if (!snapshot.transport.collected) {
         return;
     }
+    SendScreenReceiverFeedback(snapshot, feedbackEpoch);
 
     ProgressiveBitrateCeilingSample sample;
     sample.timestampMs = SteadyNowMs();
@@ -55,17 +72,18 @@ void LibWebRtcSession::HandleCompletedStatsSample()
     if (!hasActiveScreenSender) {
         return;
     }
+    (void)HandleContentAwareStreamSample(snapshot, observationEpoch);
+    {
+        std::lock_guard lock(mutex_);
+        UpdateScreenQualityProtectionLocked();
+    }
 
     ProgressiveBitrateCeilingDecision decision;
     ProgressiveBitrateCeilingState previousState;
     std::uint64_t decisionRevision = 0;
-    AdaptiveScreenFrameRateDecision frameRateDecision;
-    AdaptiveScreenFrameRateState previousFrameRateState;
-    std::uint64_t frameRateDecisionRevision = 0;
-    webrtc::scoped_refptr<webrtc::RtpTransceiverInterface>
-        screenTransceiver;
     {
         std::lock_guard lock(mutex_);
+        if (observationEpoch != screenContentPolicyEpoch_) return;
         const auto screen = mediaSlots_->videoSlots_.find(kScreenMainVideoSlot);
         if (screen == mediaSlots_->videoSlots_.end() ||
             !screen->second.sendingActive) {
@@ -80,31 +98,159 @@ void LibWebRtcSession::HandleCompletedStatsSample()
                 decisionRevision = ++progressiveBitrateCeilingRevision_;
             }
         }
-        if (adaptiveDesktopNetworkFrameRate_ &&
-            screen->second.adaptiveFrameRate.enabled) {
-            previousFrameRateState = screen->second.adaptiveFrameRate;
-            frameRateDecision = EvaluateAdaptiveScreenFrameRate(
-                &screen->second.adaptiveFrameRate,
-                {.timestampMs = sample.timestampMs,
-                 .activity = screenContentActivity_,
-                 .capacityBps =
-                     sample.availableOutgoingBitrateBps != 0
-                     ? sample.availableOutgoingBitrateBps
-                     : sample.targetBitrateBps});
-            if (frameRateDecision.applyEffectiveFrameRate) {
-                frameRateDecisionRevision =
-                    ++screen->second.adaptiveFrameRateRevision;
-                screenTransceiver = screen->second.transceiver;
-            }
-        }
     }
     (void)ApplyProgressiveBitrateCeilingDecision(
         decision, decisionRevision, previousState);
-    (void)ApplyAdaptiveScreenFrameRateDecision(
-        frameRateDecision,
-        frameRateDecisionRevision,
-        previousFrameRateState,
-        std::move(screenTransceiver));
+}
+
+void LibWebRtcSession::UpdateScreenQualityProtectionLocked()
+{
+    if (!googCcTelemetry_) return;
+    googCcTelemetry_->SetScreenQualityDeficitShare(screenQualityDeficitShareHundredths_);
+    const auto found = mediaSlots_->videoSlots_.find(kScreenMainVideoSlot);
+    if (found != mediaSlots_->videoSlots_.end()) {
+        const auto& binding = found->second;
+        googCcTelemetry_->SetScreenQualityTarget(binding.configuredMaxFrameRate,
+            static_cast<std::uint32_t>((std::min)(binding.configuredMaxBitrateBps,
+                static_cast<std::uint64_t>((std::numeric_limits<std::uint32_t>::max)()))));
+    } else googCcTelemetry_->SetScreenQualityTarget(0, 0);
+    googCcTelemetry_->SetScreenRecoveryProbeEnabled(
+        found != mediaSlots_->videoSlots_.end() && found->second.sendingActive &&
+        found->second.configuredMaxFrameRate != 0 &&
+        found->second.configuredMaxBitrateBps != 0);
+    const bool enabled = adaptiveDesktopNetworkFrameRate_ &&
+        !screenContentPolicyObservation_.enabled &&
+        found != mediaSlots_->videoSlots_.end() && found->second.sendingActive &&
+        !found->second.contentPolicyNeedsRestore &&
+        !found->second.contentPolicyExecution.pending &&
+        !found->second.contentPolicyExecution.applied;
+    // Quality protection cooperates with the native frame dropper. It never
+    // writes RTP max_framerate, reschedules capture, or lowers the probe cap.
+    googCcTelemetry_->SetScreenQualityProtection(enabled);
+}
+
+bool LibWebRtcSession::ApplyPendingScreenVideoBitrateBpp()
+{
+    {
+        std::lock_guard lock(mutex_);
+        const auto found = mediaSlots_->videoSlots_.find(kScreenMainVideoSlot);
+        if (!liveScreenVideoBitrateBpp_ || found == mediaSlots_->videoSlots_.end() ||
+            !found->second.sendingActive || !found->second.configuredOutputWidth ||
+            !found->second.configuredMaxFrameRate ||
+            found->second.configuredVideoBppHundredths == *liveScreenVideoBitrateBpp_)
+            return false;
+    }
+    // A signaling-thread stats callback must never wait for a user operation
+    // holding this mutex while it waits for the signaling proxy.
+    std::unique_lock senderLock(videoSenderParametersMutex_, std::try_to_lock);
+    if (!senderLock.owns_lock()) return true;
+    webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver;
+    ScreenStreamPolicyResult policy;
+    std::uint32_t requestedBpp = 0;
+    std::uint64_t senderCeiling = 0;
+    {
+        std::lock_guard lock(mutex_);
+        const auto found = mediaSlots_->videoSlots_.find(kScreenMainVideoSlot);
+        if (!liveScreenVideoBitrateBpp_ || found == mediaSlots_->videoSlots_.end() ||
+            !found->second.sendingActive) return false;
+        const auto& binding = found->second;
+        requestedBpp = *liveScreenVideoBitrateBpp_;
+        if (binding.configuredVideoBppHundredths == requestedBpp) return false;
+        transceiver = binding.transceiver;
+        policy = ResolveScreenStreamPolicy(binding.configuredOutputWidth, binding.configuredOutputHeight,
+            {binding.configuredOutputWidth, binding.configuredOutputHeight,
+             binding.configuredMaxFrameRate, requestedBpp});
+        // Preserve an already applied scene allocation; increasing a user
+        // ceiling cannot undo a weak-network FPS/resolution/bitrate decision.
+        senderCeiling = binding.contentPolicyExecution.applied
+            ? (std::min)(binding.effectiveMaxBitrateBps,
+                static_cast<std::uint64_t>(policy.maxBitrateBps))
+            : policy.maxBitrateBps;
+    }
+    auto sender = transceiver ? transceiver->sender() : nullptr;
+    if (!sender) return true;
+    auto parameters = sender->GetParameters();
+    if (parameters.encodings.empty()) return true;
+    for (auto& encoding : parameters.encodings)
+        encoding.max_bitrate_bps = static_cast<int>(senderCeiling);
+    auto result = sender->SetParameters(parameters);
+    if (!result.ok()) {
+        std::lock_guard lock(mutex_);
+        const auto found = mediaSlots_->videoSlots_.find(kScreenMainVideoSlot);
+        if (found != mediaSlots_->videoSlots_.end())
+            found->second.bitrateBootstrapError = std::string(result.message());
+        return true;
+    }
+    ProgressiveBitrateCeilingDecision decision;
+    ProgressiveBitrateCeilingState previousState;
+    std::uint64_t decisionRevision = 0;
+    std::uint64_t globalCeiling = 0;
+    bool progressive = false;
+    bool keepStartupFloor = false;
+    {
+        std::lock_guard lock(mutex_);
+        const auto found = mediaSlots_->videoSlots_.find(kScreenMainVideoSlot);
+        if (found == mediaSlots_->videoSlots_.end() || found->second.transceiver != transceiver)
+            return true;
+        auto& binding = found->second;
+        binding.configuredMaxBitrateBps = policy.maxBitrateBps;
+        binding.configuredNetworkProbeMaxBitrateBps = policy.networkProbeMaxBitrateBps;
+        // Only metadata for a later inactive -> active bootstrap. Do not
+        // reapply a start prior to the connection that is currently sending.
+        binding.configuredStartBitrateBps = policy.startBitrateBps;
+        binding.effectiveMaxBitrateBps = senderCeiling;
+        binding.effectiveDesiredBitrateBps = binding.contentPolicyExecution.applied
+            ? (std::min)(binding.effectiveDesiredBitrateBps, senderCeiling) : senderCeiling;
+        if (binding.contentPolicyExecution.applied)
+            binding.contentPolicyExecution.appliedMaxBitrateBps = senderCeiling;
+        // Invalidate pending decisions using the old budget but retain the
+        // applied dimensions/FPS and the scene itself.
+        binding.contentPolicyState = {};
+        binding.contentPolicyRecommendation = {};
+        binding.contentPolicyExecution.pending = false;
+        ++binding.contentPolicyRevision;
+        ++binding.adaptiveFrameRateRevision;
+        ++screenContentPolicyEpoch_;
+        binding.contentPolicyEvidenceNotBeforeMs = SteadyNowMs();
+        binding.contentQualityMetricAvailable = binding.contentQualityVerified = false;
+        binding.contentProcessingEvidenceAvailable = binding.contentProcessingHealthy = false;
+        for (const auto& [slot, value] : mediaSlots_->videoSlots_) {
+            if (!value.sendingActive) continue;
+            globalCeiling = (std::max)(globalCeiling, value.configuredNetworkProbeMaxBitrateBps);
+            keepStartupFloor = keepStartupFloor || value.bitrateProbeFloorActive;
+        }
+        UpdateScreenQualityProtectionLocked();
+        progressive = fastDesktopBweStartup_ && progressiveBitrateCeiling_.enabled;
+        if (progressive) {
+            previousState = progressiveBitrateCeiling_;
+            decision = RetargetProgressiveBitrateCeiling(&progressiveBitrateCeiling_, globalCeiling, SteadyNowMs());
+            if (decision.applyPeerConnectionMax) decisionRevision = ++progressiveBitrateCeilingRevision_;
+        }
+    }
+    senderLock.unlock();
+    if (progressive) {
+        result = ApplyProgressiveBitrateCeilingDecision(decision, decisionRevision, previousState);
+    } else if (auto peer = PeerConnection()) {
+        webrtc::BitrateSettings limits;
+        limits.min_bitrate_bps = static_cast<int>((std::min)(globalCeiling,
+            static_cast<std::uint64_t>(keepStartupFloor ? kDesktopStartupProbeFloorBps : kDefaultWebRtcMinimumBitrateBps)));
+        limits.max_bitrate_bps = static_cast<int>(globalCeiling);
+        result = peer->SetBitrate(limits);
+    } else {
+        result = webrtc::RTCError::InvalidState("PeerConnection is unavailable for the live bandwidth update.");
+    }
+    {
+        std::lock_guard lock(mutex_);
+        const auto found = mediaSlots_->videoSlots_.find(kScreenMainVideoSlot);
+        if (found != mediaSlots_->videoSlots_.end() && found->second.transceiver == transceiver) {
+            // Failed RTC updates remain pending and retry on the next tick.
+            if (result.ok()) {
+                found->second.configuredVideoBppHundredths = requestedBpp;
+                found->second.bitrateBootstrapError.clear();
+            } else found->second.bitrateBootstrapError = std::string(result.message());
+        }
+    }
+    return true;
 }
 
 webrtc::RTCError LibWebRtcSession::ApplyProgressiveBitrateCeilingDecision(
@@ -133,12 +279,11 @@ webrtc::RTCError LibWebRtcSession::ApplyProgressiveBitrateCeilingDecision(
         "PeerConnection is not ready for the progressive bitrate update.");
     if (peer) {
         webrtc::BitrateSettings settings;
-        settings.min_bitrate_bps = keepStartupProbeFloor
-            ? kDesktopStartupProbeFloorBps
-            : kDefaultWebRtcMinimumBitrateBps;
+        settings.min_bitrate_bps = static_cast<int>((std::min)(decision.peerConnectionMaxBitrateBps,
+            static_cast<std::uint64_t>(keepStartupProbeFloor ? kDesktopStartupProbeFloorBps : kDefaultWebRtcMinimumBitrateBps)));
         settings.max_bitrate_bps = static_cast<int>((std::min)(
             decision.peerConnectionMaxBitrateBps,
-            static_cast<std::uint64_t>(kMaximumScreenBitrateBps)));
+            static_cast<std::uint64_t>(kMaximumScreenConnectionBitrateBps)));
         result = peer->SetBitrate(settings);
     }
 
@@ -156,68 +301,13 @@ webrtc::RTCError LibWebRtcSession::ApplyProgressiveBitrateCeilingDecision(
     return result;
 }
 
-webrtc::RTCError LibWebRtcSession::ApplyAdaptiveScreenFrameRateDecision(
-    const AdaptiveScreenFrameRateDecision& decision,
-    std::uint64_t decisionRevision,
-    const AdaptiveScreenFrameRateState& previousState,
-    webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver)
-{
-    if (!decision.applyEffectiveFrameRate ||
-        decision.effectiveFrameRate == 0 || !transceiver) {
-        return webrtc::RTCError::OK();
-    }
-    std::unique_lock senderParametersLock(videoSenderParametersMutex_);
-    {
-        std::lock_guard lock(mutex_);
-        const auto found = mediaSlots_->videoSlots_.find(kScreenMainVideoSlot);
-        if (found == mediaSlots_->videoSlots_.end() ||
-            found->second.transceiver != transceiver ||
-            found->second.adaptiveFrameRateRevision != decisionRevision) {
-            return webrtc::RTCError::OK();
-        }
-    }
-    auto sender = transceiver->sender();
-    webrtc::RTCError result = webrtc::RTCError::InvalidState(
-        "The screen sender is unavailable for network FPS adaptation.");
-    if (sender) {
-        auto parameters = sender->GetParameters();
-        if (parameters.encodings.empty()) {
-            result = webrtc::RTCError::InvalidState(
-                "The screen sender has no encoding for network FPS "
-                "adaptation.");
-        } else {
-            for (auto& encoding : parameters.encodings) {
-                encoding.max_framerate =
-                    static_cast<double>(decision.effectiveFrameRate);
-            }
-            result = sender->SetParameters(parameters);
-        }
-    }
-
-    std::lock_guard lock(mutex_);
-    const auto found = mediaSlots_->videoSlots_.find(kScreenMainVideoSlot);
-    if (found == mediaSlots_->videoSlots_.end() ||
-        found->second.transceiver != transceiver ||
-        found->second.adaptiveFrameRateRevision != decisionRevision) {
-        return result;
-    }
-    if (result.ok()) {
-        found->second.adaptiveFrameRateError.clear();
-        return result;
-    }
-    found->second.adaptiveFrameRate = previousState;
-    ++found->second.adaptiveFrameRateRevision;
-    found->second.adaptiveFrameRateError =
-        std::string(result.message());
-    return result;
-}
-
 WebRtcSessionStatsSnapshot LibWebRtcSession::StatsSnapshot() const
 {
     if (!statsCollector_) {
         return {};
     }
     auto snapshot = statsCollector_->Snapshot();
+    if (googCcTelemetry_) snapshot.transport.googCc = googCcTelemetry_->Snapshot(SteadyNowMs());
     std::vector<std::string> videoSlots;
     std::string audioSlot;
     struct EncodingPolicy {
@@ -226,6 +316,12 @@ WebRtcSessionStatsSnapshot LibWebRtcSession::StatsSnapshot() const
         std::uint32_t outputHeight = 0;
         std::uint64_t startBitrateBps = 0;
         std::uint64_t maxBitrateBps = 0;
+        std::uint64_t effectiveMaxBitrateBps = 0;
+        std::uint32_t videoBppHundredths = 0;
+        std::uint32_t effectiveMaxFps = 0;
+        bool qualityMetric = false, qualityVerified = false, processingEvidence = false, processingHealthy = false;
+        ContentPolicyShadowSnapshot contentRecommendation;
+        ContentPolicyExecutionSnapshot contentExecution;
         AdaptiveScreenFrameRateState adaptiveFrameRate;
         std::string adaptiveFrameRateError;
         std::uint32_t bootstrapAttempts = 0;
@@ -238,12 +334,16 @@ WebRtcSessionStatsSnapshot LibWebRtcSession::StatsSnapshot() const
     };
     std::unordered_map<std::string, EncodingPolicy> policies;
     ProgressiveBitrateCeilingState progressiveCeiling;
+    ScreenReceiverFeedback receiverFeedback;
+    std::uint64_t receiverReceivedAt = 0;
     std::string progressiveCeilingError;
     {
         std::lock_guard lock(mutex_);
         videoSlots = mediaSlots_->videoSlotOrder_;
         audioSlot = mediaSlots_->audioSlot_.name;
         progressiveCeiling = progressiveBitrateCeiling_;
+        receiverFeedback = receiverFeedback_;
+        receiverReceivedAt = receiverFeedbackReceivedAtMs_;
         progressiveCeilingError = progressiveBitrateCeilingError_;
         policies.reserve(mediaSlots_->videoSlots_.size());
         for (const auto& [slot, binding] : mediaSlots_->videoSlots_) {
@@ -256,6 +356,15 @@ WebRtcSessionStatsSnapshot LibWebRtcSession::StatsSnapshot() const
                     .startBitrateBps =
                         binding.configuredStartBitrateBps,
                     .maxBitrateBps = binding.configuredMaxBitrateBps,
+                    .effectiveMaxBitrateBps = binding.effectiveMaxBitrateBps,
+                    .videoBppHundredths = binding.configuredVideoBppHundredths,
+                    .effectiveMaxFps = binding.effectiveMaxFps,
+                    .qualityMetric = binding.contentQualityMetricAvailable,
+                    .qualityVerified = binding.contentQualityVerified,
+                    .processingEvidence = binding.contentProcessingEvidenceAvailable,
+                    .processingHealthy = binding.contentProcessingHealthy,
+                    .contentRecommendation = binding.contentPolicyRecommendation,
+                    .contentExecution = binding.contentPolicyExecution,
                     .adaptiveFrameRate = binding.adaptiveFrameRate,
                     .adaptiveFrameRateError =
                         binding.adaptiveFrameRateError,
@@ -318,9 +427,34 @@ WebRtcSessionStatsSnapshot LibWebRtcSession::StatsSnapshot() const
             stream.configuredStartBitrateBps =
                 policy->second.startBitrateBps;
             stream.configuredMaxBitrateBps =
-                policy->second.maxBitrateBps;
+                policy->second.effectiveMaxBitrateBps;
+            if (stream.direction == RtpStreamDirection::kOutbound && stream.slot == kScreenMainVideoSlot) {
+                stream.userVideoBitrateBppHundredths = policy->second.videoBppHundredths;
+                stream.userVideoBitrateLimitBps = policy->second.maxBitrateBps;
+            }
+            stream.contentPolicyShadow = policy->second.contentRecommendation;
+            stream.contentPolicyExecution = policy->second.contentExecution;
+            stream.googCc = snapshot.transport.googCc;
+            stream.contentQualityMetricAvailable = policy->second.qualityMetric;
+            stream.contentQualityVerified = policy->second.qualityVerified;
+            stream.contentProcessingEvidenceAvailable = policy->second.processingEvidence;
+            stream.contentProcessingHealthy = policy->second.processingHealthy;
+            if (stream.direction == RtpStreamDirection::kOutbound && stream.slot == kScreenMainVideoSlot && receiverReceivedAt) {
+                const auto now = SteadyNowMs();
+                const auto age = now >= receiverReceivedAt ? now - receiverReceivedAt : 3001;
+                stream.receiverFeedbackAgeMs = static_cast<std::uint32_t>((std::min<std::uint64_t>)(age, UINT32_MAX));
+                stream.receiverFeedbackAvailable = age <= 3000;
+                stream.receiverFeedbackWidth = receiverFeedback.frameWidth;
+                stream.receiverFeedbackHeight = receiverFeedback.frameHeight;
+                stream.receiverFeedbackDecodedFrames = receiverFeedback.decodedFrames;
+                stream.receiverFeedbackDroppedFrames = receiverFeedback.droppedFrames;
+                stream.receiverFeedbackDecodeTimeMs = receiverFeedback.windowDecodeTimeUs / 1000.0;
+                stream.receiverFeedbackProcessingTimeMs = receiverFeedback.processingTimeUs / 1000.0;
+                stream.receiverFeedbackDecodeTimeAvailable = receiverFeedback.decodeTimeAvailable;
+                stream.receiverFeedbackProcessingTimeAvailable = receiverFeedback.processingTimeAvailable;
+            }
             stream.effectiveNetworkFrameRate =
-                policy->second.adaptiveFrameRate.effectiveFrameRate;
+                policy->second.effectiveMaxFps;
             stream.adaptiveNetworkFrameRateEnabled =
                 policy->second.adaptiveFrameRate.enabled;
             stream.adaptiveNetworkFrameRateReductionSamples =
@@ -406,7 +540,15 @@ void LibWebRtcSession::Close()
         ++progressiveBitrateCeilingRevision_;
         progressiveBitrateCeilingError_.clear();
         screenContentActivity_ = ScreenContentActivity::kUnknown;
+        screenContentPolicyObservation_ = {};
+        ++screenContentPolicyEpoch_;
+        receiverFeedbackContext_ = {};
+        ++receiverFeedbackEpoch_;
+        receiverFeedback_ = {};
+        receiverFeedbackReceivedAtMs_ = 0;
+        receiverFeedbackExpectedGeneration_ = 0;
         adaptiveDesktopNetworkFrameRate_ = false;
+        UpdateScreenQualityProtectionLocked();
         remoteTrack = std::move(mediaSlots_->remoteVideoTrack_);
         remoteSink = mediaSlots_->remoteVideoSink_;
         mediaSlots_->remoteVideoSink_ = nullptr;

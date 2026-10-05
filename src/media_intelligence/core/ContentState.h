@@ -5,6 +5,8 @@
 
 #include <cstdint>
 
+#include "ScreenScene.h"
+
 namespace remote::media_intelligence {
 
 enum class ScreenSemanticType : std::uint8_t {
@@ -37,6 +39,7 @@ struct ContentState {
     std::uint64_t timestampMs = 0;
     std::uint32_t inferenceTimeUs = 0;
     bool modelResultAvailable = false;
+    ScreenScene scene = ScreenScene::kUnknown;
 };
 
 // Model semantics expire independently from rule-based motion. This lets a

@@ -132,9 +132,11 @@ void ControllerMainWindow::SetRoomActionHint(const QString& text, bool error)
 {
     const bool changed = RoomControls().actionHint->text() != text;
     RoomControls().actionHint->setText(text);
-    RoomControls().actionHint->setStyleSheet(
-        error ? QStringLiteral("color:#b4232f;")
-              : QStringLiteral("color:#9a6513;"));
+    const QString style = error ? QStringLiteral("color:#b4232f;")
+                                : QStringLiteral("color:#9a6513;");
+    if (RoomControls().actionHint->styleSheet() != style) {
+        RoomControls().actionHint->setStyleSheet(style);
+    }
     if (changed) {
         AnimateSmallUiChange(RoomControls().actionHint);
     }

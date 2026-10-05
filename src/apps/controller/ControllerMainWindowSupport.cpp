@@ -5,6 +5,7 @@
 
 #include "ControllerMainWindowSupport.h"
 #include "ControllerMainWindow.h"
+#include "src/core/ScreenFrameQualityPolicy.h"
 
 #include <QAction>
 #include <QAbstractItemView>
@@ -131,6 +132,14 @@ namespace detail {
 
 const char kDefaultFileSaveDirectorySetting[] =
     "files/defaultSaveDirectory";
+
+std::uint32_t ConfiguredScreenQualityDeficitShareHundredths()
+{
+    return NormalizeScreenQualityDeficitShareHundredths(
+        QSettings().value(
+            QStringLiteral("media/screenQualityDeficitShareHundredths"),
+            kDefaultScreenQualityDeficitShareHundredths).toUInt());
+}
 
 bool IsNineDigitPublicId(const QString& value)
 {
@@ -512,6 +521,81 @@ std::pair<std::uint32_t, std::uint32_t> SavedScreenQualityBounds(
         return {0, 0};
     }
     return {0, 0};
+}
+
+QString ContentSceneDisplayText(const std::string& scene)
+{
+    if (scene == "code_terminal") return QStringLiteral("代码 / 终端");
+    if (scene == "document") return QStringLiteral("文档 / 阅读");
+    if (scene == "spreadsheet") return QStringLiteral("表格 / 报表");
+    if (scene == "web_app") return QStringLiteral("网页 / 普通软件");
+    if (scene == "photo_graphics") return QStringLiteral("图片 / 图形编辑");
+    if (scene == "cad_diagram") return QStringLiteral("工程图 / 图示");
+    if (scene == "video") return QStringLiteral("视频播放");
+    if (scene == "game_3d") return QStringLiteral("游戏 / 实时三维");
+    if (scene == "mixed") return QStringLiteral("混合内容");
+    return scene.empty() || scene == "unknown" ? QStringLiteral("尚未识别")
+        : QString::fromStdString(scene);
+}
+
+QString ContentPolicyExecutionDisplayText(const std::string& status)
+{
+    if (status == "awaiting_scene") return QStringLiteral("等待有效场景识别，尚未执行场景调整");
+    if (status == "awaiting_activity") return QStringLiteral("等待当前采集活动窗口，尚未执行新调整");
+    if (status == "idle_hold") return QStringLiteral("画面静止，保持规格；活动恢复后重新评估");
+    if (status == "healthy_hold") return QStringLiteral("未确认网络压力，保持当前规格；不按参考曲线降级");
+    if (status == "awaiting_calibration") return QStringLiteral("等待需求模型标定，未执行场景调整");
+    if (status == "awaiting_quality_evidence") return QStringLiteral("等待画质证据，未执行新调整");
+    if (status == "awaiting_network_evidence") return QStringLiteral("等待新鲜的 GoogCC 状态与传输反馈，保持当前规格");
+    if (status == "awaiting_stream_window") return QStringLiteral("等待当前规格的完整统计窗口，保持已应用规格");
+    if (status == "awaiting_processing_evidence") return QStringLiteral("等待编码与接收端负载证据，未执行新调整");
+    if (status == "holding_for_evidence") return QStringLiteral("尚无满足预算和质量要求的候选，保持并由网络策略保护");
+    if (status == "awaiting_candidate_budget") return QStringLiteral("当前 GoogCC 预算不足以满足候选需求，尚未进入调整确认");
+    if (status == "observing") return QStringLiteral("正在观察连续窗口，尚未确认新调整");
+    if (status == "observing_emergency") return QStringLiteral("预算不足，正在确认按场景逐步降级；参考画质尚未达标");
+    if (status == "applying_emergency") return QStringLiteral("正在应用按场景逐步降级；参考画质尚未达标");
+    if (status == "emergency_applied") return QStringLiteral("逐步降级已应用，重新评估网络预算；参考画质尚未达标");
+    if (status == "observing_user_restore") return QStringLiteral("网络预算已回升，正在确认恢复用户原规格");
+    if (status == "applying_user_restore") return QStringLiteral("正在恢复用户原分辨率与目标帧率");
+    if (status == "user_specification_restored") return QStringLiteral("已恢复用户原规格，继续观察画质");
+    if (status == "observing_repair") return QStringLiteral("画质需改善，正在确认码率或规格修复");
+    if (status == "applying_repair") return QStringLiteral("正在应用码率或规格修复，随后重新验证");
+    if (status == "repair_applied") return QStringLiteral("修复参数已应用到 RTP 发送器，等待新窗口验证");
+    if (status == "applying") return QStringLiteral("正在应用已确认的场景策略");
+    if (status == "applied") return QStringLiteral("场景参数已应用到 RTP 发送器");
+    if (status == "apply_failed") return QStringLiteral("参数应用失败，未确认新规格");
+    if (status == "sender_busy") return QStringLiteral("发送参数正在更新，等待下一统计窗口");
+    if (status == "context_changed_restoring") return QStringLiteral("场景上下文已变化，正在恢复用户范围");
+    if (status == "context_restored") return QStringLiteral("已恢复用户范围，重新评估场景");
+    if (status == "disabled_restored") return QStringLiteral("内容感知已关闭，已恢复用户上限，使用 WebRTC 原生丢帧与拥塞控制");
+    if (status == "disabled") return QStringLiteral("内容感知未启用，使用 WebRTC 原生丢帧与拥塞控制");
+    return QStringLiteral("仅观察，未执行场景调整");
+}
+
+QString ContentPolicyReasonDisplayText(const std::string& reason)
+{
+    if (reason == "invalid_input") return QStringLiteral("等待有效规格数据");
+    if (reason == "idle_hold") return QStringLiteral("画面空闲，保留规格上限");
+    if (reason == "activity_unavailable") return QStringLiteral("等待采集活动信息");
+    if (reason == "capacity_unavailable") return QStringLiteral("等待有效网络容量");
+    if (reason == "stale_network") return QStringLiteral("网络统计已过期");
+    if (reason == "generation_mismatch") return QStringLiteral("网络统计不属于当前会话");
+    if (reason == "unknown_scene_hold") return QStringLiteral("场景未知，暂不升级");
+    if (reason == "hold") return QStringLiteral("保持当前规格");
+    if (reason == "healthy_hold") return QStringLiteral("未确认网络受限，保留当前规格");
+    if (reason == "quality_limited") return QStringLiteral("预算不足以满足估算画质需求");
+    if (reason == "emergency_network_reduction") return QStringLiteral("网络预算不足，按场景优先级逐步减少负载");
+    if (reason == "user_specification_restore") return QStringLiteral("网络预算已接近用户视频上限，恢复原规格并验证画质");
+    if (reason == "manual_quality_limited") return QStringLiteral("手动规格超出估算预算");
+    if (reason == "protect_resolution") return QStringLiteral("优先保留分辨率，减少发送帧率");
+    if (reason == "protect_frame_rate") return QStringLiteral("小幅减少像素，保留当前帧率");
+    if (reason == "resolution_upgrade") return QStringLiteral("优先恢复分辨率");
+    if (reason == "frame_rate_upgrade") return QStringLiteral("预算允许提高帧率");
+    if (reason == "bitrate_recovery") return QStringLiteral("恢复所需编码预算");
+    if (reason == "processing_limited") return QStringLiteral("编解码处理能力受限");
+    if (reason == "activity_frame_rate_limited") return QStringLiteral("预算受限，暂低于本场景的活动流畅度目标");
+    if (reason == "awaiting_quality_evidence") return QStringLiteral("等待画质验证数据");
+    return QString::fromStdString(reason);
 }
 
 QString FormatBitrate(std::uint64_t bitsPerSecond)
@@ -955,6 +1039,9 @@ QLabel#pageTitle {
 QLabel#pageSubtitle, QLabel[muted="true"] {
     color: #536176;
 }
+QCheckBox#visionApiConsentCheckBox {
+    color: #344054;
+}
 QFrame[card="true"] {
     background: #FFFEFB;
     border: 1px solid #DDE0E4;
@@ -1031,6 +1118,28 @@ QComboBox#capacitySelector {
 QComboBox#capacitySelector::drop-down {
     border: none;
     width: 32px;
+}
+)" R"(
+QDoubleSpinBox#screenVideoBitrateBppInput,
+QDoubleSpinBox#screenQualityDeficitShareInput {
+    background: #F8F7F3;
+    border: 1px solid #DDE0E4;
+    border-radius: 9px;
+    color: #172033;
+    min-height: 28px;
+    padding: 8px 11px;
+}
+QDoubleSpinBox#screenVideoBitrateBppInput:focus,
+QDoubleSpinBox#screenQualityDeficitShareInput:focus {
+    background: #FFFEFB;
+    border-color: #007aff;
+}
+QDoubleSpinBox#screenVideoBitrateBppInput QLineEdit,
+QDoubleSpinBox#screenQualityDeficitShareInput QLineEdit {
+    background: transparent;
+    border: none;
+    padding: 0;
+    min-height: 0;
 }
 QComboBox#capacitySelector::down-arrow { image: none; }
 QComboBox#capacitySelector:focus {
@@ -1345,6 +1454,14 @@ QLabel#statsChipValue {
 }
 QFrame#statsMetricChip[tone="good"] QLabel#statsChipValue {
     color: #128553;
+}
+QFrame#statsMetricChip[stackedMetrics="true"] QLabel#statsChipLabel {
+    font-size: 12px;
+    font-weight: 400;
+}
+QFrame#statsMetricChip[stackedMetrics="true"] QLabel#statsChipValue {
+    font-size: 15px;
+    font-weight: 600;
 }
 QFrame#statsMetricChip[tone="warning"] QLabel#statsChipValue {
     color: #9b6208;

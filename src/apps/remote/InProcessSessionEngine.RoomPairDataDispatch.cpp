@@ -45,6 +45,7 @@ void InProcessSessionEngine::OnRoomPairDataMessage(
     if (!binary) {
         return;
     }
+    if (DispatchScreenReceiverFeedback(pairId, label, payload)) return;
     if (DispatchRemoteCursorData(pairId, label, payload) ||
         DispatchRoomPairTransferData(pairId, label, payload)) {
         return;

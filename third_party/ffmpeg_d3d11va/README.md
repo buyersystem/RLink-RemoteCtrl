@@ -15,6 +15,11 @@ Rebuild it from the WebRTC checkout used by this repository:
 powershell -ExecutionPolicy Bypass -File .\scripts\Build-FfmpegD3D11Va.ps1
 ```
 
+The script prepares a local source copy and applies the tracked
+[NVENC dynamic FPS patch](../../patches/ffmpeg/README.md). It leaves the external
+WebRTC source checkout intact. The updated runtime can reconfigure H.264 FPS
+on the existing NVENC session; older unpatched DLLs use RLink's reopen fallback.
+
 Runtime files copied beside `RLinkAPP.exe`:
 
 - `avcodec-62.dll`

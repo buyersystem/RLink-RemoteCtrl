@@ -115,7 +115,8 @@ std::optional<OperationError> InProcessSessionEngine::PrepareDirectMedia(
             options_.desktopCaptureImplementation,
             captureTarget,
             options_.contentAnalyzerEnabled,
-            options_.contentAnalyzerRateHz);
+            options_.contentAnalyzerRateHz,
+            options_.remoteVisionAnalyzer);
         if (!source->SetTargetFrameRate(kDefaultScreenFrameRate)) {
             return fail("direct_capture_frame_rate_rejected",
                         "The desktop capturer rejected the default frame rate.",

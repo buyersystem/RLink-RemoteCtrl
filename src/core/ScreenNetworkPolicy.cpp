@@ -78,10 +78,11 @@ std::uint64_t RequiredStartBitrate(
     std::uint32_t height,
     std::uint32_t framesPerSecond)
 {
-    return ResolveScreenStreamPolicy(
-        width,
-        height,
-        {width, height, framesPerSecond}).startBitrateBps;
+    // Freeze the reference used by release 959a553. The live video bpp
+    // setting must not silently change this historical controller's curve.
+    const auto pixelRate = static_cast<std::uint64_t>(width) * height * framesPerSecond;
+    const auto maximum = std::clamp<std::uint64_t>(pixelRate * 15 / 100, 4'000'000, 100'000'000);
+    return std::clamp<std::uint64_t>(pixelRate * 8 / 100, 2'000'000, maximum);
 }
 
 std::uint32_t HighestSupportedFrameRate(
@@ -108,25 +109,6 @@ std::uint32_t HighestSupportedFrameRate(
         selected = state.requestedFrameRate;
     }
     return selected;
-}
-
-std::uint32_t NextRecoveryFrameRate(
-    const AdaptiveScreenFrameRateState& state,
-    std::uint32_t supportedFrameRate)
-{
-    std::uint32_t next = supportedFrameRate;
-    for (const auto candidate : kAdaptiveFrameRateCandidates) {
-        if (candidate > state.effectiveFrameRate &&
-            candidate <= supportedFrameRate) {
-            next = candidate;
-            break;
-        }
-    }
-    if (state.requestedFrameRate > state.effectiveFrameRate &&
-        state.requestedFrameRate <= supportedFrameRate) {
-        next = (std::min)(next, state.requestedFrameRate);
-    }
-    return next;
 }
 
 }  // namespace
@@ -430,12 +412,31 @@ AdaptiveScreenFrameRateDecision EvaluateAdaptiveScreenFrameRate(
         sample.capacityBps,
         std::clamp(config.capacityEmaAlpha, 0.0, 1.0));
 
+    // GCC owns bandwidth discovery. Lift the sender restriction as soon as
+    // its current budget supports more FPS, without serial recovery windows,
+    // per-tier timers, or a second lagging bandwidth estimate.
+    const auto currentSupportedFrameRate = HighestSupportedFrameRate(*state,
+        static_cast<std::uint64_t>(sample.capacityBps *
+            std::clamp(config.capacitySafetyRatio, 0.1, 1.0)));
+    if (currentSupportedFrameRate > state->effectiveFrameRate) {
+        state->effectiveFrameRate = currentSupportedFrameRate;
+        state->lastChangeTimestampMs = sample.timestampMs;
+        state->reductionSampleCount = state->recoverySampleCount = 0;
+        // The old low-budget EMA must not immediately undo this recovery.
+        state->smoothedCapacityBps = sample.capacityBps;
+        state->status = AdaptiveScreenFrameRateStatus::kStable;
+        decision.applyEffectiveFrameRate = true;
+        decision.effectiveFrameRate = currentSupportedFrameRate;
+        return decision;
+    }
+
     const auto usableCapacityBps = static_cast<std::uint64_t>(
         state->smoothedCapacityBps *
         std::clamp(config.capacitySafetyRatio, 0.1, 1.0));
     const auto supportedFrameRate = HighestSupportedFrameRate(
         *state, usableCapacityBps);
-    if (supportedFrameRate < state->effectiveFrameRate) {
+    if (supportedFrameRate < state->effectiveFrameRate &&
+        currentSupportedFrameRate < state->effectiveFrameRate) {
         state->recoverySampleCount = 0;
         ++state->reductionSampleCount;
         state->status = AdaptiveScreenFrameRateStatus::kReducing;
@@ -451,35 +452,6 @@ AdaptiveScreenFrameRateDecision EvaluateAdaptiveScreenFrameRate(
         }
         return decision;
     }
-    if (supportedFrameRate > state->effectiveFrameRate) {
-        state->reductionSampleCount = 0;
-        const auto nextFrameRate = NextRecoveryFrameRate(
-            *state, supportedFrameRate);
-        const auto nextRequiredBitrate = RequiredStartBitrate(
-            state->outputWidth,
-            state->outputHeight,
-            nextFrameRate);
-        const bool hasHeadroom = usableCapacityBps >=
-            static_cast<std::uint64_t>(
-                nextRequiredBitrate *
-                (std::max)(1.0, config.recoveryHeadroomRatio));
-        state->recoverySampleCount = hasHeadroom
-            ? state->recoverySampleCount + 1
-            : 0;
-        state->status = AdaptiveScreenFrameRateStatus::kRecovering;
-        if (hasHeadroom &&
-            state->recoverySampleCount >= config.requiredRecoverySamples &&
-            sample.timestampMs - state->lastChangeTimestampMs >=
-                config.minimumRecoveryIntervalMs) {
-            state->effectiveFrameRate = nextFrameRate;
-            state->lastChangeTimestampMs = sample.timestampMs;
-            state->recoverySampleCount = 0;
-            decision.applyEffectiveFrameRate = true;
-            decision.effectiveFrameRate = nextFrameRate;
-        }
-        return decision;
-    }
-
     state->reductionSampleCount = 0;
     state->recoverySampleCount = 0;
     state->status = AdaptiveScreenFrameRateStatus::kStable;

@@ -19,6 +19,8 @@ struct RecentRoomCardData {
     QString availabilityTone;
     QString actionText;
     bool canJoin = false;
+
+    bool operator==(const RecentRoomCardData&) const = default;
 };
 
 struct RecentDeviceCardData {
@@ -29,6 +31,8 @@ struct RecentDeviceCardData {
     bool ownedDevice = false;
     bool ownedDeviceOnline = false;
     bool actionEnabled = false;
+
+    bool operator==(const RecentDeviceCardData&) const = default;
 };
 
 class RecentConnectionsPage final : public QScrollArea {
@@ -52,6 +56,10 @@ private:
     QVBoxLayout* devicesLayout_ = nullptr;
     QFrame* roomsEmptyState_ = nullptr;
     QFrame* devicesEmptyState_ = nullptr;
+    QVector<RecentRoomCardData> renderedRooms_;
+    QVector<RecentDeviceCardData> renderedDevices_;
+    bool renderedRoomsDark_ = false;
+    bool renderedDevicesDark_ = false;
 };
 
 }  // namespace remote::controller

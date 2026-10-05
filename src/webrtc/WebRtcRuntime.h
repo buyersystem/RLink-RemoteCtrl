@@ -26,6 +26,7 @@ namespace remote {
 class MfD3D11H264DecoderPreferenceState;
 class WindowsPreferredVideoEncoderFactory;
 class WindowsPreferredVideoDecoderFactory;
+class GoogCcTelemetryFactoryContext;
 
 struct WebRtcCapabilityReport {
     bool factoryCreated = false;
@@ -113,7 +114,9 @@ public:
     WebRtcRuntime(const WebRtcRuntime&) = delete;
     WebRtcRuntime& operator=(const WebRtcRuntime&) = delete;
 
-    bool Initialize();
+    // False retains read-only controller telemetry but uses native probing
+    // configuration and omits RLink recovery invitations, for reference runs.
+    bool Initialize(bool enableScreenRecoveryHints = true);
     void Shutdown();
 
     const WebRtcCapabilityReport& CapabilityReport() const noexcept;
@@ -150,6 +153,7 @@ private:
     bool sslInitialized_ = false;
 
     webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface> factory_;
+    std::shared_ptr<GoogCcTelemetryFactoryContext> googCcTelemetryContext_;
     // Owned by factory_. These non-owning pointers remain valid until
     // factory_ is released in Shutdown().
     WindowsPreferredVideoEncoderFactory* videoEncoderFactory_ = nullptr;

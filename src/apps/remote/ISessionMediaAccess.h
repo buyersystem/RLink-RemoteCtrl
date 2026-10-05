@@ -62,6 +62,18 @@ public:
     virtual SessionCommandResult SetRemoteAudioPlaybackMuted(bool muted) = 0;
     virtual SessionCommandResult SetDirectScreenStreamPreference(
         const ScreenStreamPreferenceRequest& preference) = 0;
+    // Queue acceptance is separate from the transport result. Completion may
+    // run on a controller/cleanup thread and does not replace the remote ACK.
+    // Rejected requests do not invoke completion.
+    virtual SessionCommandResult QueueDirectScreenStreamPreference(
+        const ScreenStreamPreferenceRequest& preference,
+        std::function<void(SessionCommandResult)> completion)
+    {
+        (void)preference;
+        (void)completion;
+        return {false, "screen_stream_queue_unsupported",
+                "Queued direct screen preferences are not supported."};
+    }
     virtual SessionCommandResult RequestDirectSharedDisplaySwitch(
         const std::string& stableDisplayKey) = 0;
     virtual void SetPreferredHardwareDecoderName(std::string name) = 0;

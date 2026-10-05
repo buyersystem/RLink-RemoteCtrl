@@ -143,6 +143,16 @@ RecentConnectionsPage::RecentConnectionsPage(QWidget* parent)
 void RecentConnectionsPage::SetRooms(
     const QVector<RecentRoomCardData>& rooms)
 {
+    const bool dark = ui::RemoteCTheme::IsDark(
+        ui::RemoteCTheme::LoadPreference());
+    // Keep existing widgets (and their hover bindings) when a navigation or
+    // engine notification repeats the same state. A theme change still
+    // refreshes the bindings' explicit colors on the next update.
+    if (rooms == renderedRooms_ && dark == renderedRoomsDark_) {
+        return;
+    }
+    renderedRooms_ = rooms;
+    renderedRoomsDark_ = dark;
     ClearCards(roomsLayout_, roomsEmptyState_);
     roomsEmptyState_->setVisible(rooms.isEmpty());
     if (rooms.isEmpty()) {
@@ -194,8 +204,6 @@ void RecentConnectionsPage::SetRooms(
         ui::RemoteCTheme::SetIcon(
             action, QStringLiteral(":/ui/icons/lucide/base/users-round.svg"),
             ui::ThemeIconTone::kPrimary);
-        const bool dark = ui::RemoteCTheme::IsDark(
-            ui::RemoteCTheme::LoadPreference());
         remotec::ui::morph::MorphIconButtonBinding::attach(
             action,
             QStringLiteral(":/ui/icons/lucide/base/users-round.svg"),
@@ -218,6 +226,13 @@ void RecentConnectionsPage::SetRooms(
 void RecentConnectionsPage::SetDevices(
     const QVector<RecentDeviceCardData>& devices)
 {
+    const bool dark = ui::RemoteCTheme::IsDark(
+        ui::RemoteCTheme::LoadPreference());
+    if (devices == renderedDevices_ && dark == renderedDevicesDark_) {
+        return;
+    }
+    renderedDevices_ = devices;
+    renderedDevicesDark_ = dark;
     ClearCards(devicesLayout_, devicesEmptyState_);
     devicesEmptyState_->setVisible(devices.isEmpty());
     if (devices.isEmpty()) {

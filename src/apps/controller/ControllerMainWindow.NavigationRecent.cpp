@@ -269,12 +269,32 @@ void ControllerMainWindow::RememberRecentDevice(
     }
     settings.setValue(
         RecentSettingsKey(QStringLiteral("recentDevices")), records);
-    RefreshRecentDevices();
+    RefreshRecentDevices(snapshot, true);
 }
 
 void ControllerMainWindow::RefreshRecentDevices()
 {
     if (!recentConnectionsPage_ || !engine_) {
+        return;
+    }
+
+    // Explicit navigation/account/history refreshes also pick up persisted
+    // changes. Snapshot-driven refreshes below reuse their already copied state.
+    RefreshRecentDevices(engine_->Snapshot(), true);
+}
+
+void ControllerMainWindow::RefreshRecentDevices(
+    const SessionEngineSnapshot& snapshot, bool forceRefresh)
+{
+    if (!recentConnectionsPage_) {
+        return;
+    }
+    const bool engineReady =
+        snapshot.connectivity == SessionConnectivityState::kOnline &&
+        snapshot.state == SessionEngineState::kReady;
+    if (!recentDevicesRefreshState_.Accept(
+            recentHistoryAccountKey_, snapshot.ownedDevices,
+            snapshot.connectivity, engineReady, darkInterfaceTheme_, forceRefresh)) {
         return;
     }
 
@@ -298,7 +318,6 @@ void ControllerMainWindow::RefreshRecentDevices()
             RecentSettingsKey(QStringLiteral("recentDevices")), records);
     }
 
-    const auto snapshot = engine_->Snapshot();
     QVector<RecentDeviceCardData> cards;
     cards.reserve(records.size());
     for (const QVariant& value : records) {
@@ -336,9 +355,6 @@ void ControllerMainWindow::RefreshRecentDevices()
             ? (card.ownedDeviceOnline ? QStringLiteral("进入桌面")
                                       : QStringLiteral("设备离线"))
             : QStringLiteral("再次连接  →");
-        const bool engineReady =
-            snapshot.connectivity == SessionConnectivityState::kOnline &&
-            snapshot.state == SessionEngineState::kReady;
         card.actionEnabled =
             engineReady && (!card.ownedDevice || card.ownedDeviceOnline);
         cards.push_back(std::move(card));
@@ -387,11 +403,18 @@ void ControllerMainWindow::SelectMainPage(
         if (!button) {
             continue;
         }
-        button->setProperty("navActive", button == navigationButton);
-        button->setChecked(button == navigationButton);
-        button->style()->unpolish(button);
-        button->style()->polish(button);
-        button->update();
+        const bool active = button == navigationButton;
+        const bool activeChanged =
+            button->property("navActive").toBool() != active;
+        if (activeChanged) {
+            button->setProperty("navActive", active);
+        }
+        button->setChecked(active);
+        if (activeChanged) {
+            button->style()->unpolish(button);
+            button->style()->polish(button);
+            button->update();
+        }
     }
     if (titleBar_) {
         titleBar_->SetTitle(title);
@@ -613,11 +636,7 @@ void ControllerMainWindow::SetRoomWorkspaceActive(bool active)
 void ControllerMainWindow::SetAnimationLevel(int level)
 {
     level = std::clamp(level, 0, 2);
-    QSettings settings;
-    settings.setValue(QStringLiteral("ui/animationLevel"), level);
-    // Keep the old boolean in sync for older public-test builds that may read
-    // the same INI file during a rollback.
-    settings.setValue(QStringLiteral("ui/animationsEnabled"), level > 0);
+    SaveUiAnimationLevel(level);
     if (level == 0) {
         SetBusyStatusAnimation(connectivityPill_, false);
         SetBusyStatusAnimation(serviceStatus_, false);

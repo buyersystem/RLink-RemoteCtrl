@@ -24,6 +24,7 @@ namespace webrtc_session_detail {
 inline constexpr int kMaximumScreenBitrateBps = 100'000'000;
 inline constexpr int kDesktopStartupProbeFloorBps = 2'000'000;
 inline constexpr int kDefaultWebRtcMinimumBitrateBps = 30'000;
+inline constexpr int kMaximumScreenConnectionBitrateBps = 105'000'000;
 
 inline std::uint64_t SteadyNowMs()
 {

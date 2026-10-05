@@ -4,6 +4,7 @@
 #pragma once
 
 #include <QHash>
+#include <QByteArray>
 #include <QScrollArea>
 #include <QString>
 
@@ -30,10 +31,15 @@ public:
                   bool expanded = false);
     void RegisterValue(const QString& key, QLabel* label);
     QLabel* ValueLabel(const QString& key) const;
+    void SetValue(const QString& key, const QString& value,
+                  const QByteArray& tone = "normal");
+    int CurrentCategory() const;
+    bool NeedsRealtimeDiagnostics() const;
     bool HasValues() const;
     bool ScreenFrameRateLogEnabled() const;
     bool InputEventStatsEnabled() const;
     QWidget* StatsCardsWidget() const;
+    QWidget* PolicyCardsWidget() const;
     QPushButton* CopyAllButton() const;
     QPushButton* CopyMediaButton() const;
 
@@ -44,10 +50,18 @@ signals:
 
 private:
     void BuildWorkspace();
+    void ApplyValue(const QString& key);
 
     QVBoxLayout* contentLayout_ = nullptr;
     QHash<QString, QLabel*> valueLabels_;
+    struct Value {
+        QString text;
+        QByteArray tone;
+    };
+    QHash<QString, Value> values_;
+    QStackedWidget* detailStack_ = nullptr;
     QWidget* statsCardsWidget_ = nullptr;
+    QWidget* policyCardsWidget_ = nullptr;
     QPushButton* copyAllButton_ = nullptr;
     QPushButton* copyMediaButton_ = nullptr;
     bool screenFrameRateLogEnabled_ = false;

@@ -1,0 +1,103 @@
+--- a/libavcodec/nvenc.c
++++ b/libavcodec/nvenc.c
+@@ -2310,6 +2310,7 @@
+             return ret;
+     }
+ 
++    ctx->rlink_dynamic_fps = 1;
+     return 0;
+ }
+ 
+@@ -2950,7 +2951,7 @@
+     return res;
+ }
+ 
+-static void reconfig_encoder(AVCodecContext *avctx, const AVFrame *frame)
++static int reconfig_encoder(AVCodecContext *avctx, const AVFrame *frame)
+ {
+     NvencContext *ctx = avctx->priv_data;
+     NV_ENCODE_API_FUNCTION_LIST *p_nvenc = &ctx->nvenc_dload_funcs.nvenc_funcs;
+@@ -2959,11 +2960,25 @@
+     NV_ENC_RECONFIGURE_PARAMS params = { 0 };
+     int needs_reconfig = 0;
+     int needs_encode_config = 0;
+-    int reconfig_bitrate = 0, reconfig_dar = 0;
++    int reconfig_bitrate = 0, reconfig_dar = 0, reconfig_fps = 0;
++    NV_ENC_CONFIG config = ctx->encode_config;
+     int dw, dh;
+ 
+     params.version = NV_ENC_RECONFIGURE_PARAMS_VER;
+     params.reInitEncodeParams = ctx->init_encode_params;
++    params.reInitEncodeParams.encodeConfig = &config;
++
++    /* FPS is rate-control input, not an instruction to manufacture frames.
++     * Preserve the session, resources, GOP configuration and timestamp base. */
++    if (avctx->framerate.num > 0 && avctx->framerate.den > 0 &&
++        (avctx->framerate.num != ctx->init_encode_params.frameRateNum ||
++         avctx->framerate.den != ctx->init_encode_params.frameRateDen)) {
++        params.reInitEncodeParams.frameRateNum = avctx->framerate.num;
++        params.reInitEncodeParams.frameRateDen = avctx->framerate.den;
++        needs_reconfig = 1;
++        needs_encode_config = 1;
++        reconfig_fps = 1;
++    }
+ 
+     compute_dar(avctx, &dw, &dh);
+     if (dw != ctx->init_encode_params.darWidth || dh != ctx->init_encode_params.darHeight) {
+@@ -3025,8 +3040,12 @@
+     if (needs_reconfig) {
+         ret = p_nvenc->nvEncReconfigureEncoder(ctx->nvencoder, &params);
+         if (ret != NV_ENC_SUCCESS) {
+-            nvenc_print_error(avctx, ret, "failed to reconfigure nvenc");
++            return nvenc_print_error(avctx, ret, "failed to reconfigure nvenc");
+         } else {
++            if (reconfig_fps) {
++                ctx->init_encode_params.frameRateNum = avctx->framerate.num;
++                ctx->init_encode_params.frameRateDen = avctx->framerate.den;
++            }
+             if (reconfig_dar) {
+                 ctx->init_encode_params.darHeight = dh;
+                 ctx->init_encode_params.darWidth = dw;
+@@ -3040,6 +3059,7 @@
+ 
+         }
+     }
++    return 0;
+ }
+ 
+ #ifdef NVENC_HAVE_HEVC_AND_AV1_MASTERING_METADATA
+@@ -3148,8 +3168,12 @@
+         if (res < 0)
+             return res;
+ 
+-        reconfig_encoder(avctx, frame);
+-
++        res = reconfig_encoder(avctx, frame);
++        if (res < 0) {
++            res2 = nvenc_pop_context(avctx);
++            av_fifo_write(ctx->unused_surface_queue, &in_surf, 1);
++            return res2 < 0 ? res2 : res;
++        }
+         res = nvenc_upload_frame(avctx, frame, in_surf);
+ 
+         res2 = nvenc_pop_context(avctx);
+--- a/libavcodec/nvenc.h
++++ b/libavcodec/nvenc.h
+@@ -262,6 +262,7 @@
+     uint32_t frame_idx_counter;
+     uint32_t next_view_id;
+ 
++    int rlink_dynamic_fps;
+     int preset;
+     int profile;
+     int level;
+--- a/libavcodec/nvenc_h264.c
++++ b/libavcodec/nvenc_h264.c
+@@ -26,6 +26,7 @@
+ #define OFFSET(x) offsetof(NvencContext, x)
+ #define VE AV_OPT_FLAG_VIDEO_PARAM | AV_OPT_FLAG_ENCODING_PARAM
+ static const AVOption options[] = {
++    { "rlink_dynamic_fps", "RLink transactional dynamic FPS support", OFFSET(rlink_dynamic_fps), AV_OPT_TYPE_BOOL, { .i64 = 1 }, 0, 1, VE | AV_OPT_FLAG_READONLY },
+ #ifdef NVENC_HAVE_NEW_PRESETS
+     { "preset",       "Set the encoding preset",            OFFSET(preset),       AV_OPT_TYPE_INT,   { .i64 = PRESET_P4 },     PRESET_DEFAULT, PRESET_P7,          VE, .unit = "preset" },
+ #else

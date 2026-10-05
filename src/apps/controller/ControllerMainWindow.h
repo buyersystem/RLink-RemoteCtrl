@@ -17,6 +17,7 @@
 
 #include "FramelessWindow.h"
 #include "RemoteSessionBinding.h"
+#include "RecentDevicesRefreshState.h"
 #include "src/apps/remote/ClipboardController.h"
 #include "src/apps/update/SoftwareUpdateController.h"
 #include "src/core/ISessionEngine.h"
@@ -168,24 +169,31 @@ private:
     void RememberRecentDevice(const SessionEngineSnapshot& snapshot);
     void RefreshRecentRooms();
     void RefreshRecentDevices();
+    void RefreshRecentDevices(const SessionEngineSnapshot& snapshot,
+                              bool forceRefresh = false);
     QString RecentSettingsKey(const QString& listName) const;
     void MigrateLegacyRecentHistory();
     void RequestRecentRoomAvailability();
     void RefreshDiagnosticsUi();
+    void RefreshDiagnosticsSnapshotUi(const SessionEngineSnapshot& snapshot);
+    void ScheduleDiagnosticsUiRefresh();
     void StartDecoderBenchmark(bool manualRequest);
     void FinishDecoderBenchmark(int exitCode);
-    void RefreshDecoderBenchmarkSummary();
-    void RefreshDecoderHardwareSelectionAvailability();
+    QString HardwareFingerprintForUi(bool refresh = false);
+    void RefreshDecoderBenchmarkSummary(bool refreshHardwareEnvironment = true);
+    void RefreshDecoderHardwareSelectionAvailability(
+        bool refreshHardwareEnvironment = true);
     void StartEncoderBenchmark(bool manualRequest);
     void FinishEncoderBenchmark(int exitCode);
-    void RefreshEncoderBenchmarkSummary();
+    void RefreshEncoderBenchmarkSummary(bool refreshHardwareEnvironment = true);
     void UpdateLocalMediaDevicesUi(
         const SessionEngineSnapshot& snapshot);
     void PersistHardwareCapabilityCache();
     void RequestMediaDeviceRefresh(bool userInitiated = false);
     void ApplyVideoPipelineSettingsFromUi(
         bool showFeedback = true,
-        const QString& changedSettingName = {});
+        const QString& changedSettingName = {},
+        bool refreshHardwareEnvironment = true);
     void UpdateVideoPipelineSettingsAvailability(
         const SessionEngineSnapshot& snapshot);
     void ShowMediaDeviceMenu(
@@ -276,6 +284,8 @@ private:
     bool authenticationAvailable_ = true;
     bool videoPipelineSettingsBusy_ = false;
     bool videoPipelineSettingsApplyPending_ = false;
+    QString uiHardwareFingerprint_;
+    bool uiHardwareFingerprintInitialized_ = false;
     QProcess* decoderBenchmarkProcess_ = nullptr;
     bool decoderBenchmarkManualRequest_ = false;
     QString decoderBenchmarkHardwareFingerprint_;
@@ -295,10 +305,12 @@ private:
     QString mediaDebugCopyText_;
     QString statsDebugCopyText_;
     bool diagnosticsCopyTextRequested_ = false;
+    bool diagnosticsUiRefreshPending_ = false;
     QTimer* diagnosticsRefreshTimer_ = nullptr;
     QString lastRememberedRoomId_;
     QString lastRememberedDirectSessionId_;
     QString recentHistoryAccountKey_;
+    RecentDevicesRefreshState recentDevicesRefreshState_;
     bool recentRoomAvailabilityRequested_ = false;
     bool quitting_ = false;
     QString pendingDeviceName_;

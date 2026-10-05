@@ -14,6 +14,7 @@
 namespace remote {
 
 class WindowsPreferredVideoEncoderFactoryState;
+class GoogCcTelemetryState;
 
 // Prefers the Windows Media Foundation/D3D11 H264 encoder and delegates
 // runtime failure to WebRTC's official software-fallback wrapper.
@@ -23,7 +24,8 @@ public:
     WindowsPreferredVideoEncoderFactory(
         std::unique_ptr<webrtc::VideoEncoderFactory> softwareFactory,
         std::unique_ptr<webrtc::VideoEncoderFactory> hardwareFactory,
-        std::shared_ptr<VideoEncoderRuntimeState> runtimeState = nullptr);
+        std::shared_ptr<VideoEncoderRuntimeState> runtimeState = nullptr,
+        std::shared_ptr<GoogCcTelemetryState> qualityControl = nullptr);
     ~WindowsPreferredVideoEncoderFactory() override;
 
     std::vector<webrtc::SdpVideoFormat>
@@ -51,6 +53,7 @@ public:
 
 private:
     std::shared_ptr<WindowsPreferredVideoEncoderFactoryState> state_;
+    std::shared_ptr<GoogCcTelemetryState> qualityControl_;
 };
 
 }  // namespace remote

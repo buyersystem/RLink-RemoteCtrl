@@ -117,12 +117,9 @@ enum class AdaptiveScreenFrameRateStatus {
 struct AdaptiveScreenFrameRateConfig {
     double capacityEmaAlpha = 0.25;
     double capacitySafetyRatio = 0.85;
-    double recoveryHeadroomRatio = 1.15;
     std::uint32_t requiredReductionSamples = 2;
-    std::uint32_t requiredRecoverySamples = 5;
     std::uint64_t startupGraceMs = 8'000;
     std::uint64_t minimumReductionIntervalMs = 2'000;
-    std::uint64_t minimumRecoveryIntervalMs = 5'000;
 };
 
 struct AdaptiveScreenFrameRateSample {

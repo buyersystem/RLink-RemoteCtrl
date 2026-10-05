@@ -297,15 +297,12 @@ void ControllerMainWindow::ConnectUiSignals()
     });
     connect(debugNavButton_, &QPushButton::clicked, this, [this] {
         SelectMainPage(4, debugNavButton_, QStringLiteral("调试信息"));
-        if (engine_) {
-            OnSessionEngineSnapshot(engine_->Snapshot());
-            RefreshDiagnosticsUi();
-        }
+        ScheduleDiagnosticsUiRefresh();
     });
     connect(settingsNavButton_, &QPushButton::clicked, this,
             [this] {
         SelectMainPage(5, settingsNavButton_, QStringLiteral("设置"));
-        if (settingsPage_ && settingsPage_->CurrentCategory() == 2) {
+        if (settingsPage_ && settingsPage_->CurrentCategory() == 3) {
             RequestMediaDeviceRefresh(false);
         }
     });
@@ -602,7 +599,7 @@ void ControllerMainWindow::ConnectUiSignals()
     connect(debugPage_->CopyAllButton(), &QPushButton::clicked, this, [this] {
         diagnosticsCopyTextRequested_ = true;
         if (engine_) {
-            OnSessionEngineSnapshot(engine_->Snapshot());
+            RefreshDiagnosticsSnapshotUi(engine_->Snapshot());
             RefreshDiagnosticsUi();
         }
         QString text = debugCopyText_;
@@ -621,7 +618,7 @@ void ControllerMainWindow::ConnectUiSignals()
     connect(debugPage_->CopyMediaButton(), &QPushButton::clicked, this, [this] {
         diagnosticsCopyTextRequested_ = true;
         if (engine_) {
-            OnSessionEngineSnapshot(engine_->Snapshot());
+            RefreshDiagnosticsSnapshotUi(engine_->Snapshot());
         }
         QApplication::clipboard()->setText(mediaDebugCopyText_);
         diagnosticsCopyTextRequested_ = false;

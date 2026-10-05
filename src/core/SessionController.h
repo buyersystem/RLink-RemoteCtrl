@@ -109,6 +109,10 @@ public:
     SendResult SendData(const std::string& channelName,
                         std::span<const std::uint8_t> data,
                         bool binary);
+    // False rejects synchronously without invoking completion. An accepted
+    // task reports its send result exactly once, or kSessionNotStarted if the
+    // executor stops before sending it. Completion is not on the UI thread
+    // (cancellation may run on the stopping thread); callers must marshal it.
     bool QueueData(
         const std::string& channelName,
         std::span<const std::uint8_t> data,

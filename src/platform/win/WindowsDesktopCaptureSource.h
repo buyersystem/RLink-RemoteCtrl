@@ -14,12 +14,14 @@
 #include <stop_token>
 #include <string>
 #include <thread>
+#include <unordered_map>
 
 #include "api/video/adapted_video_track_source.h"
 #include "modules/desktop_capture/desktop_capturer.h"
 #include "src/core/DesktopCaptureTypes.h"
 #include "src/core/DisplayTopology.h"
 #include "src/media_intelligence/core/ContentState.h"
+#include "src/platform/win/IRemoteVisionFrameAnalyzer.h"
 
 namespace remote::media_intelligence {
 class ContentAnalysisWorker;
@@ -62,10 +64,16 @@ public:
         std::uint64_t totalForcedRefreshFrames = 0;
         double latestCaptureCallMs = 0.0;
         bool contentAnalyzerEnabled = false;
+        std::string contentAnalyzerBackend = "disabled";
         std::uint64_t contentAnalysisGeneration = 0;
         media_intelligence::ContentState contentState;
         std::uint32_t contentStateAgeMs = 0;
         std::uint32_t contentLatestAnalysisTimeUs = 0;
+        std::uint32_t contentLatestScaleConvertTimeUs = 0;
+        std::uint32_t contentLatestJpegEncodeTimeUs = 0;
+        std::uint64_t contentLatestJpegBytes = 0;
+        media_intelligence::SemanticClassification contentLatestReturnedClassification;
+        std::uint32_t contentLatestReturnedAgeMs = 0;
         std::uint64_t contentSubmittedSamples = 0;
         std::uint64_t contentReplacedSamples = 0;
         std::uint64_t contentProcessedSamples = 0;
@@ -84,7 +92,9 @@ public:
             DesktopCaptureImplementation::kNativeDxgi,
         DisplayDescriptor captureTarget = {},
         bool contentAnalyzerEnabled = false,
-        std::uint32_t contentAnalyzerRateHz = 3);
+        std::uint32_t contentAnalyzerRateHz = 3,
+        std::shared_ptr<IRemoteVisionFrameAnalyzer>
+            remoteVisionAnalyzer = {});
     ~WindowsDesktopCaptureSource() override;
 
     bool StartCapture(
@@ -121,8 +131,15 @@ public:
     bool remote() const override;
     bool is_screencast() const override;
     std::optional<bool> needs_denoising() const override;
+    void AddOrUpdateSink(webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink,
+        const webrtc::VideoSinkWants& wants) override;
+    void RemoveSink(webrtc::VideoSinkInterface<webrtc::VideoFrame>* sink) override;
+    bool GetStats(Stats* stats) override;
+    void ProcessConstraints(const webrtc::VideoTrackSourceConstraints& constraints) override;
 
 private:
+    class FrameRateSinkProxy;
+    friend class DesktopCaptureDeliveryTestAccess;
     enum class FrameDeliveryReason : std::uint8_t {
         kInitial,
         kDesktopChanged,
@@ -157,20 +174,34 @@ private:
         FrameDeliveryReason* reason);
     void DeliverFrame(
         webrtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer,
-        FrameDeliveryReason reason);
+        FrameDeliveryReason reason,
+        std::int64_t timestampUs = 0);
     void DeliverLibWebRtcFrame(
         webrtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer,
         FrameDeliveryReason reason,
         const FrameUpdateRegion& updateRegion,
-        bool repeatFrame);
+        bool repeatFrame,
+        std::int64_t timestampUs = 0);
+    bool AcceptFrameForDelivery(
+        const webrtc::scoped_refptr<webrtc::VideoFrameBuffer>& buffer,
+        std::int64_t timestampUs);
     bool ConsumeForcedRefreshFrame();
     void ScheduleForcedRefreshFrames(std::uint32_t frameCount);
     void SignalCaptureSchedule();
     void RecordChangedAreaRatio(float ratio) noexcept;
     void PublishChangedAreaRatioWindow() noexcept;
     void MaybeSubmitContentAnalysis(float changedAreaRatio) noexcept;
+    void MaybeSubmitRemoteVisionFrame(
+        webrtc::scoped_refptr<webrtc::VideoFrameBuffer> buffer) noexcept;
 
     mutable std::mutex mutex_;
+    // Control-thread ownership only. VideoBroadcaster synchronizes dispatch
+    // with RemoveSink; capture callbacks never acquire this map mutex.
+    std::mutex sinkProxyMutex_;
+    std::unordered_map<webrtc::VideoSinkInterface<webrtc::VideoFrame>*,
+        std::unique_ptr<FrameRateSinkProxy>> sinkProxies_;
+    webrtc::VideoBroadcaster sinkBroadcaster_;
+    std::atomic<std::uint64_t> statsInputDimensions_{0};
     std::condition_variable firstFrameCondition_;
     std::jthread captureThread_;
     const DesktopCaptureImplementation configuredImplementation_;
@@ -178,9 +209,14 @@ private:
     const std::uint32_t contentAnalyzerRateHz_ = 3;
     std::unique_ptr<media_intelligence::ContentAnalysisWorker>
         contentAnalysisWorker_;
+    const std::shared_ptr<IRemoteVisionFrameAnalyzer>
+        remoteVisionAnalyzer_;
     CaptureBackend backend_ = CaptureBackend::kGdi;
     bool initializationFinished_ = false;
     bool firstFrameReady_ = false;
+    // Capture-thread state: a discarded partial update requires the next
+    // delivered CPU frame to cover the full desktop.
+    bool deliveryUpdateRegionInvalidated_ = false;
     bool running_ = false;
     std::string fallbackReason_;
     std::string lastError_;
@@ -213,6 +249,7 @@ private:
     std::atomic<std::uint64_t> contentAnalysisGeneration_{0};
     std::atomic<std::uint64_t> contentAnalysisSourceFrameId_{0};
     std::atomic<std::int64_t> nextContentAnalysisSubmitSteadyUs_{0};
+    std::atomic<std::uint64_t> remoteVisionSessionToken_{0};
     // HANDLE is kept opaque in the header. It is created and destroyed by the
     // active capture thread while mutex_ protects publication/lifetime.
     void* captureScheduleWakeEvent_ = nullptr;

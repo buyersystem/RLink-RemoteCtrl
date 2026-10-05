@@ -17,7 +17,7 @@ void ControllerMainWindow::RefreshOwnedDevicesUi(
         ownedDevicesPage_->UpdateSnapshot(
             snapshot.ownedDevices, snapshot.connectivity);
     }
-    RefreshRecentDevices();
+    RefreshRecentDevices(snapshot);
 }
 
 void ControllerMainWindow::StartOwnedDeviceSession(

@@ -26,6 +26,8 @@ set(RLINK_OUTPUT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/x64" CACHE PATH
     "Root directory for build outputs")
 option(RLINK_ENABLE_CONTENT_ANALYZER
     "Allow the local content analyzer to be enabled at runtime" ON)
+option(RLINK_ENABLE_REMOTE_VISION_API
+    "Allow the remote vision API semantic backend to be enabled at runtime" ON)
 
 if(NOT RLINK_QT_DIR OR NOT RLINK_WEBRTC_SRC OR NOT RLINK_WEBRTC_OUT)
   message(FATAL_ERROR

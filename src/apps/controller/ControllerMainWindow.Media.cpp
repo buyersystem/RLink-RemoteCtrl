@@ -183,7 +183,8 @@ void ControllerMainWindow::PersistHardwareCapabilityCache()
 
 void ControllerMainWindow::ApplyVideoPipelineSettingsFromUi(
     bool showFeedback,
-    const QString& changedSettingName)
+    const QString& changedSettingName,
+    bool refreshHardwareEnvironment)
 {
     if (videoPipelineSettingsBusy_) {
         if (!showFeedback) {
@@ -215,7 +216,7 @@ void ControllerMainWindow::ApplyVideoPipelineSettingsFromUi(
     const QString captureBackend = captureValue;
     const QJsonObject encoderProfile = app::LoadEncoderBenchmarkProfile(
         currentSettings,
-        QString::fromStdString(BuildWindowsHardwareFingerprint()),
+        HardwareFingerprintForUi(refreshHardwareEnvironment),
         captureBackend, qualityValue, kEncoderBenchmarkPolicyVersion);
     if (encoderProfile.value(QStringLiteral("passed")).toBool()) {
         automaticEncoderId = encoderProfile.value(
@@ -355,13 +356,14 @@ void ControllerMainWindow::UpdateLocalMediaDevicesUi(
         return;
     }
     const auto& media = snapshot.media.localMediaDevices;
+    const bool deviceListChanged =
+        !mediaDeviceSnapshotSeen_ || media.revision != mediaDeviceRevision_;
     const bool activityChanged =
         !mediaActivitySnapshotSeen_ ||
         displayedMicrophoneState_ != snapshot.media.localMicrophone ||
         displayedRoomAudioPlaybackMuted_ !=
             snapshot.media.roomAudioPlaybackMuted;
-    if (media.revision == mediaDeviceRevision_ &&
-        !activityChanged) {
+    if (!deviceListChanged && !activityChanged) {
         return;
     }
     mediaActivitySnapshotSeen_ = true;
@@ -459,9 +461,11 @@ void ControllerMainWindow::UpdateLocalMediaDevicesUi(
                 QStringLiteral("当前未启用")));
         };
 
-    rebuild(SettingsControls().cameraDeviceSelector, media.camera);
-    rebuild(SettingsControls().microphoneDeviceSelector, media.microphone);
-    rebuild(SettingsControls().speakerDeviceSelector, media.speaker);
+    if (deviceListChanged) {
+        rebuild(SettingsControls().cameraDeviceSelector, media.camera);
+        rebuild(SettingsControls().microphoneDeviceSelector, media.microphone);
+        rebuild(SettingsControls().speakerDeviceSelector, media.speaker);
+    }
 
     const auto completePending =
         [this](
@@ -662,14 +666,28 @@ void ControllerMainWindow::UpdateLocalMediaDevicesUi(
             RemoteCToast::Tone::kError);
     }
 }
-void ControllerMainWindow::RefreshEncoderBenchmarkSummary()
+QString ControllerMainWindow::HardwareFingerprintForUi(bool refresh)
+{
+    // Presentation-only refreshes share the last UI environment sample.
+    // Real capability checks and both benchmark boundaries request a fresh
+    // query so GPU, driver and remote-session changes remain detectable.
+    if (refresh || !uiHardwareFingerprintInitialized_) {
+        uiHardwareFingerprint_ = QString::fromStdString(
+            BuildWindowsHardwareFingerprint());
+        uiHardwareFingerprintInitialized_ = true;
+    }
+    return uiHardwareFingerprint_;
+}
+
+void ControllerMainWindow::RefreshEncoderBenchmarkSummary(
+    bool refreshHardwareEnvironment)
 {
     if (!SettingsControls().encoderBenchmarkSummary) {
         return;
     }
     const QSettings settings;
-    const QString fingerprint = QString::fromStdString(
-        BuildWindowsHardwareFingerprint());
+    const QString fingerprint =
+        HardwareFingerprintForUi(refreshHardwareEnvironment);
     const QString captureBackend = settings.value(
         QString::fromLatin1(kDesktopCaptureBackendSetting),
         QStringLiteral("native_dxgi")).toString();
@@ -844,8 +862,7 @@ void ControllerMainWindow::StartEncoderBenchmark(bool manualRequest)
 
     const QSettings settings;
     encoderBenchmarkManualRequest_ = manualRequest;
-    encoderBenchmarkHardwareFingerprint_ = QString::fromStdString(
-        BuildWindowsHardwareFingerprint());
+    encoderBenchmarkHardwareFingerprint_ = HardwareFingerprintForUi(true);
     encoderBenchmarkCaptureBackend_ = settings.value(
         QString::fromLatin1(kDesktopCaptureBackendSetting),
         QStringLiteral("native_dxgi")).toString();
@@ -905,8 +922,7 @@ void ControllerMainWindow::FinishEncoderBenchmark(int exitCode)
         }
     }
     const QJsonObject result = document.object();
-    const QString currentFingerprint = QString::fromStdString(
-        BuildWindowsHardwareFingerprint());
+    const QString currentFingerprint = HardwareFingerprintForUi(true);
     const QSettings currentSettings;
     const QString currentCaptureBackend = currentSettings.value(
         QString::fromLatin1(kDesktopCaptureBackendSetting),
@@ -989,7 +1005,7 @@ void ControllerMainWindow::FinishEncoderBenchmark(int exitCode)
         }
         settings.sync();
     }
-    RefreshEncoderBenchmarkSummary();
+    RefreshEncoderBenchmarkSummary(false);
     const bool testedProfileIsCurrent =
         testedCaptureBackend == currentCaptureBackend &&
         testedX264Preset == currentSettings.value(
@@ -998,7 +1014,7 @@ void ControllerMainWindow::FinishEncoderBenchmark(int exitCode)
     if (passed && testedProfileIsCurrent && SettingsControls().videoEncoderSelector &&
         SettingsControls().videoEncoderSelector->currentData().toString() ==
             QStringLiteral("auto")) {
-        ApplyVideoPipelineSettingsFromUi(false);
+        ApplyVideoPipelineSettingsFromUi(false, {}, false);
     }
     if (encoderBenchmarkManualRequest_) {
         RemoteCToast::Show(
@@ -1025,15 +1041,15 @@ void ControllerMainWindow::FinishEncoderBenchmark(int exitCode)
             .arg(processError.toHtmlEscaped()));
     }
 }
-void ControllerMainWindow::RefreshDecoderBenchmarkSummary()
+void ControllerMainWindow::RefreshDecoderBenchmarkSummary(
+    bool refreshHardwareEnvironment)
 {
     if (!SettingsControls().decoderBenchmarkSummary) {
         return;
     }
     const QSettings settings;
     const QString currentFingerprint =
-        QString::fromStdString(
-            BuildWindowsHardwareFingerprint());
+        HardwareFingerprintForUi(refreshHardwareEnvironment);
     const bool resultMatchesCurrentHardware =
         settings.value(
             QString::fromLatin1(
@@ -1238,14 +1254,15 @@ void ControllerMainWindow::RefreshDecoderBenchmarkSummary()
         "自动模式优先使用通过连续与稀疏帧低延迟检测的硬件解码器；运行失败后永久切换到软件解码，直到下次会话。"));
 }
 
-void ControllerMainWindow::RefreshDecoderHardwareSelectionAvailability()
+void ControllerMainWindow::RefreshDecoderHardwareSelectionAvailability(
+    bool refreshHardwareEnvironment)
 {
     if (!SettingsControls().videoDecoderSelector) {
         return;
     }
     const QSettings settings;
-    const QString currentFingerprint = QString::fromStdString(
-        BuildWindowsHardwareFingerprint());
+    const QString currentFingerprint =
+        HardwareFingerprintForUi(refreshHardwareEnvironment);
     const bool available =
         settings.value(
             QString::fromLatin1(kDecoderBenchmarkCompletedSetting),
@@ -1335,9 +1352,7 @@ void ControllerMainWindow::StartDecoderBenchmark(bool manualRequest)
     }
 
     decoderBenchmarkManualRequest_ = manualRequest;
-    decoderBenchmarkHardwareFingerprint_ =
-        QString::fromStdString(
-            BuildWindowsHardwareFingerprint());
+    decoderBenchmarkHardwareFingerprint_ = HardwareFingerprintForUi(true);
     decoderBenchmarkProcess_ = new QProcess(this);
     decoderBenchmarkProcess_->setProcessChannelMode(
         QProcess::SeparateChannels);
@@ -1404,9 +1419,7 @@ void ControllerMainWindow::FinishDecoderBenchmark(int exitCode)
     const bool resultDocumentComplete =
         !result.isEmpty() &&
         result.contains(QStringLiteral("passed"));
-    const QString currentHardwareFingerprint =
-        QString::fromStdString(
-            BuildWindowsHardwareFingerprint());
+    const QString currentHardwareFingerprint = HardwareFingerprintForUi(true);
     const QString benchmarkHardwareFingerprint =
         std::exchange(
             decoderBenchmarkHardwareFingerprint_, QString{});
@@ -1477,7 +1490,7 @@ void ControllerMainWindow::FinishDecoderBenchmark(int exitCode)
             sessionMedia_->SetPreferredHardwareDecoderName(
                 bestName.toStdString());
         }
-        RefreshDecoderBenchmarkSummary();
+        RefreshDecoderBenchmarkSummary(false);
         if (decoderBenchmarkManualRequest_) {
             RemoteCToast::Show(
                 this, QStringLiteral("解码器性能检测完成"),
@@ -1514,11 +1527,11 @@ void ControllerMainWindow::FinishDecoderBenchmark(int exitCode)
                     : RemoteCToast::Tone::kError);
         }
         if (completedNormally) {
-            RefreshDecoderBenchmarkSummary();
+            RefreshDecoderBenchmarkSummary(false);
         }
     }
     decoderBenchmarkManualRequest_ = false;
-    RefreshDecoderHardwareSelectionAvailability();
+    RefreshDecoderHardwareSelectionAvailability(false);
     if (SettingsControls().decoderBenchmarkButton) {
         SettingsControls().decoderBenchmarkButton->setEnabled(true);
         SettingsControls().decoderBenchmarkButton->setText(

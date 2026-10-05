@@ -16,6 +16,75 @@ enum class RtpStreamDirection {
     kInbound,
 };
 
+// Read-only recommendations. These fields never represent applied settings.
+struct ContentPolicyShadowSnapshot {
+    bool observed = false;
+    bool hasRecommendation = false;
+    bool estimatedFeasible = false;
+    bool modelCalibrated = false;
+    bool modelReference = false;
+    std::uint32_t width = 0;
+    std::uint32_t height = 0;
+    std::uint32_t senderMaxFps = 0;
+    std::uint64_t estimatedSafeVideoBudgetBps = 0;
+    std::uint64_t requiredVideoBitrateBps = 0;
+    std::uint64_t desiredVideoBitrateBps = 0;
+    std::uint64_t senderMaxBitrateBps = 0;
+    std::string reason;
+};
+
+struct ContentPolicyExecutionSnapshot {
+    bool observed = false;
+    bool eligible = false;
+    bool ownsSender = false;
+    bool applied = false;
+    bool pending = false;
+    std::uint64_t generation = 0;
+    std::uint64_t revision = 0;
+    std::uint32_t appliedWidth = 0;
+    std::uint32_t appliedHeight = 0;
+    std::uint32_t appliedMaxFps = 0;
+    std::uint64_t appliedMaxBitrateBps = 0;
+    std::uint64_t successfulChanges = 0;
+    std::string status;
+    std::string error;
+    bool networkPressure = false;
+    std::string networkStatus;
+    std::string networkTrigger;
+    std::uint64_t userSpecificationVerifiedBitrateBps = 0;
+    std::uint32_t confirmObservedSamples = 0;
+    std::uint32_t confirmRequiredSamples = 0;
+    std::uint64_t confirmationRemainingMs = 0;
+    std::string confirmationBlock;
+};
+
+// Read-only GoogCC telemetry. RTT/loss are measurements, not locally invented
+// congestion thresholds. The timestamps use the same host steady clock as stats.
+struct GoogCcNetworkDiagnostics {
+    bool controllerObserved = false;
+    bool delayObserved = false;
+    bool feedbackFresh = false;
+    std::string delayState = "unknown";
+    std::uint64_t routeRevision = 0;
+    std::uint64_t targetUpdatedAtMs = 0;
+    std::uint64_t feedbackAtMs = 0;
+    std::uint64_t delayUpdatedAtMs = 0;
+    std::uint64_t lastDelayOveruseAtMs = 0;
+    std::uint64_t lastCwndPushbackAtMs = 0;
+    std::uint64_t targetRateBps = 0;
+    std::uint64_t effectiveTargetRateBps = 0;
+    std::uint32_t feedbackAgeMs = 0;
+    double congestionWindowReduction = 0;
+    double roundTripTimeMs = 0;
+    double lossPercent = 0;
+    bool applicationLimited = false;
+    bool recoveryProbeActive = false;
+    std::uint32_t recoveryProbeRemainingAttempts = 0;
+    std::uint64_t recoveryProbeHistoricalBudgetBps = 0;
+    std::uint32_t recoveryProbeAttempts = 0;
+    std::uint32_t recoveryProbeEpisodes = 0;
+};
+
 struct RtpStreamStatsSnapshot {
     std::string statsId;
     RtpStreamDirection direction = RtpStreamDirection::kOutbound;
@@ -37,8 +106,21 @@ struct RtpStreamStatsSnapshot {
     double jitterMs = 0.0;
     double roundTripTimeMs = 0.0;
     std::uint64_t targetBitrateBps = 0;
+    bool screenQualityProtectionAvailable = false;
+    bool screenQualityProtectionActive = false;
+    bool screenQualityProtectionLimited = false;
+    std::uint32_t screenQualityNetworkBudgetBps = 0;
+    std::uint32_t screenQualityEncoderAdjustedBudgetBps = 0;
+    std::uint32_t screenQualityBandwidthAllocationBps = 0;
+    std::uint32_t screenQualityEncoderReferenceBps = 0;
+    std::uint32_t screenQualityReferenceBps = 0;
+    std::uint32_t screenQualityDeficitShareHundredths = 50;
     std::uint64_t configuredStartBitrateBps = 0;
     std::uint64_t configuredMaxBitrateBps = 0;
+    // User request ceiling remains independent of an adaptive RTP allocation.
+    // Zero means not supplied; never infer the user's bpp from actual traffic.
+    std::uint32_t userVideoBitrateBppHundredths = 0;
+    std::uint64_t userVideoBitrateLimitBps = 0;
     std::uint32_t bitrateBootstrapAttempts = 0;
     std::uint32_t bitrateBootstrapSuccesses = 0;
     std::uint32_t mediaReadyBitrateRestarts = 0;
@@ -74,6 +156,7 @@ struct RtpStreamStatsSnapshot {
     std::uint32_t framesEncoded = 0;
     std::uint32_t framesSent = 0;
     std::uint32_t framesDecoded = 0;
+    bool receiverFrameCountersAvailable = false;
     std::uint32_t framesDropped = 0;
     std::uint32_t keyFrames = 0;
     std::uint32_t sourceWidth = 0;
@@ -104,17 +187,41 @@ struct RtpStreamStatsSnapshot {
     bool contentAnalyzerEnabled = false;
     std::string contentAnalyzerBackend;
     std::string contentSemanticType;
+    std::string contentScene;
     double contentSemanticConfidence = 0.0;
     std::string contentMotionLevel;
     double contentMotionScore = 0.0;
     std::uint64_t contentSourceFrameId = 0;
     std::uint32_t contentStateAgeMs = 0;
     std::uint32_t contentLatestAnalysisTimeUs = 0;
+    std::uint32_t contentLatestScaleConvertTimeUs = 0;
+    std::uint32_t contentLatestJpegEncodeTimeUs = 0;
+    std::uint64_t contentLatestJpegBytes = 0;
+    std::string contentLatestReturnedScene;
+    double contentLatestReturnedSemanticConfidence = 0.0;
+    std::uint32_t contentLatestReturnedAgeMs = 0;
     std::uint64_t contentSubmittedSamples = 0;
     std::uint64_t contentReplacedSamples = 0;
     std::uint64_t contentProcessedSamples = 0;
     std::uint64_t contentRejectedSamples = 0;
     std::uint64_t contentDiscardedResults = 0;
+    ContentPolicyShadowSnapshot contentPolicyShadow;
+    ContentPolicyExecutionSnapshot contentPolicyExecution;
+    GoogCcNetworkDiagnostics googCc;
+    bool contentQualityMetricAvailable = false;
+    bool contentQualityVerified = false;
+    bool contentProcessingEvidenceAvailable = false;
+    bool contentProcessingHealthy = false;
+    bool receiverFeedbackAvailable = false;
+    std::uint32_t receiverFeedbackAgeMs = 0;
+    std::uint32_t receiverFeedbackWidth = 0;
+    std::uint32_t receiverFeedbackHeight = 0;
+    std::uint32_t receiverFeedbackDecodedFrames = 0;
+    std::uint32_t receiverFeedbackDroppedFrames = 0;
+    double receiverFeedbackDecodeTimeMs = 0;
+    double receiverFeedbackProcessingTimeMs = 0;
+    bool receiverFeedbackDecodeTimeAvailable = false;
+    bool receiverFeedbackProcessingTimeAvailable = false;
     double averageEncodeTimeMs = 0.0;
     double averageDecodeTimeMs = 0.0;
     double averageProcessingDelayMs = 0.0;
@@ -221,7 +328,10 @@ struct IceCandidateStatsSnapshot {
 
 struct WebRtcTransportStatsSnapshot {
     bool collected = false;
+    GoogCcNetworkDiagnostics googCc;
     std::int64_t timestampMs = 0;
+    // Host steady clock; RTC report timestamps may use another epoch.
+    std::uint64_t receivedAtSteadyMs = 0;
     std::string iceState;
     std::string dtlsState;
     std::string iceRole;

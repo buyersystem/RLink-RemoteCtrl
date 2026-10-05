@@ -57,6 +57,24 @@ SessionCommandResult InProcessSessionEngine::SetRoomScreenStreamPreference(
     const std::string& pairId,
     const ScreenStreamPreferenceRequest& preference)
 {
+    return SendRoomScreenStreamPreference(pairId, preference, false, {});
+}
+
+SessionCommandResult InProcessSessionEngine::QueueRoomScreenStreamPreference(
+    const std::string& pairId,
+    const ScreenStreamPreferenceRequest& preference,
+    std::function<void(SessionCommandResult)> completion)
+{
+    return SendRoomScreenStreamPreference(
+        pairId, preference, true, std::move(completion));
+}
+
+SessionCommandResult InProcessSessionEngine::SendRoomScreenStreamPreference(
+    const std::string& pairId,
+    const ScreenStreamPreferenceRequest& preference,
+    bool queued,
+    std::function<void(SessionCommandResult)> completion)
+{
     const bool originalSize = preference.maxWidth == 0 &&
         preference.maxHeight == 0;
     const bool boundedSize = preference.maxWidth > 0 &&
@@ -71,6 +89,7 @@ SessionCommandResult InProcessSessionEngine::SetRoomScreenStreamPreference(
     }
 
     std::shared_ptr<RoomPairRuntime> pair;
+    std::uint64_t shareEpoch = 0;
     ScreenStreamPreferenceRequest request = preference;
     {
         std::lock_guard lock(mutex_);
@@ -121,6 +140,7 @@ SessionCommandResult InProcessSessionEngine::SetRoomScreenStreamPreference(
                            "The screen control sequence is exhausted.");
         }
         pair = pairIt->second;
+        shareEpoch = snapshot_.room.screenShareEpoch;
         request.roomId = snapshot_.room.roomId;
         request.senderDeviceId = snapshot_.localDeviceId;
         request.sequence = ++roomSession_.nextScreenControlSequence_;
@@ -135,50 +155,113 @@ SessionCommandResult InProcessSessionEngine::SetRoomScreenStreamPreference(
             snapshotIt->screenPreferenceSequence = request.sequence;
             snapshotIt->screenPreferenceGeneration =
                 snapshot_.room.screenShareEpoch;
+            if (snapshotIt->errorCode == "screen_stream_preference_rejected") {
+                snapshotIt->errorCode.clear();
+                snapshotIt->errorMessage.clear();
+            }
         }
     }
 
+    // Keep a weak ownership identity rather than a shared pair in the queued
+    // callback: the controller lives inside that pair, so a strong capture
+    // would make its queued task own the controller that must stop the task.
+    const auto isCurrent =
+        [this, pairId, expectedPair = std::weak_ptr<RoomPairRuntime>(pair),
+         roomId = request.roomId, shareEpoch, sequence = request.sequence] {
+            const auto found = roomPairs_.find(pairId);
+            const auto current = std::find_if(
+                snapshot_.roomActivity.peerConnections.begin(),
+                snapshot_.roomActivity.peerConnections.end(),
+                [&pairId](const auto& value) { return value.pairId == pairId; });
+            return snapshot_.state != SessionEngineState::kStopping &&
+                snapshot_.state != SessionEngineState::kStopped &&
+                snapshot_.room.membership == RoomMembershipState::kActive &&
+                snapshot_.room.roomId == roomId &&
+                snapshot_.room.screenShareEpoch == shareEpoch &&
+                found != roomPairs_.end() &&
+                !expectedPair.owner_before(found->second) &&
+                !found->second.owner_before(expectedPair) &&
+                current != snapshot_.roomActivity.peerConnections.end() &&
+                current->screenPreferenceSequence == sequence &&
+                current->screenPreferenceGeneration == shareEpoch;
+        };
+    const auto finish = [this, pairId, isCurrent, queued](SendResult sendResult) {
+        bool current = false;
+        {
+            std::lock_guard lock(mutex_);
+            current = isCurrent();
+            if (current && sendResult != SendResult::kSent) {
+                auto snapshotIt = std::find_if(
+                    snapshot_.roomActivity.peerConnections.begin(),
+                    snapshot_.roomActivity.peerConnections.end(),
+                    [&pairId](const auto& value) { return value.pairId == pairId; });
+                snapshotIt->screenPreferencePending = false;
+                snapshotIt->screenPreferenceGeneration = 0;
+            }
+        }
+        if (queued && !current) {
+            return Failure("screen_stream_request_stale",
+                           "The screen stream request has been superseded.");
+        }
+        if (current && sendResult != SendResult::kSent) {
+            // Observers may already have seen this pending request through
+            // another state update. Publish its cleared state before reporting
+            // the transport failure so they cannot retain a stale pending UI.
+            PublishSnapshot();
+        }
+        switch (sendResult) {
+        case SendResult::kSent:
+            PublishSnapshot();
+            return Success();
+        case SendResult::kChannelNotFound:
+            return Failure("screen_stream_channel_not_found",
+                           "The reliable control channel was not negotiated.");
+        case SendResult::kChannelNotOpen:
+            return Failure("screen_stream_channel_not_open",
+                           "The reliable control channel is not open.");
+        case SendResult::kSessionNotStarted:
+            return Failure("screen_stream_session_not_started",
+                           "The room P2P session is not active.");
+        case SendResult::kSendFailed:
+            return Failure("screen_stream_send_failed",
+                           "WebRTC rejected the screen stream request.");
+        }
+        return Failure("screen_stream_send_failed",
+                       "The screen stream request could not be sent.");
+    };
+
     std::vector<std::uint8_t> encoded;
     std::string encodeError;
-    if (!EncodeScreenStreamPreferenceRequest(
-            request, &encoded, &encodeError)) {
+    if (!EncodeScreenStreamPreferenceRequest(request, &encoded, &encodeError)) {
+        (void)finish(SendResult::kSendFailed);
         return Failure("screen_stream_encode_failed", encodeError);
     }
-    const SendResult sendResult = pair->controller->SendData(
-        std::string(kControlReliableChannel), encoded, true);
-    if (sendResult != SendResult::kSent) {
+    if (!queued) {
+        return finish(pair->controller->SendData(
+            std::string(kControlReliableChannel), encoded, true));
+    }
+    bool accepted = false;
+    {
+        // QueueData never calls completion inline or waits for its executor.
+        // Protect the controller lifetime until its task has been accepted.
         std::lock_guard lock(mutex_);
-        auto snapshotIt = std::find_if(
-            snapshot_.roomActivity.peerConnections.begin(),
-            snapshot_.roomActivity.peerConnections.end(),
-            [&pairId](const auto& current) {
-                return current.pairId == pairId;
-            });
-        if (snapshotIt != snapshot_.roomActivity.peerConnections.end() &&
-            snapshotIt->screenPreferenceSequence == request.sequence) {
-            snapshotIt->screenPreferencePending = false;
-            snapshotIt->screenPreferenceGeneration = 0;
+        if (!isCurrent()) {
+            return Failure("screen_stream_request_stale",
+                           "The screen stream request has been superseded.");
         }
+        accepted = pair->controller->QueueData(
+            std::string(kControlReliableChannel), encoded, true,
+            [finish, completion = std::move(completion)](SendResult result) {
+                const auto commandResult = finish(result);
+                if (completion) {
+                    completion(commandResult);
+                }
+            });
     }
-    switch (sendResult) {
-    case SendResult::kSent:
-        PublishSnapshot();
-        return Success();
-    case SendResult::kChannelNotFound:
-        return Failure("screen_stream_channel_not_found",
-                       "The reliable control channel was not negotiated.");
-    case SendResult::kChannelNotOpen:
-        return Failure("screen_stream_channel_not_open",
-                       "The reliable control channel is not open.");
-    case SendResult::kSessionNotStarted:
-        return Failure("screen_stream_session_not_started",
-                       "The room P2P session is not active.");
-    case SendResult::kSendFailed:
-        return Failure("screen_stream_send_failed",
-                       "WebRTC rejected the screen stream request.");
+    if (!accepted) {
+        return finish(SendResult::kSessionNotStarted);
     }
-    return Failure("screen_stream_send_failed",
-                   "The screen stream request could not be sent.");
+    return Success();
 }
 
 SessionCommandResult
@@ -433,7 +516,8 @@ SessionCommandResult InProcessSessionEngine::SwitchLocalSharedDisplay(
             options_.desktopCaptureImplementation,
             *selected,
             options_.contentAnalyzerEnabled,
-            options_.contentAnalyzerRateHz);
+            options_.contentAnalyzerRateHz,
+            options_.remoteVisionAnalyzer);
     if (!replacement->SetTargetFrameRate(targetFrameRate) ||
         !replacement->StartCapture()) {
         const std::string captureError = replacement->LastError();

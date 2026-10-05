@@ -35,6 +35,19 @@ public:
 
     virtual SessionEngineCapabilities Capabilities() const = 0;
     virtual SessionDiagnosticsSnapshot Diagnostics() const { return {}; }
+    // Publish a local sender preference. Existing connections apply it on
+    // their next stats tick without changing capture or the peer contract.
+    virtual SessionCommandResult SetScreenVideoBitrateBpp(std::uint32_t hundredths)
+    {
+        (void)hundredths;
+        return {false, "unsupported", "Live screen bandwidth settings are unsupported."};
+    }
+    // Encoder quality preference only; leaves capture, RTP and BWE limits intact.
+    virtual SessionCommandResult SetScreenQualityDeficitShare(std::uint32_t hundredths)
+    {
+        (void)hundredths;
+        return {false, "unsupported", "Live screen quality settings are unsupported."};
+    }
 
     virtual SessionCommandResult ConnectDirectDevice(
         const DirectSessionConnectRequest& request) = 0;

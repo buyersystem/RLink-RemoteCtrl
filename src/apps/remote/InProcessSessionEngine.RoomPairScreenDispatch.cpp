@@ -159,6 +159,10 @@ bool InProcessSessionEngine::DispatchRoomPairScreenData(
                 }
                 snapshotIt->screenPreferencePending = false;
                 if (applied.accepted) {
+                    snapshotIt->screenPreferenceAcceptedSequence =
+                        applied.requestSequence;
+                    snapshotIt->screenPreferenceAcceptedGeneration =
+                        snapshotIt->screenPreferenceGeneration;
                     snapshotIt->screenWidth = applied.width;
                     snapshotIt->screenHeight = applied.height;
                     snapshotIt->screenFramesPerSecond =
@@ -201,6 +205,7 @@ bool InProcessSessionEngine::DispatchRoomPairScreenData(
             std::uint32_t sourceWidth = 0;
             std::uint32_t sourceHeight = 0;
             std::uint64_t screenShareGeneration = 0;
+            std::uint32_t previousCaptureFrameRate = 0;
             bool preflightPreference = false;
             std::shared_ptr<RoomPairRuntime> pair;
             webrtc::scoped_refptr<WindowsDesktopCaptureSource> source;
@@ -232,6 +237,7 @@ bool InProcessSessionEngine::DispatchRoomPairScreenData(
                 pairIt->second->lastScreenControlSequence =
                     streamRequest.sequence;
                 source = screenShare_.CaptureSource();
+                previousCaptureFrameRate = source ? source->TargetFrameRate() : 0;
                 maximumFrameRate = ScreenShareCoordinator::MaximumCaptureFrameRate(
                     options_.desktopCaptureImplementation,
                     source.get());
@@ -253,16 +259,15 @@ bool InProcessSessionEngine::DispatchRoomPairScreenData(
                 streamRequest.framesPerSecond = (std::min)(
                     streamRequest.framesPerSecond,
                     effectiveFrameRateLimit);
-                roomSession_.screenStreamPreferences_[pairId] =
-                    streamRequest;
-                captureFrameRate = 5;
+                // Calculate capture arbitration with the proposed request,
+                // but only publish it after the RTP sender accepts it.
+                captureFrameRate = (std::max)(5u, streamRequest.framesPerSecond);
                 for (const auto& [requestPairId, preference] :
                      roomSession_.screenStreamPreferences_) {
-                    (void)requestPairId;
+                    if (requestPairId == pairId) continue;
                     captureFrameRate = (std::max)(
                         captureFrameRate, preference.framesPerSecond);
                 }
-                roomSession_.localScreenFrameRate_ = captureFrameRate;
                 screenShareGeneration =
                     snapshot_.room.screenShareEpoch;
                 pair = pairIt->second;
@@ -301,20 +306,41 @@ bool InProcessSessionEngine::DispatchRoomPairScreenData(
             } else {
                 const auto effective = ScreenShareCoordinator::ResolvePolicy(
                     sourceWidth, sourceHeight, streamRequest);
+                ScreenStreamPolicyResult appliedPolicy;
                 const auto result = pair->session->SetVideoSlotEncodingPolicy(
                     kScreenMainVideoSlot,
                     effective.framesPerSecond,
                     effective.width,
-                    effective.height);
+                    effective.height, &appliedPolicy);
                 response.accepted = result.ok();
                 response.width = effective.width;
                 response.height = effective.height;
                 response.framesPerSecond = effective.framesPerSecond;
-                response.maxBitrateBps = effective.maxBitrateBps;
+                response.maxBitrateBps = result.ok() ? appliedPolicy.maxBitrateBps : 0;
                 response.scaleBackend = ScreenScaleBackend::kWebRtc;
                 if (!result.ok()) {
                     response.error = std::string(result.message());
                 }
+            }
+
+            bool restoreCaptureFrameRate = false;
+            {
+                std::lock_guard lock(mutex_);
+                const auto currentPair = roomPairs_.find(pairId);
+                const bool sameContext = currentPair != roomPairs_.end() &&
+                    currentPair->second == pair &&
+                    snapshot_.room.screenShareEpoch == screenShareGeneration;
+                if (response.accepted && sameContext) {
+                    roomSession_.screenStreamPreferences_[pairId] = streamRequest;
+                    roomSession_.localScreenFrameRate_ = captureFrameRate;
+                } else if (!response.accepted && sameContext && source &&
+                    screenShare_.CaptureSource() == source &&
+                    source->TargetFrameRate() == captureFrameRate) {
+                    restoreCaptureFrameRate = previousCaptureFrameRate != 0;
+                }
+            }
+            if (restoreCaptureFrameRate) {
+                (void)source->SetTargetFrameRate(previousCaptureFrameRate);
             }
 
             ScreenCaptureCapability capability;

@@ -273,39 +273,53 @@ void SettingsPage::RefreshClipboardCacheCapacityOptions()
         : settings.value(
               QString::fromLatin1(kClipboardCacheCapacitySetting),
               2).toULongLong();
-    QSignalBlocker blocker(controls_.clipboardCacheCapacitySelector);
-    controls_.clipboardCacheCapacitySelector->clear();
     const qulonglong safeGiB = SafeClipboardCacheCapacityGiB(baseDirectory);
+    std::vector<std::pair<QString, qulonglong>> options;
     for (const qulonglong capacity : {1ull, 2ull, 5ull, 10ull}) {
         if (capacity > safeGiB) {
             continue;
         }
         const bool recommended = capacity == std::min(2ull, safeGiB);
-        controls_.clipboardCacheCapacitySelector->addItem(
+        options.emplace_back(
             recommended
                 ? QStringLiteral("%1 GiB（推荐）").arg(capacity)
                 : QStringLiteral("%1 GiB").arg(capacity),
-            QVariant::fromValue(capacity));
+            capacity);
     }
     if (safeGiB > 10) {
-        controls_.clipboardCacheCapacitySelector->addItem(
+        options.emplace_back(
             QStringLiteral("不限制（安全上限 %1 GiB）").arg(safeGiB),
-            QVariant::fromValue(safeGiB));
+            safeGiB);
     }
-    if (controls_.clipboardCacheCapacitySelector->count() == 0) {
-        controls_.clipboardCacheCapacitySelector->addItem(
+    const bool hasCapacity = !options.empty();
+    if (!hasCapacity) {
+        options.emplace_back(
             QStringLiteral("空间不足（至少需 2 GiB 可用）"),
-            QVariant::fromValue(0ull));
-        controls_.clipboardCacheCapacitySelector->setEnabled(false);
+            0ull);
+    }
+    auto* selector = controls_.clipboardCacheCapacitySelector;
+    bool optionsChanged = selector->count() != static_cast<int>(options.size());
+    for (int item = 0; !optionsChanged && item < selector->count(); ++item) {
+        optionsChanged = selector->itemText(item) != options[item].first ||
+            selector->itemData(item).toULongLong() != options[item].second;
+    }
+    QSignalBlocker blocker(selector);
+    if (optionsChanged) {
+        selector->clear();
+        for (const auto& [label, capacity] : options) {
+            selector->addItem(label, QVariant::fromValue(capacity));
+        }
+    }
+    selector->setEnabled(hasCapacity);
+    if (!hasCapacity) {
         return;
     }
-    controls_.clipboardCacheCapacitySelector->setEnabled(true);
-    int index = controls_.clipboardCacheCapacitySelector->findData(
+    int index = selector->findData(
         QVariant::fromValue(preferredGiB));
     if (index < 0) {
-        index = controls_.clipboardCacheCapacitySelector->count() - 1;
+        index = selector->count() - 1;
     }
-    controls_.clipboardCacheCapacitySelector->setCurrentIndex(index);
+    selector->setCurrentIndex(index);
 }
 
 void SettingsPage::ApplyClipboardCacheBaseDirectory(

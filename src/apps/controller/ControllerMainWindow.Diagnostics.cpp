@@ -27,10 +27,26 @@
 #include "ScreenFrameRateLogger.h"
 #include "pages/DirectConnectPage.h"
 #include "pages/DiagnosticsCardsWidget.h"
+#include "pages/ContentPolicyCards.h"
 #include "pages/DiagnosticsPage.h"
+#include "pages/SettingsPage.h"
 
 namespace remote::controller {
 using namespace detail;
+
+void ControllerMainWindow::ScheduleDiagnosticsUiRefresh()
+{
+    if (diagnosticsUiRefreshPending_) return;
+    diagnosticsUiRefreshPending_ = true;
+    // Leave the input handler promptly so the selected page/indicator can be
+    // painted first. Multiple navigation requests only refresh the final page.
+    QTimer::singleShot(16, this, [this] {
+        diagnosticsUiRefreshPending_ = false;
+        if (!engine_ || !debugPage_ || !debugPage_->isVisibleTo(this)) return;
+        RefreshDiagnosticsSnapshotUi(engine_->Snapshot());
+        RefreshDiagnosticsUi();
+    });
+}
 
 void ControllerMainWindow::RefreshDiagnosticsUi()
 {
@@ -48,13 +64,21 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
         debugPage_ && debugPage_->isVisibleTo(this);
     const bool sessionHudNeeded =
         remoteSessionWindow_ && remoteSessionBinding_;
-    if (!diagnosticsPageVisible && !sessionHudNeeded &&
+    const bool settingsTrafficNeeded = settingsPage_ && settingsPage_->isVisibleTo(this) &&
+        settingsPage_->CurrentCategory() == 1;
+    if (!diagnosticsPageVisible && !sessionHudNeeded && !settingsTrafficNeeded &&
         (!debugPage_ || !debugPage_->ScreenFrameRateLogEnabled()) &&
         !diagnosticsCopyTextRequested_) {
         return;
     }
 
+    if (diagnosticsPageVisible && !debugPage_->NeedsRealtimeDiagnostics() &&
+        !sessionHudNeeded && !settingsTrafficNeeded &&
+        !debugPage_->ScreenFrameRateLogEnabled() &&
+        !diagnosticsCopyTextRequested_) return;
+
     const auto diagnostics = engine_->Diagnostics();
+    if (settingsTrafficNeeded) settingsPage_->UpdateScreenVideoTrafficEstimate(diagnostics);
     if (debugPage_ && debugPage_->ScreenFrameRateLogEnabled()) {
         AppendScreenFrameRateLog(diagnostics);
     }
@@ -79,21 +103,12 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
         !debugPage_ || !debugPage_->HasValues()) {
         return;
     }
+    if (!debugPage_->NeedsRealtimeDiagnostics() && !diagnosticsCopyTextRequested_) return;
 
     const auto setInputDebugValue =
         [this](const QString& key, const QString& value,
                const char* tone = "normal") {
-            auto* label = debugPage_->ValueLabel(key);
-            if (!label) {
-                return;
-            }
-            label->setText(value);
-            label->setToolTip(value);
-            if (label->property("tone").toByteArray() != tone) {
-                label->setProperty("tone", tone);
-                label->style()->unpolish(label);
-                label->style()->polish(label);
-            }
+            debugPage_->SetValue(key, value, tone);
         };
     const auto& input = diagnostics.remoteInput;
     const std::uint32_t dragSampleRateHz =
@@ -304,6 +319,19 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
     QVector<DiagnosticsCard> outboundCards;
     QVector<DiagnosticsCard> inboundCards;
     QVector<DiagnosticsCard> dataChannelCards;
+    bool visionPerformanceAvailable = false;
+    std::uint32_t visionScaleConvertTimeUs = 0;
+    std::uint32_t visionJpegEncodeTimeUs = 0;
+    std::uint64_t visionJpegBytes = 0;
+    QString visionReturnedScene;
+    QString visionAcceptedScene;
+    std::uint32_t visionResultAgeMs = 0;
+    QVector<DiagnosticsSection> policySections;
+    double visionReturnedConfidence = 0.0;
+    const bool connectionDetailsNeeded =
+        debugPage_->CurrentCategory() == 2 || diagnosticsCopyTextRequested_;
+    const bool policyDetailsNeeded =
+        debugPage_->CurrentCategory() == 9 || diagnosticsCopyTextRequested_;
 
     for (const auto& peer : diagnostics.peerConnections) {
         const QString peerName =
@@ -319,6 +347,33 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                                       : peerName)
                 : QString::fromStdString(peer.pairId);
         const auto& stats = peer.stats;
+        if (policyDetailsNeeded) {
+            policySections += MakeContentPolicySections(peerKey, peerName, stats.rtpStreams);
+        }
+        for (const auto& stream : stats.rtpStreams) {
+            if (stream.contentAnalyzerBackend.find("vision_api") !=
+                    std::string::npos &&
+                (stream.contentLatestScaleConvertTimeUs > 0 ||
+                 stream.contentLatestJpegEncodeTimeUs > 0 ||
+                 stream.contentLatestJpegBytes > 0)) {
+                visionPerformanceAvailable = true;
+                visionScaleConvertTimeUs =
+                    stream.contentLatestScaleConvertTimeUs;
+                visionJpegEncodeTimeUs =
+                    stream.contentLatestJpegEncodeTimeUs;
+                visionJpegBytes = stream.contentLatestJpegBytes;
+                visionReturnedScene = ContentSceneDisplayText(
+                    stream.contentLatestReturnedScene);
+                visionAcceptedScene = ContentSceneDisplayText(
+                    stream.contentScene);
+                visionResultAgeMs = stream.contentLatestReturnedAgeMs;
+                visionReturnedConfidence =
+                    stream.contentLatestReturnedSemanticConfidence;
+            }
+        }
+        // Input/vision/policy tabs do not need hundreds of RTP chips and
+        // copy-only text strings from the connection-quality workspace.
+        if (!connectionDetailsNeeded) continue;
         const auto& transport = stats.transport;
         if (!transport.collected) {
             overviewLines
@@ -457,6 +512,23 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                  ? QByteArray("warning")
                  : QByteArray("normal"),
              false}};
+        const auto& recovery = transport.googCc;
+        if (recovery.recoveryProbeHistoricalBudgetBps != 0 ||
+            recovery.recoveryProbeEpisodes != 0) {
+            connectionCard.chips << DiagnosticsChip{
+                QStringLiteral("screenRecoveryProbe"),
+                QStringLiteral("网络恢复探测"),
+                QStringLiteral("%1\n本轮原生探测 %2 次 · 剩余 %3 次 · 累计触发 %4 次")
+                    .arg(recovery.recoveryProbeActive
+                        ? QStringLiteral("原生恢复探测窗口 · 提示预算上界 %1")
+                            .arg(FormatBitrate(recovery.recoveryProbeHistoricalBudgetBps))
+                        : QStringLiteral("待机 · 无活动提示"))
+                    .arg(recovery.recoveryProbeAttempts)
+                    .arg(recovery.recoveryProbeRemainingAttempts)
+                    .arg(recovery.recoveryProbeEpisodes),
+                recovery.recoveryProbeActive ? QByteArray("warning") : QByteArray("normal"),
+                true};
+        }
         connectionCards.push_back(std::move(connectionCard));
 
         bool hasOutbound = false;
@@ -758,7 +830,7 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                            "normal", false}
                     << DiagnosticsChip{
                            QStringLiteral("senderBitrateCeiling"),
-                           QStringLiteral("应用码率上限"),
+                           QStringLiteral("视频编码码率上限"),
                            stream.configuredMaxBitrateBps > 0
                                ? FormatBitrate(
                                      stream.configuredMaxBitrateBps)
@@ -844,6 +916,24 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                             : QByteArray("good"),
                         true};
                 }
+                if (stream.screenQualityProtectionAvailable) {
+                    streamCard.chips << DiagnosticsChip{
+                        QStringLiteral("nativeScreenQualityProtection"),
+                        QStringLiteral("原生丢帧 / 画质优先"),
+                        QStringLiteral("%1 · 用户上限 %2 FPS\n视频目标预算 B：%3 · 单帧画质参考 A：%4\n编码器名义速率 C：%5（不是实际发送码率）\n网络波动取舍系数 %6\nWebRTC 编码修正值：%7 · 视频带宽分配：%8")
+                            .arg(stream.screenQualityProtectionActive
+                                ? QStringLiteral("保护画质，由 WebRTC 临时丢帧")
+                                : QStringLiteral("按当前网络预算编码"))
+                            .arg(stream.configuredMaxFrameRate)
+                            .arg(FormatBitrate(stream.screenQualityNetworkBudgetBps))
+                            .arg(FormatBitrate(stream.screenQualityReferenceBps))
+                            .arg(FormatBitrate(stream.screenQualityEncoderReferenceBps))
+                            .arg(stream.screenQualityDeficitShareHundredths / 100.0, 0, 'f', 2)
+                            .arg(FormatBitrate(stream.screenQualityEncoderAdjustedBudgetBps))
+                            .arg(FormatBitrate(stream.screenQualityBandwidthAllocationBps)),
+                        stream.screenQualityProtectionActive ? QByteArray("warning") : QByteArray("good"),
+                        true};
+                }
                 if (stream.adaptiveNetworkFrameRateEnabled) {
                     QString frameRateState = QStringLiteral("稳定");
                     if (stream.adaptiveNetworkFrameRateStatus ==
@@ -867,7 +957,7 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                     }
                     QString frameRateDetail = QStringLiteral(
                         "用户请求 %1 FPS · 当前连接有效 %2 FPS · %3 · "
-                        "平滑容量 %4 · 降帧样本 %5/2 · 恢复样本 %6/5")
+                        "平滑容量 %4 · 降帧样本 %5/2 · 恢复跟随当前网络预算")
                         .arg(stream.configuredMaxFrameRate)
                         .arg(stream.effectiveNetworkFrameRate)
                         .arg(frameRateState)
@@ -875,8 +965,7 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                                  ? FormatBitrate(
                                        stream.adaptiveNetworkFrameRateCapacityBps)
                                  : QStringLiteral("未报告"))
-                        .arg(stream.adaptiveNetworkFrameRateReductionSamples)
-                        .arg(stream.adaptiveNetworkFrameRateRecoverySamples);
+                        .arg(stream.adaptiveNetworkFrameRateReductionSamples);
                     if (!stream.adaptiveNetworkFrameRateError.empty()) {
                         frameRateDetail += QStringLiteral("\n错误：%1").arg(
                             QString::fromStdString(
@@ -1045,6 +1134,33 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                                           ? QStringLiteral("等待首个分析样本")
                                           : QStringLiteral("规则观察已关闭")),
                                stream.contentAnalyzerEnabled
+                                   ? QByteArray("good")
+                                   : QByteArray("normal"),
+                               true}
+                        << DiagnosticsChip{
+                               QStringLiteral("contentSemantic"),
+                               QStringLiteral("内容语义观察"),
+                               stream.contentAnalyzerEnabled &&
+                                       stream.contentScene != "unknown"
+                                   ? QStringLiteral("%1 · 置信度 %2 · %3")
+                                         .arg(
+                                             ContentSceneDisplayText(
+                                                 stream.contentScene))
+                                         .arg(
+                                             stream.contentSemanticConfidence,
+                                             0, 'f', 3)
+                                         .arg(
+                                             stream.contentAnalyzerBackend ==
+                                                     "rules+vision_api"
+                                                 ? QStringLiteral("远程视觉 API")
+                                                 : QStringLiteral("本地后端"))
+                                   : (stream.contentAnalyzerBackend ==
+                                              "rules+vision_api"
+                                          ? QStringLiteral(
+                                                "等待稳定的远程分类；失败时继续使用本地运动规则")
+                                          : QStringLiteral(
+                                                "当前本地规则后端暂不提供语义分类")),
+                               stream.contentScene != "unknown"
                                    ? QByteArray("good")
                                    : QByteArray("normal"),
                                true}
@@ -1702,6 +1818,61 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
         }
     }
 
+    setInputDebugValue(
+        QStringLiteral("visionReturnedScene"),
+        visionReturnedScene.isEmpty()
+            ? QStringLiteral("暂无成功返回的分类") : visionReturnedScene,
+        visionReturnedScene.isEmpty() ? "muted" : "normal");
+    setInputDebugValue(QStringLiteral("visionAcceptedScene"),
+        visionAcceptedScene.isEmpty() ? QStringLiteral("等待稳定分类")
+                                     : visionAcceptedScene,
+        visionAcceptedScene.isEmpty() ? "muted" : "normal");
+    setInputDebugValue(QStringLiteral("visionResultAge"),
+        visionReturnedScene.isEmpty() ? QStringLiteral("暂无结果")
+            : QStringLiteral("%1 秒").arg(visionResultAgeMs / 1000.0, 0, 'f', 1),
+        visionReturnedScene.isEmpty() ? "muted" : "normal");
+    if (diagnosticsPageVisible && debugPage_->CurrentCategory() == 9 &&
+        debugPage_->PolicyCardsWidget()) {
+        static_cast<DiagnosticsCardsWidget*>(debugPage_->PolicyCardsWidget())->SetSections(
+            policySections, QStringLiteral("暂无策略数据\n开启内容感知并共享屏幕后，按连接显示场景与执行状态。"));
+    }
+    setInputDebugValue(
+        QStringLiteral("visionReturnedConfidence"),
+        visionReturnedScene.isEmpty()
+            ? QStringLiteral("暂无结果")
+            : QStringLiteral("%1%（%2）")
+                  .arg(visionReturnedConfidence * 100.0, 0, 'f', 1)
+                  .arg(visionReturnedConfidence, 0, 'f', 3),
+        visionReturnedScene.isEmpty() ? "muted" : "normal");
+    if (visionPerformanceAvailable) {
+        setInputDebugValue(
+            QStringLiteral("visionScaleConvertTime"),
+            QStringLiteral("%1 us（%2 ms）")
+                .arg(visionScaleConvertTimeUs)
+                .arg(visionScaleConvertTimeUs / 1000.0, 0, 'f', 3),
+            "normal");
+        setInputDebugValue(
+            QStringLiteral("visionJpegEncodeTime"),
+            QStringLiteral("%1 us（%2 ms）")
+                .arg(visionJpegEncodeTimeUs)
+                .arg(visionJpegEncodeTimeUs / 1000.0, 0, 'f', 3),
+            "normal");
+        setInputDebugValue(
+            QStringLiteral("visionJpegSize"),
+            QStringLiteral("%1 KB（%2 字节）")
+                .arg(visionJpegBytes / 1024.0, 0, 'f', 2)
+                .arg(visionJpegBytes),
+            "normal");
+    } else {
+        const QString waiting = QStringLiteral("暂无实际远控样本");
+        setInputDebugValue(
+            QStringLiteral("visionScaleConvertTime"), waiting, "muted");
+        setInputDebugValue(
+            QStringLiteral("visionJpegEncodeTime"), waiting, "muted");
+        setInputDebugValue(
+            QStringLiteral("visionJpegSize"), waiting, "muted");
+    }
+
     if (diagnostics.peerConnections.empty()) {
         overviewLines
             << QStringLiteral("当前没有成员对 P2P 连接。");
@@ -1758,7 +1929,8 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
             QStringLiteral("输入、控制、文件与遥测通道"),
             std::move(dataChannelCards)});
     }
-    if (debugPage_ && debugPage_->StatsCardsWidget()) {
+    if (diagnosticsPageVisible && debugPage_->CurrentCategory() == 2 &&
+        debugPage_->StatsCardsWidget()) {
         static_cast<DiagnosticsCardsWidget*>(debugPage_->StatsCardsWidget())
             ->SetSections(
                 sections,
@@ -1774,6 +1946,7 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                 QStringLiteral("发送媒体流：\n%1").arg(outboundText),
                 QStringLiteral("接收媒体流：\n%1").arg(inboundText),
                 QStringLiteral("DataChannel：\n%1").arg(dataChannelText),
+                QStringLiteral("内容策略：\n%1").arg(ContentPolicyCopyText(policySections)),
                 QStringLiteral("鼠标与键盘：\n%1").arg(inputDebugText)}
                 .join(QStringLiteral("\n\n"));
     }

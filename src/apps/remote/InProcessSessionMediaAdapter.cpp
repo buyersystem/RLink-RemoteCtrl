@@ -548,6 +548,15 @@ InProcessSessionMediaAdapter::SetDirectScreenStreamPreference(
 }
 
 SessionCommandResult
+InProcessSessionMediaAdapter::QueueDirectScreenStreamPreference(
+    const ScreenStreamPreferenceRequest& preference,
+    std::function<void(SessionCommandResult)> completion)
+{
+    return engine_->QueueDirectScreenStreamPreference(
+        preference, std::move(completion));
+}
+
+SessionCommandResult
 InProcessSessionMediaAdapter::RequestDirectSharedDisplaySwitch(
     const std::string& stableDisplayKey)
 {

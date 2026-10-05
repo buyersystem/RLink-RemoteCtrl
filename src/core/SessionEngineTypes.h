@@ -158,6 +158,9 @@ struct DirectSessionSnapshot {
     std::uint64_t remoteScreenShareGeneration = 0;
     bool screenPreferencePending = false;
     std::uint64_t screenPreferenceSequence = 0;
+    // Last successfully applied request; a failed or pending request must
+    // never replace the receiver-feedback contract still used by the sender.
+    std::uint64_t screenPreferenceAcceptedSequence = 0;
     std::uint32_t screenWidth = 0;
     std::uint32_t screenHeight = 0;
     std::uint32_t screenFramesPerSecond = kDefaultScreenFrameRate;

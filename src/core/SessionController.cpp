@@ -31,6 +31,13 @@ public:
         return PostAt(std::chrono::steady_clock::now(), std::move(task));
     }
 
+    bool PostWithCancellation(std::function<void()> task,
+                              std::function<void()> canceled)
+    {
+        return PostAt(std::chrono::steady_clock::now(), std::move(task),
+                      std::move(canceled));
+    }
+
     bool PostAfter(std::chrono::milliseconds delay,
                    std::function<void()> task)
     {
@@ -58,17 +65,26 @@ public:
 
     void Stop()
     {
+        decltype(tasks_) discarded;
         {
             std::lock_guard lock(mutex_);
             if (stopping_) {
                 return;
             }
             stopping_ = true;
-            while (!tasks_.empty()) {
-                tasks_.pop();
-            }
+            tasks_.swap(discarded);
         }
         condition_.notify_all();
+        // Accepted sends must finish or report cancellation. Run notifications
+        // outside the executor lock: completion may publish engine state or
+        // enqueue a UI event. Tasks already running complete on their own.
+        while (!discarded.empty()) {
+            auto canceled = std::move(discarded.top().canceled);
+            discarded.pop();
+            if (canceled) {
+                canceled();
+            }
+        }
         if (thread_.joinable() &&
             std::this_thread::get_id() != thread_.get_id()) {
             thread_.join();
@@ -80,6 +96,7 @@ private:
         std::chrono::steady_clock::time_point due;
         std::uint64_t sequence = 0;
         std::function<void()> task;
+        std::function<void()> canceled;
     };
 
     struct WorkItemLater {
@@ -93,14 +110,15 @@ private:
     };
 
     bool PostAt(std::chrono::steady_clock::time_point due,
-                std::function<void()> task)
+                std::function<void()> task,
+                std::function<void()> canceled = {})
     {
         {
             std::lock_guard lock(mutex_);
             if (stopping_) {
                 return false;
             }
-            tasks_.push({due, nextSequence_++, std::move(task)});
+            tasks_.push({due, nextSequence_++, std::move(task), std::move(canceled)});
         }
         condition_.notify_all();
         return true;
@@ -307,7 +325,12 @@ public:
                    bool binary,
                    std::function<void(SendResult)> completion)
     {
-        return executor_.Post(
+        const auto canceled = completion
+            ? std::function<void()>([completion] {
+                  completion(SendResult::kSessionNotStarted);
+              })
+            : std::function<void()>{};
+        return executor_.PostWithCancellation(
             [this,
              channelName = std::move(channelName),
              payload = std::move(payload),
@@ -318,7 +341,7 @@ public:
                 if (completion) {
                     completion(result);
                 }
-            });
+            }, canceled);
     }
 
     SessionControllerSnapshot Snapshot() const

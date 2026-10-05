@@ -77,6 +77,10 @@ private:
     QHash<QString, QString> pairBindings_;
     QStringList orderedDeviceIds_;
     QString focusedDeviceId_;
+    QStringList layoutDeviceIds_;
+    QString layoutFocusedDeviceId_;
+    bool layoutInitialized_ = false;
+    bool layoutOverviewMode_ = false;
     bool overviewMode_ = false;
     bool singleParticipantMode_ = false;
     bool initialPlacementDone_ = false;

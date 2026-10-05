@@ -22,6 +22,7 @@ struct DiagnosticsChip {
   QString value;
   QByteArray tone = "normal";
   bool wide = false;
+  bool operator==(const DiagnosticsChip&) const = default;
 };
 
 struct DiagnosticsCard {
@@ -29,6 +30,10 @@ struct DiagnosticsCard {
   QString title;
   QString subtitle;
   QVector<DiagnosticsChip> chips;
+  bool initiallyExpanded = true;
+  bool stackedMetrics = false;
+  bool copyable = false;
+  bool operator==(const DiagnosticsCard&) const = default;
 };
 
 struct DiagnosticsSection {
@@ -36,6 +41,8 @@ struct DiagnosticsSection {
   QString title;
   QString description;
   QVector<DiagnosticsCard> cards;
+  bool initiallyExpanded = false;
+  bool operator==(const DiagnosticsSection&) const = default;
 };
 
 class DiagnosticsCardsWidget final : public QWidget {
@@ -48,9 +55,16 @@ public:
 private:
   void Rebuild(const QVector<DiagnosticsSection> &sections,
                const QString &emptyText);
+  void PopulateSection(QWidget* host, const QString& sectionKey);
+  void PopulateCard(QWidget* host, const QString& cardKey);
+  void RefreshValues();
 
   QVBoxLayout *layout_ = nullptr;
   QString structure_;
+  QVector<DiagnosticsSection> sections_;
+  QString emptyText_;
+  QHash<QString, QToolButton*> sectionButtons_;
+  QHash<QString, QLabel*> sectionDescriptions_;
   QHash<QString, QLabel *> textLabels_;
   QHash<QString, QLabel *> chipNameLabels_;
   QHash<QString, QFrame *> chipFrames_;

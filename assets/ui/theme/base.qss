@@ -7,7 +7,7 @@ QPushButton {
     padding: 0 16px;
     font-weight: 600;
 }
-QLineEdit, QComboBox {
+QLineEdit, QComboBox, QDoubleSpinBox#screenVideoBitrateBppInput, QDoubleSpinBox#screenQualityDeficitShareInput {
     min-height: 40px;
     border-radius: 10px;
 }

@@ -28,6 +28,7 @@ dist/
 # Reproducible local FFmpeg D3D11VA build workspace. Keep only the headers,
 # runtime DLLs and license material required by RemoteC.
 /third_party/ffmpeg_d3d11va/build/
+/third_party/ffmpeg_d3d11va/source/
 /third_party/ffmpeg_d3d11va/home/
 /third_party/ffmpeg_d3d11va/tmp/
 /third_party/ffmpeg_d3d11va/prefix/lib/

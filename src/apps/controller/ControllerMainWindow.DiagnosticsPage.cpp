@@ -34,7 +34,7 @@ void ControllerMainWindow::BuildDiagnosticsPage()
                     RemoteCToast::Tone::kInformation);
             });
     connect(debugPage_, &DiagnosticsPage::RefreshRequested,
-            this, &ControllerMainWindow::RefreshDiagnosticsUi);
+            this, &ControllerMainWindow::ScheduleDiagnosticsUiRefresh);
     pageStack_->addWidget(debugPage_);
 }
 

@@ -63,6 +63,7 @@ namespace remote::controller {
             selectedQuality_ =
                 static_cast<ScreenQualityTier>(savedQuality);
         }
+        ResetStreamPreferenceRequests();
         BuildUi();
         BindSessionVideo(sessionControl, sessionMedia, binding_);
         sessionElapsed_.start();
@@ -176,6 +177,8 @@ namespace remote::controller {
             sessionMedia_->SetRemoteCursorCallback({});
         }
         if (bindingChanged) {
+            ResetStreamPreferenceRequests();
+            directPreferenceShareGeneration_ = 0;
             pairWasActive_ = false;
             if (desktopCanvas_) {
                 static_cast<RemoteDesktopCanvas*>(desktopCanvas_)
@@ -346,6 +349,7 @@ namespace remote::controller {
         selectedFrameRate_ = kDefaultScreenFrameRate;
         reportedRemoteMaximumFrameRate_ = kMaximumScreenFrameRate;
         RebuildFrameRateMenu();
+        ResetStreamPreferenceRequests();
         screenStartupRefreshAttempts_ = 0;
         screenFirstFramePresented_ = false;
         screenStartupElapsed_.restart();

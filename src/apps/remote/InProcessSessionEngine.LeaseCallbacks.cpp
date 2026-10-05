@@ -83,7 +83,8 @@ void InProcessSessionEngine::OnRoomScreenShareGranted(
                 options_.desktopCaptureImplementation,
                 captureTarget,
                 options_.contentAnalyzerEnabled,
-                options_.contentAnalyzerRateHz);
+                options_.contentAnalyzerRateHz,
+                options_.remoteVisionAnalyzer);
         if (!source->SetTargetFrameRate(targetFrameRate)) {
             signaling->StopRoomScreenShare(
                 granted.roomId, granted.grantId,

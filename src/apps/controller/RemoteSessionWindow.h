@@ -1,10 +1,11 @@
-﻿// SPDX-License-Identifier: GPL-3.0-only
+// SPDX-License-Identifier: GPL-3.0-only
 // Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd)
 
 #pragma once
 
 #include <cstddef>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <memory>
 
@@ -16,6 +17,7 @@
 
 #include "FramelessWindow.h"
 #include "RemoteSessionBinding.h"
+#include "StreamPreferenceRequestState.h"
 #include "src/core/MediaDevice.h"
 #include "src/core/IRemoteSessionControl.h"
 #include "src/core/SessionDiagnostics.h"
@@ -106,7 +108,12 @@ namespace remote::controller {
         void RebuildFrameRateMenu();
         void HandleFrameRateSelection(std::uint32_t framesPerSecond);
         void HandleQualitySelection(ScreenQualityTier quality);
-        bool RequestStreamPreference(bool showError = true);
+        bool RequestStreamPreference(bool showError = true,
+                                     QString successMessage = {},
+                                     QWidget* successAnchor = nullptr);
+        void DispatchNextStreamPreference();
+        void ResetStreamPreferenceRequests();
+        void RefreshSelectedStreamPreferenceUi();
         void ToggleRemoteSound();
         void ToggleLocalMicrophone();
         void ShowMediaDeviceMenu();
@@ -215,6 +222,18 @@ namespace remote::controller {
         std::uint32_t remoteSourceWidth_ = 0;
         std::uint32_t remoteSourceHeight_ = 0;
         ScreenQualityTier selectedQuality_ = ScreenQualityTier::kOriginal;
+        struct PendingStreamPreference {
+            ScreenStreamPreferenceRequest request;
+            std::uint64_t generation = 0;
+            std::uint64_t sequence = 0;
+            bool showError = false;
+            QString successMessage;
+            QPointer<QWidget> successAnchor;
+        };
+        StreamPreferenceRequestState streamPreferenceRequests_;
+        std::deque<PendingStreamPreference> streamPreferenceQueue_;
+        bool streamPreferenceSendInFlight_ = false;
+        std::uint64_t directPreferenceShareGeneration_ = 0;
         bool toolbarShown_ = true;
         bool toolbarLocked_ = false;
         bool fullScreenMode_ = false;

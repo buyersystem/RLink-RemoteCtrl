@@ -15,6 +15,7 @@ ContentState ApplyContentStateStaleness(
         nowMs - state.timestampMs > semanticMaximumAgeMs;
     if (expired) {
         state.semantic = ScreenSemanticType::kUnknown;
+        state.scene = ScreenScene::kUnknown;
         state.semanticConfidence = 0.0f;
         state.textScore = 0.0f;
         state.mixedUiScore = 0.0f;

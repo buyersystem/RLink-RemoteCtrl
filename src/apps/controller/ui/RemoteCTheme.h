@@ -70,6 +70,9 @@ public:
     static QString RemoteDarkStyleSheet();
     static QString PageStyleSheet(const QString& resourcePath, bool dark);
     static ThemePreference LoadPreference();
+    // Explicitly reload after an external settings update. Normal UI changes
+    // use SavePreference and update the process cache immediately.
+    static void ReloadPreference();
     static void SavePreference(ThemePreference preference);
     static QString PreferenceValue(ThemePreference preference);
     static ThemePreference PreferenceFromValue(const QString& value);

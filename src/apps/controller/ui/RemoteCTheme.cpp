@@ -3,6 +3,9 @@
 
 #include "RemoteCTheme.h"
 
+#include <atomic>
+#include <mutex>
+
 #include <QFile>
 #include <QAbstractButton>
 #include <QAction>
@@ -21,6 +24,24 @@ namespace {
 constexpr auto kThemeIconPath = "remoteCThemeIconPath";
 constexpr auto kThemeIconTone = "remoteCThemeIconTone";
 constexpr auto kThemeIconSize = "remoteCThemeIconSize";
+
+struct ThemePreferenceCache {
+    std::atomic<int> value{-1};
+    std::mutex updateMutex;
+};
+
+ThemePreferenceCache& PreferenceCache()
+{
+    static ThemePreferenceCache cache;
+    return cache;
+}
+
+ThemePreference ReadPreference()
+{
+    return RemoteCTheme::PreferenceFromValue(
+        QSettings().value(QStringLiteral("ui/themeMode"),
+                          QStringLiteral("system")).toString());
+}
 }
 
 QColor RemoteCTheme::Color(ThemeColor color)
@@ -101,16 +122,35 @@ QString RemoteCTheme::PageStyleSheet(const QString& resourcePath, bool dark)
 
 ThemePreference RemoteCTheme::LoadPreference()
 {
-    return PreferenceFromValue(
-        QSettings().value(QStringLiteral("ui/themeMode"),
-                          QStringLiteral("system")).toString());
+    auto& cache = PreferenceCache();
+    int value = cache.value.load(std::memory_order_acquire);
+    if (value < 0) {
+        const std::lock_guard lock(cache.updateMutex);
+        value = cache.value.load(std::memory_order_relaxed);
+        if (value < 0) {
+            value = static_cast<int>(ReadPreference());
+            cache.value.store(value, std::memory_order_release);
+        }
+    }
+    return static_cast<ThemePreference>(value);
+}
+
+void RemoteCTheme::ReloadPreference()
+{
+    auto& cache = PreferenceCache();
+    const std::lock_guard lock(cache.updateMutex);
+    cache.value.store(static_cast<int>(ReadPreference()),
+                      std::memory_order_release);
 }
 
 void RemoteCTheme::SavePreference(ThemePreference preference)
 {
+    auto& cache = PreferenceCache();
+    const std::lock_guard lock(cache.updateMutex);
     QSettings settings;
     settings.setValue(QStringLiteral("ui/themeMode"),
                       PreferenceValue(preference));
+    cache.value.store(static_cast<int>(preference), std::memory_order_release);
 }
 
 QString RemoteCTheme::PreferenceValue(ThemePreference preference)

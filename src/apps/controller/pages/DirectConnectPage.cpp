@@ -253,7 +253,9 @@ void DirectConnectPage::SetSignalStatus(
     const QString& styleSheet)
 {
     signalStatus_->setText(text);
-    signalStatus_->setStyleSheet(styleSheet);
+    if (signalStatus_->styleSheet() != styleSheet) {
+        signalStatus_->setStyleSheet(styleSheet);
+    }
 }
 
 void DirectConnectPage::SetRuntimeStatus(

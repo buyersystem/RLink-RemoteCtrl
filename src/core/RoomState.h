@@ -140,6 +140,10 @@ struct RoomPeerConnectionSnapshot {
     // Epoch for which screenPreferenceSequence was sent and acknowledged.
     // Width/FPS values from an older share must never satisfy a new share.
     std::uint64_t screenPreferenceGeneration = 0;
+    // Feedback identifies the applied preference, independently of the last
+    // request (which may still be pending or may have been rejected).
+    std::uint64_t screenPreferenceAcceptedSequence = 0;
+    std::uint64_t screenPreferenceAcceptedGeneration = 0;
     // Startup telemetry is generation-bound. A non-zero presented generation
     // means that the first frame reached the viewer's actual presentation
     // path, not merely the decoder callback.

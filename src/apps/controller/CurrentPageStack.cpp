@@ -12,6 +12,28 @@
 
 namespace remote::controller::detail {
 
+CurrentPageStack::CurrentPageStack(QWidget* parent, bool trackFixedHeight)
+    : QStackedWidget(parent), trackFixedHeight_(trackFixedHeight)
+{
+    if (!trackFixedHeight_) {
+        layout()->setSizeConstraint(QLayout::SetNoConstraint);
+    }
+    connect(this, &QStackedWidget::currentChanged, this, [this] {
+        updateGeometry();
+    });
+}
+
+int CurrentPageStackItem::heightForWidth(int width) const
+{
+    const int height = wid->heightForWidth(width);
+    return height < 0 ? height : std::clamp(height, wid->minimumHeight(), wid->maximumHeight());
+}
+
+int CurrentPageStackItem::minimumHeightForWidth(int width) const
+{
+    return heightForWidth(width);
+}
+
 int CurrentPageStack::PageHeightForWidth(QWidget* page) const
 {
     if (!page) {
@@ -57,13 +79,29 @@ QSize CurrentPageStack::minimumSizeHint() const
                            : QStackedWidget::minimumSizeHint();
 }
 
+bool CurrentPageStack::hasHeightForWidth() const
+{
+    return currentWidget() && currentWidget()->hasHeightForWidth();
+}
+
+int CurrentPageStack::heightForWidth(int width) const
+{
+    // QStackedLayout measures every page, including hidden long-text tabs.
+    // Only the visible page determines the scroll viewport's height.
+    return currentWidget() ? currentWidget()->heightForWidth(width) : -1;
+}
+
 void CurrentPageStack::resizeEvent(QResizeEvent* event)
 {
     const bool widthChanged =
         event->oldSize().width() != event->size().width();
     QStackedWidget::resizeEvent(event);
-    if (widthChanged) {
-        QTimer::singleShot(0, this, [this] { RefreshCurrentHeight(); });
+    if (widthChanged && trackFixedHeight_ && !heightRefreshPending_) {
+        heightRefreshPending_ = true;
+        QTimer::singleShot(0, this, [this] {
+            heightRefreshPending_ = false;
+            RefreshCurrentHeight();
+        });
     }
 }
 

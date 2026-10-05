@@ -2,6 +2,7 @@
 // Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd)
 
 #include "FfmpegHardwareH264Encoder.h"
+#include "FfmpegHardwareRateControl.h"
 
 #include <Windows.h>
 #include <d3d11.h>
@@ -10,6 +11,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <cstdint>
 #include <cstring>
 #include <deque>
@@ -214,6 +216,7 @@ public:
     decltype(&::av_hwframe_get_buffer) avHwFrameGetBuffer = nullptr;
     decltype(&::av_opt_set) avOptSet = nullptr;
     decltype(&::av_opt_set_int) avOptSetInt = nullptr;
+    decltype(&::av_opt_get_int) avOptGetInt = nullptr;
     decltype(&::av_strerror) avStrError = nullptr;
 
 private:
@@ -294,6 +297,7 @@ private:
                             &avHwFrameGetBuffer) &&
             ResolveFunction(avutilModule_, "av_opt_set", &avOptSet) &&
             ResolveFunction(avutilModule_, "av_opt_set_int", &avOptSetInt) &&
+            ResolveFunction(avutilModule_, "av_opt_get_int", &avOptGetInt) &&
             ResolveFunction(avutilModule_, "av_strerror", &avStrError);
         if (!codecFunctions || !utilityFunctions) {
             error_ = "The bundled FFmpeg DLL exports do not match RemoteC.";
@@ -506,10 +510,16 @@ public:
         configuredFrameRate_ = (std::max<std::uint32_t>)(
             codecSettings->maxFramerate, 1);
         frameRate_ = configuredFrameRate_;
+        timeBaseFrameRate_ = configuredFrameRate_;
         requestedBitrateBps_ = (std::max<std::uint32_t>)(
             codecSettings->startBitrate * 1000, 100'000);
         maximumBitrateBps_ = (std::max<std::uint32_t>)(
             codecSettings->maxBitrate * 1000, requestedBitrateBps_);
+        rateControl_ = FfmpegHardwareRateControl({
+            .maximumRequestedBitrateBps = maximumBitrateBps_,
+            .maximumSubmittedBitrateBps = maximumBitrateBps_,
+        });
+        rateControl_.Reset(configuredFrameRate_, requestedBitrateBps_, NowMs());
         startupKeyFramePending_ =
             codecSettings->mode == webrtc::VideoCodecMode::kScreensharing;
         // The encoder must start at libwebrtc's current allocation. A private
@@ -528,48 +538,8 @@ public:
         // CPU NV12 upload path below.
         InitializeD3D11Input(api, encoder, selected->vendorId);
 
-        codecContext_->codec_type = AVMEDIA_TYPE_VIDEO;
-        codecContext_->codec_id = AV_CODEC_ID_H264;
-        codecContext_->width = static_cast<int>(width_);
-        codecContext_->height = static_cast<int>(height_);
-        codecContext_->pix_fmt = useD3D11Input_
-            ? AV_PIX_FMT_D3D11
-            : AV_PIX_FMT_NV12;
-        if (useD3D11Input_) {
-            codecContext_->hw_frames_ctx =
-                api.avBufferRef(hardwareFrames_);
-            if (!codecContext_->hw_frames_ctx) {
-                return RequestSoftwareFallback(
-                    "FFmpeg could not retain the D3D11 input frame pool.");
-            }
-        }
-        codecContext_->time_base = {1, static_cast<int>(frameRate_)};
-        codecContext_->framerate = {static_cast<int>(frameRate_), 1};
-        codecContext_->bit_rate = bitrateBps_;
-        const bool nvencRateControl =
-            selectedBackend_ == FfmpegHardwareBackend::kNvenc;
-        codecContext_->rc_max_rate = nvencRateControl
-            ? bitrateBps_
-            : maximumBitrateBps_;
-        const std::uint64_t rateControlBufferBps = nvencRateControl
-            ? (std::max<std::uint64_t>)(bitrateBps_ / 2, 100'000)
-            : maximumBitrateBps_;
-        codecContext_->rc_buffer_size = static_cast<int>((std::min)(
-            rateControlBufferBps,
-            static_cast<std::uint64_t>(INT_MAX)));
-        codecContext_->gop_size = static_cast<int>(frameRate_ * 2);
-        codecContext_->max_b_frames = 0;
-        codecContext_->flags |= AV_CODEC_FLAG_LOW_DELAY;
-        codecContext_->thread_count = 1;
-
-        if (!ConfigureBackendOptions(api, selectedBackend_)) {
+        if (!OpenBackendContext(api, encoder, configuredFrameRate_, bitrateBps_)) {
             return RequestSoftwareFallback(lastError_);
-        }
-        const int openResult =
-            api.avcodecOpen2(codecContext_, encoder, nullptr);
-        if (openResult < 0) {
-            return RequestSoftwareFallback(FfmpegError(
-                api, implementationName_.c_str(), openResult));
         }
         inputFrame_->format = useD3D11Input_
             ? AV_PIX_FMT_D3D11
@@ -589,14 +559,68 @@ public:
         pendingBitrateBps_ = bitrateBps_;
         if (runtimeState_) {
             runtimeState_->MarkHardwareInitialized(
-                runtimeInstanceId_, width_, height_, frameRate_,
+                runtimeInstanceId_, width_, height_, configuredFrameRate_,
                 codecSettings->minBitrate * 1000,
                 bitrateBps_, maximumBitrateBps_);
-            runtimeState_->MarkRates(
-                runtimeInstanceId_, frameRate_, bitrateBps_, frameRate_, 0,
-                bitrateBps_, true, false);
+            ReportRates();
         }
         return WEBRTC_VIDEO_CODEC_OK;
+    }
+
+    bool OpenBackendContext(FfmpegHardwareApi& api, const AVCodec* encoder,
+                            std::uint32_t nominalFps, std::uint32_t bitrate)
+    {
+        codecContext_->codec_type = AVMEDIA_TYPE_VIDEO;
+        codecContext_->codec_id = AV_CODEC_ID_H264;
+        codecContext_->width = static_cast<int>(width_);
+        codecContext_->height = static_cast<int>(height_);
+        codecContext_->pix_fmt = useD3D11Input_
+            ? AV_PIX_FMT_D3D11
+            : AV_PIX_FMT_NV12;
+        if (useD3D11Input_) {
+            codecContext_->hw_frames_ctx =
+                api.avBufferRef(hardwareFrames_);
+            if (!codecContext_->hw_frames_ctx) {
+                lastError_ = "FFmpeg could not retain the D3D11 input frame pool.";
+                return false;
+            }
+        }
+        // PTS is a monotonically increasing metadata key. Keep its time base
+        // fixed across rate changes; changing it with frames in flight corrupts
+        // QSV timestamps and the packet -> WebRTC frame association.
+        codecContext_->time_base = {1, static_cast<int>(timeBaseFrameRate_)};
+        codecContext_->framerate = {static_cast<int>(nominalFps), 1};
+        codecContext_->bit_rate = bitrate;
+        const bool boundedCbr = selectedBackend_ == FfmpegHardwareBackend::kNvenc ||
+            selectedBackend_ == FfmpegHardwareBackend::kAmf;
+        codecContext_->rc_max_rate = boundedCbr
+            ? bitrate
+            : maximumBitrateBps_;
+        const std::uint64_t rateControlBufferBps = boundedCbr
+            ? (std::max<std::uint64_t>)(bitrate / 2, 100'000)
+            : maximumBitrateBps_;
+        codecContext_->rc_buffer_size = static_cast<int>((std::min)(
+            rateControlBufferBps,
+            static_cast<std::uint64_t>(INT_MAX)));
+        codecContext_->gop_size = static_cast<int>(nominalFps * 2);
+        codecContext_->max_b_frames = 0;
+        codecContext_->flags |= AV_CODEC_FLAG_LOW_DELAY;
+        codecContext_->thread_count = 1;
+
+        if (!ConfigureBackendOptions(api, selectedBackend_)) {
+            return false;
+        }
+        const int openResult =
+            api.avcodecOpen2(codecContext_, encoder, nullptr);
+        if (openResult < 0) {
+            lastError_ = FfmpegError(api, implementationName_.c_str(), openResult);
+            return false;
+        }
+        std::int64_t dynamicFps = 0;
+        supportsDynamicNvencFps_ = selectedBackend_ == FfmpegHardwareBackend::kNvenc &&
+            api.avOptGetInt(codecContext_->priv_data, "rlink_dynamic_fps", 0, &dynamicFps) >= 0 &&
+            dynamicFps == 1;
+        return true;
     }
 
     int RegisterCallback(webrtc::EncodedImageCallback* callback)
@@ -617,10 +641,17 @@ public:
                const std::vector<webrtc::VideoFrameType>* frameTypes)
     {
         std::lock_guard lock(mutex_);
+        if (rateUpdateFailed_) {
+            return RequestSoftwareFallback(lastError_);
+        }
         if (!initialized_ || !codecContext_ || !callback_) {
             return WEBRTC_VIDEO_CODEC_UNINITIALIZED;
         }
+        ObserveInputCadence();
         MaybeApplyPendingBitrate();
+        if (rateUpdateFailed_) {
+            return RequestSoftwareFallback(lastError_);
+        }
         const auto source = frame.video_frame_buffer();
         if (!source || source->width() <= 0 || source->height() <= 0) {
             return RequestSoftwareFallback(
@@ -706,6 +737,8 @@ public:
         }
         if (result < 0) {
             pendingFrames_.pop_back();
+            rateUpdateFailed_ = true;
+            lastError_ = FfmpegError(api, "Submit frame to FFmpeg hardware encoder", result);
             return RequestSoftwareFallback(FfmpegError(
                 api, "Submit frame to FFmpeg hardware encoder", result));
         }
@@ -713,7 +746,14 @@ public:
             startupKeyFramePending_ = false;
         }
         if (!DrainOutput()) {
+            rateUpdateFailed_ = true;
             return RequestSoftwareFallback(lastError_);
+        }
+        if (pendingConfiguredFrameRate_ != 0) {
+            configuredFrameRate_ = pendingConfiguredFrameRate_;
+            pendingConfiguredFrameRate_ = 0;
+            rateControl_.CommitNominalFrameRate(configuredFrameRate_, NowMs());
+            ReportRates();
         }
         return WEBRTC_VIDEO_CODEC_OK;
     }
@@ -722,22 +762,106 @@ public:
     {
         std::lock_guard lock(mutex_);
         const std::uint32_t bitrate = parameters.bitrate.get_sum_bps();
-        if (bitrate != 0) {
-            requestedBitrateBps_ = (std::min)(bitrate, maximumBitrateBps_);
-            ScheduleBitrate(requestedBitrateBps_);
+        rateControl_.Observe(bitrate, parameters.framerate_fps, NowMs());
+        const auto decision = rateControl_.Recommend(NowMs());
+        frameRate_ = static_cast<std::uint32_t>(decision.activeFrameRate);
+        requestedBitrateBps_ = decision.requestedBitrateBps;
+        // Zero allocation pauses WebRTC, rather than reconfiguring CBR to zero.
+        if (bitrate != 0 && initialized_ && !rateUpdateFailed_) {
+            ScheduleBitrate(decision.submittedBitrateBps);
         }
-        if (parameters.framerate_fps > 0.0) {
-            frameRate_ = static_cast<std::uint32_t>((std::max)(
-                parameters.framerate_fps, 1.0));
-        }
-        if (runtimeState_ && runtimeInstanceId_ != 0) {
-            runtimeState_->MarkRates(
-                runtimeInstanceId_, frameRate_, bitrateBps_, frameRate_, 0,
-                bitrateBps_, true, false);
-        }
+        ReportRates();
     }
 
 private:
+    static std::int64_t NowMs()
+    {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count();
+    }
+
+    void ObserveInputCadence()
+    {
+        const auto now = NowMs();
+        if (inputCadenceStartMs_ == 0) {
+            inputCadenceStartMs_ = now;
+            inputCadenceFrames_ = 0;
+            return;
+        }
+        ++inputCadenceFrames_;
+        const auto elapsed = now - inputCadenceStartMs_;
+        if (elapsed < 500) return;
+        const double fps = (std::min)(120.0, inputCadenceFrames_ * 1000.0 / elapsed);
+        observedInputFrameRate_ = static_cast<std::uint32_t>(fps);
+        inputCadenceStartMs_ = now;
+        inputCadenceFrames_ = 0;
+        // Input can resume before WebRTC's cadence estimate catches up. Use
+        // real submitted cadence to raise nominal FPS; never enlarge bitrate
+        // using the stale 1 FPS estimate from a previously idle screen.
+        // A reopen can stall submission briefly, followed by a paced caller's
+        // catch-up burst. Require two consistent windows before using measured
+        // cadence to override WebRTC; one burst must not reopen a 60 FPS session.
+        double activeFps = frameRate_;
+        if (fps >= configuredFrameRate_ * 1.25 && fps - configuredFrameRate_ >= 5.0) {
+            if (inputCadenceUpFps_ > 0 &&
+                std::abs(fps - inputCadenceUpFps_) <= fps * 0.10) {
+                activeFps = (std::max)(activeFps, fps);
+            }
+            inputCadenceUpFps_ = fps;
+        } else {
+            inputCadenceUpFps_ = 0;
+        }
+        rateControl_.Observe(requestedBitrateBps_, activeFps, now);
+        ReportRates();
+    }
+
+    void ReportRates()
+    {
+        if (runtimeState_ && runtimeInstanceId_ != 0) {
+            runtimeState_->MarkRates(
+                runtimeInstanceId_, frameRate_, requestedBitrateBps_,
+                configuredFrameRate_, observedInputFrameRate_, bitrateBps_,
+                !rateUpdateFailed_ && pendingConfiguredFrameRate_ == 0, false);
+        }
+    }
+
+    bool ReopenBackend(std::uint32_t nominalFps, std::uint32_t bitrate)
+    {
+        auto& api = FfmpegHardwareApi::Instance();
+        // Flush packets with the old context before retiring it. Keep the
+        // D3D11 device, conversion processor, frame pool and CPU buffer alive.
+        int flushResult = api.avcodecSendFrame(codecContext_, nullptr);
+        if (flushResult == AVERROR(EAGAIN)) {
+            if (!DrainOutput()) return false;
+            flushResult = api.avcodecSendFrame(codecContext_, nullptr);
+        }
+        if (flushResult < 0 && flushResult != AVERROR_EOF) {
+            lastError_ = FfmpegError(api, "Flush hardware encoder for rate update", flushResult);
+            return false;
+        }
+        if (!DrainOutput()) return false;
+        if (!pendingFrames_.empty()) {
+            lastError_ = "Hardware rate update left unaccounted frames after flush.";
+            return false;
+        }
+        api.avcodecFreeContext(&codecContext_);
+        const auto descriptor = std::find_if(std::begin(kBackendDescriptors),
+            std::end(kBackendDescriptors), [this](const auto& value) {
+                return value.backend == selectedBackend_;
+            });
+        if (descriptor == std::end(kBackendDescriptors)) return false;
+        const auto* encoder = api.avcodecFindEncoderByName(descriptor->codecName);
+        codecContext_ = api.avcodecAllocContext3(encoder);
+        if (!codecContext_) {
+            lastError_ = "Could not allocate hardware context for rate update.";
+            return false;
+        }
+        if (!OpenBackendContext(api, encoder, nominalFps, bitrate)) return false;
+        startupKeyFramePending_ = true;
+        inputCadenceUpFps_ = 0;
+        return true;
+    }
+
     struct FrameMetadata {
         std::int64_t presentationId;
         webrtc::VideoFrame frame;
@@ -1046,6 +1170,13 @@ private:
             }
             break;
         case FfmpegHardwareBackend::kAmf:
+            // The upstream AMF wrapper only applies these values at open.
+            // Explicit CBR and a bounded VBV make a controlled reopen meaningful.
+            if (api.avOptSet(codecContext_->priv_data, "rc", "cbr", 0) < 0 ||
+                api.avOptSet(codecContext_->priv_data, "enforce_hrd", "1", 0) < 0) {
+                lastError_ = "Could not configure AMF CBR rate control.";
+                return false;
+            }
             api.avOptSet(
                 codecContext_->priv_data, "usage", "ultralowlatency", 0);
             api.avOptSet(codecContext_->priv_data, "quality",
@@ -1076,6 +1207,14 @@ private:
 
     void ApplyBitrate(std::uint32_t bitrate)
     {
+        if (selectedBackend_ == FfmpegHardwareBackend::kAmf && initialized_) {
+            // Writing AVCodecContext.bit_rate alone does not update AMF's
+            // component properties in the bundled FFmpeg wrapper.
+            if (!ReopenBackend(configuredFrameRate_, bitrate)) {
+                rateUpdateFailed_ = true;
+                return;
+            }
+        }
         bitrateBps_ = (std::min)(bitrate, maximumBitrateBps_);
         pendingBitrateBps_ = bitrateBps_;
         lastBitrateApplyTime_ = std::chrono::steady_clock::now();
@@ -1099,6 +1238,7 @@ private:
                     codecContext_->rc_buffer_size, 0);
             }
         }
+        ReportRates();
     }
 
     void ScheduleBitrate(std::uint32_t bitrate)
@@ -1113,14 +1253,8 @@ private:
 
     void MaybeApplyPendingBitrate()
     {
-        if (pendingBitrateBps_ == 0 ||
-            pendingBitrateBps_ == bitrateBps_ ||
-            !codecContext_) {
-            return;
-        }
-        if (selectedBackend_ != FfmpegHardwareBackend::kNvenc &&
-            selectedBackend_ != FfmpegHardwareBackend::kQsv) {
-            ApplyBitrate(pendingBitrateBps_);
+        if (rateUpdateFailed_ || !codecContext_ || requestedBitrateBps_ == 0 ||
+            pendingConfiguredFrameRate_ != 0) {
             return;
         }
         // Do not ask a newly opened QSV session to reset its rate-control
@@ -1136,6 +1270,35 @@ private:
             outputFrames_ == 0) {
             return;
         }
+
+        const auto decision = rateControl_.Recommend(NowMs());
+        if (decision.nominalFrameRateChangeNeeded) {
+            const auto nominalFps = decision.proposedNominalFrameRate;
+            if (selectedBackend_ == FfmpegHardwareBackend::kQsv || supportsDynamicNvencFps_) {
+                // The patched NVENC wrapper reconfigures the existing session;
+                // QSV performs an MFX reset. Both apply on the next submit.
+                codecContext_->framerate = {static_cast<int>(nominalFps), 1};
+                pendingConfiguredFrameRate_ = nominalFps;
+                ApplyBitrate(decision.submittedBitrateBps);
+                ReportRates();
+                return;
+            } else {
+                // Older unpatched NVENC runtimes do not reconfigure FPS; AMF
+                // does not reconfigure FPS or bitrate. Reopen only for a
+                // material active-cadence change; idle/jitter keeps the session.
+                if (!ReopenBackend(nominalFps, decision.submittedBitrateBps)) {
+                    rateUpdateFailed_ = true;
+                    return;
+                }
+                bitrateBps_ = pendingBitrateBps_ = decision.submittedBitrateBps;
+                lastBitrateApplyTime_ = std::chrono::steady_clock::now();
+            }
+            configuredFrameRate_ = nominalFps;
+            rateControl_.CommitNominalFrameRate(nominalFps, NowMs());
+            ReportRates();
+            return;
+        }
+        if (pendingBitrateBps_ == 0 || pendingBitrateBps_ == bitrateBps_) return;
 
         // GoogCC may publish a slightly different allocation on almost every
         // frame. FFmpeg's NVENC wrapper forces an IDR for a bitrate change,
@@ -1321,6 +1484,7 @@ private:
         }
         pendingFrames_.clear();
         initialized_ = false;
+        rateUpdateFailed_ = false;
         startupKeyFramePending_ = false;
         requestedBitrateBps_ = 0;
         pendingBitrateBps_ = 0;
@@ -1330,6 +1494,12 @@ private:
         configuredFrameRate_ = 30;
         frameRate_ = 30;
         outputFrames_ = 0;
+        inputCadenceStartMs_ = 0;
+        inputCadenceFrames_ = 0;
+        observedInputFrameRate_ = 0;
+        inputCadenceUpFps_ = 0;
+        pendingConfiguredFrameRate_ = 0;
+        supportsDynamicNvencFps_ = false;
         nextPresentationId_ = 1;
         implementationName_ = "FFmpeg/Hardware";
         selectedBackend_ = FfmpegHardwareBackend::kAutomatic;
@@ -1367,7 +1537,15 @@ private:
     std::uint32_t width_ = 0;
     std::uint32_t height_ = 0;
     std::uint32_t configuredFrameRate_ = 30;
+    std::uint32_t pendingConfiguredFrameRate_ = 0;
+    bool supportsDynamicNvencFps_ = false;
+    std::uint32_t timeBaseFrameRate_ = 30;
+    FfmpegHardwareRateControl rateControl_;
     std::uint32_t frameRate_ = 30;
+    std::int64_t inputCadenceStartMs_ = 0;
+    std::uint32_t inputCadenceFrames_ = 0;
+    std::uint32_t observedInputFrameRate_ = 0;
+    double inputCadenceUpFps_ = 0;
     std::uint32_t bitrateBps_ = 1'000'000;
     std::uint32_t requestedBitrateBps_ = 0;
     std::uint32_t pendingBitrateBps_ = 0;
@@ -1378,6 +1556,7 @@ private:
     bool startupKeyFramePending_ = false;
     bool useD3D11Input_ = false;
     bool initialized_ = false;
+    bool rateUpdateFailed_ = false;
 };
 
 FfmpegHardwareH264Encoder::FfmpegHardwareH264Encoder(
