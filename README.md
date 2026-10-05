@@ -1,8 +1,8 @@
-<p align="center">
-  <img src="assets/ui/branding/remotec-logo.png" alt="RLink Logo" width="80" height="80">
-</p>
+<h1 align="center">
+  <img src="assets/ui/branding/remotec-logo.png" alt="RLink Logo" width="36" height="36" align="absmiddle"> RLink
+</h1>
 
-<h1 align="center">RLink</h1>
+<p align="center">简体中文 · <a href="README.en.md">English</a></p>
 
 <p align="center">连接你的电脑，一起协作。</p>
 
@@ -116,7 +116,16 @@ Release 中的 `Source code` 是源码压缩包，`RLink-update.json` 是客户�
 - [x] 文件、剪贴板和输入控制状态查看
 - [x] 客户端与 C++ 信令服务器源码，支持自行构建与部署
 
-当前提供 Windows x64 客户端，其他平台暂无公开客户端。
+### 平台支持
+
+| 平台 | 状态 |
+| --- | --- |
+| Windows x64 | 已提供客户端 |
+| Linux | TODO |
+| Android | TODO |
+| macOS | TODO |
+
+TODO 表示尚未提供客户端。
 
 ## 功能界面
 
