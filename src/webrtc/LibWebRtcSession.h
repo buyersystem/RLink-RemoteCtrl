@@ -22,10 +22,9 @@
 #include "src/core/ScreenNetworkPolicy.h"
 #include "src/core/ScreenFrameQualityPolicy.h"
 #include "src/webrtc/IWebRtcSession.h"
-#include "src/webrtc/ScreenContentPolicy.h"
+#include "src/webrtc/SceneQualityObservation.h"
 #include "src/protocol/ScreenReceiverFeedbackProtocol.h"
-#include "media_intelligence/core/CalibratedStreamQualityModel.h"
-#include "media_intelligence/core/H264ReferenceQualityModel.h"
+#include "media_intelligence/core/SceneQualityCoefficientSmoother.h"
 
 namespace remote {
 
@@ -95,19 +94,11 @@ public:
     void SetScreenQualityDeficitShare(std::uint32_t hundredths);
     void SetAdaptiveDesktopNetworkFrameRateEnabled(bool enabled);
     void SetScreenContentActivity(ScreenContentActivity activity);
-    void SetScreenContentPolicyObservation(const ScreenContentPolicyObservation& observation);
+    void SetSceneQualityObservation(const SceneQualityObservation& observation);
+    void UpdateSceneQualityCoefficient(std::uint64_t nowMs);
     void SetScreenReceiverFeedbackContext(const ScreenReceiverFeedback& context);
     void SetScreenSenderFeedbackContract(std::uint64_t generation, std::uint64_t preferenceSequence);
     bool AcceptScreenReceiverFeedback(const ScreenReceiverFeedback& feedback);
-    void SetScreenContentPolicyCalibration(
-        std::shared_ptr<const media_intelligence::CalibratedStreamQualityModel> model,
-        std::string encoderProfile);
-    void SetScreenContentPolicyReferenceEnabled(bool enabled, std::string encoderProfile);
-    // The model's context is owned for all evaluations, including replacement
-    // races. A null estimator keeps production in guarded observation mode.
-    void SetScreenContentPolicyModel(
-        media_intelligence::ContentAwareStreamConfig config,
-        std::shared_ptr<const void> estimatorContext = {});
     void RestartVideoSlotBandwidthEstimation(const std::string& slot);
     void FinishVideoSlotBandwidthBootstrap(const std::string& slot);
     webrtc::RTCError SetVideoSlotEncodingPolicy(
@@ -148,7 +139,7 @@ public:
         override;
 
 private:
-    friend class ContentAwareStreamExecutionTestAccess;
+    friend class SceneQualityCoefficientIntegrationTestAccess;
     class CallbackGate;
     OperationId NextOperationId();
     webrtc::scoped_refptr<webrtc::PeerConnectionInterface>
@@ -158,17 +149,11 @@ private:
     void UpdateIceConnectionState(
         webrtc::PeerConnectionInterface::IceConnectionState state);
     void ApplyPendingVideoStartBitrateBootstrap();
-    void HandleCompletedStatsSample(std::uint64_t observationEpoch, std::uint64_t feedbackEpoch);
+    void HandleCompletedStatsSample(std::uint64_t feedbackEpoch);
     void UpdateScreenQualityProtectionLocked();
     void SendScreenReceiverFeedback(const WebRtcSessionStatsSnapshot& snapshot, std::uint64_t feedbackEpoch);
-    bool HandleContentAwareStreamSample(const WebRtcSessionStatsSnapshot& snapshot,
-        std::optional<std::uint64_t> observationEpoch = std::nullopt);
-    webrtc::RTCError ApplyContentAwareStreamDecision(
-        const media_intelligence::ContentAwareStreamInput& input,
-        const media_intelligence::ContentAwareStreamEvaluation& evaluation,
-        std::uint64_t revision,
-        webrtc::scoped_refptr<webrtc::RtpTransceiverInterface> transceiver,
-        bool restoreUserRequest = false);
+    SceneQualitySmoothingSnapshot SceneQualitySnapshotLocked(std::uint64_t nowMs) const;
+    void UpdateSceneQualityCoefficientLocked(std::uint64_t nowMs);
     webrtc::RTCError ApplyProgressiveBitrateCeilingDecision(
         const ProgressiveBitrateCeilingDecision& decision,
         std::uint64_t decisionRevision,
@@ -212,8 +197,10 @@ private:
     std::string progressiveBitrateCeilingError_;
     ScreenContentActivity screenContentActivity_ =
         ScreenContentActivity::kUnknown;
-    ScreenContentPolicyObservation screenContentPolicyObservation_;
-    std::uint64_t screenContentPolicyEpoch_ = 0;
+    SceneQualityObservation sceneQualityObservation_;
+    media_intelligence::SceneQualityCoefficientSmoother sceneQualitySmoother_;
+    std::uint64_t sceneQualityLastResultMs_ = 0;
+    std::uint64_t sceneQualityLastTickMs_ = 0;
     ScreenReceiverFeedback receiverFeedbackContext_;
     std::uint64_t receiverFeedbackEpoch_ = 0;
     std::uint64_t receiverFeedbackNextSequence_ = 0;
@@ -226,14 +213,6 @@ private:
     std::uint64_t receiverFeedbackExpectedPreference_ = 0;
     ScreenReceiverFeedback receiverFeedback_;
     std::uint64_t receiverFeedbackReceivedAtMs_ = 0;
-    media_intelligence::ContentAwareStreamConfig screenContentPolicyConfig_;
-    std::shared_ptr<const void> screenContentPolicyEstimatorContext_;
-    std::shared_ptr<const media_intelligence::CalibratedStreamQualityModel> screenCalibrationModel_;
-    std::shared_ptr<const media_intelligence::CalibratedStreamQualityContext> screenCalibrationContext_;
-    std::shared_ptr<const media_intelligence::H264ReferenceQualityContext> screenReferenceContext_;
-    bool screenReferenceEnabled_ = false;
-    std::string screenReferenceProfile_;
-    std::string screenCalibrationProfile_, screenCalibrationCodec_, screenCalibrationEncoder_;
     WebRtcSessionState state_ = WebRtcSessionState::kNew;
     webrtc::PeerConnectionInterface::PeerConnectionState
         peerConnectionState_ =

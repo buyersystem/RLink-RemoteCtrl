@@ -601,7 +601,8 @@ int main(int argc, char** argv)
     const bool hardware = argc > 1 && std::string_view(argv[1]) == "--nvenc";
     const bool software = argc > 1 && std::string_view(argv[1]) == "--x264";
     const bool ok = Core() && UnadjustedBudgetAndRecovery() &&
-        CoupledAdjusterAndNativeDropperRecovery() && DynamicAndEligibility() &&
+        CoupledAdjusterAndNativeDropperRecovery() &&
+        DynamicAndEligibility() &&
         Run(hardware, true, software) && Run(hardware, false, software);
     std::cout << "SCREEN_FRAME_QUALITY_COMPLETED=" << (ok ? "PASS" : "FAIL") << std::endl;
     return ok ? 0 : 1;

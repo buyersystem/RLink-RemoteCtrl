@@ -49,6 +49,7 @@ struct ClipboardSessionContext {
 struct ClipboardControllerSnapshot {
     bool enabled = false;
     bool sessionActive = false;
+    bool localIsController = false;
     bool peerCapabilitiesSeen = false;
     bool peerEnabled = false;
     std::string peerDeviceId;
@@ -175,10 +176,12 @@ private:
         std::string* error);
     bool SendProtocolMessage(const ClipboardMessage& message);
     bool BuildOutgoingTransfer(WindowsClipboardContent content,
-                               std::string* error);
+                               std::string* error,
+                               std::string* errorCode);
     void ScheduleBackpressureRetry();
     bool PrepareIncomingTransfer(const ClipboardEnvelope& envelope,
-                                 std::string* error);
+                                 std::string* error,
+                                 std::string* errorCode);
     bool FinalizeIncoming(std::string* error);
     void CleanupClipboardCache();
     void UpdateCacheSnapshot();

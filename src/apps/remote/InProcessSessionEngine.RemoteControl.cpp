@@ -113,16 +113,22 @@ SessionCommandResult InProcessSessionEngine::RespondToRoomControl(
 
 SessionCommandResult InProcessSessionEngine::ReleaseRoomControl()
 {
-    if (!signaling_ || !SignalingIsOnline()) {
-        return Failure("signaling_not_online",
-                       "The device is not registered with signaling.");
-    }
     std::string roomId;
     std::string grantId;
+    bool endedLocally = false;
     {
         std::lock_guard lock(mutex_);
+        const bool localIsSharer = !snapshot_.localDeviceId.empty() &&
+            snapshot_.room.screenSharerDeviceId == snapshot_.localDeviceId;
+        // The controller still needs a server-confirmed release. The sharer's
+        // local stop is a safety action and cannot depend on signaling uptime.
+        if (!localIsSharer &&
+            (!signaling_ || snapshot_.connectivity != SessionConnectivityState::kOnline)) {
+            return Failure("signaling_not_online",
+                           "The device is not registered with signaling.");
+        }
         const bool localParticipates =
-            snapshot_.room.screenSharerDeviceId == snapshot_.localDeviceId ||
+            localIsSharer ||
             snapshot_.room.activeControllerDeviceId ==
                 snapshot_.localDeviceId;
         if (!localParticipates || roomSession_.controlGrantId_.empty()) {
@@ -131,9 +137,40 @@ SessionCommandResult InProcessSessionEngine::ReleaseRoomControl()
         }
         roomId = snapshot_.room.roomId;
         grantId = roomSession_.controlGrantId_;
+        if (localIsSharer) {
+            roomSession_.locallyRevokedControlGrantIds_.insert(grantId);
+            roomSession_.controlGrantId_.clear();
+            roomSession_.controlGrantScreenSharerDeviceId_.clear();
+            roomSession_.controlGrantControllerDeviceId_.clear();
+            snapshot_.roomControlGrantActive = false;
+            snapshot_.room.activeControllerDeviceId.clear();
+            snapshot_.room.pendingControllerDeviceId.clear();
+            snapshot_.roomActivity.incomingControlRequests.clear();
+            // Input dispatch serializes its final authorization check and
+            // injection with this lock, so no queued press can follow this.
+            if (remoteInputSink_) {
+                remoteInputSink_->ReleaseAllRemoteInputs();
+            }
+            endedLocally = true;
+        }
+    }
+    if (endedLocally) {
+        PublishSnapshot();
+    }
+    if (!signaling_ || !SignalingIsOnline()) {
+        if (!endedLocally) {
+            return Failure("signaling_not_online",
+                           "The device is not registered with signaling.");
+        }
+        return {endedLocally, "room_control_ended_locally",
+                "Remote control ended locally; signaling is offline, so server notification was not sent."};
     }
     const auto result = signaling_->ReleaseRoomControl(
         roomId, grantId, "released_by_participant");
+    if (endedLocally && !result.accepted) {
+        return {true, "room_control_ended_locally",
+                "Remote control ended locally; server notification failed: " + result.errorMessage};
+    }
     return result.accepted
                ? Success()
                : Failure(result.errorCode, result.errorMessage);

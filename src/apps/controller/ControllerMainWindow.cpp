@@ -45,6 +45,7 @@
 #include <algorithm>
 #include "RoundedPopupMenu.h"
 #include "CameraWindow.h"
+#include "ControlledSessionIndicator.h"
 #include "FileTransferWindow.h"
 #include "LoginWindow.h"
 #include "RemoteSessionWindow.h"
@@ -297,7 +298,7 @@ ControllerMainWindow::ControllerMainWindow(
     }
     const QString configuredCaptureBackend = decoderProbeSettings.value(
         QString::fromLatin1(kDesktopCaptureBackendSetting),
-        QStringLiteral("native_dxgi")).toString();
+        QStringLiteral("libwebrtc")).toString();
     const QString configuredX264Preset = decoderProbeSettings.value(
         QString::fromLatin1(kFfmpegX264PresetSetting),
         QStringLiteral("medium")).toString();
@@ -511,6 +512,7 @@ bool ControllerMainWindow::StartSessionEngine()
 
 void ControllerMainWindow::StopSessionEngine()
 {
+    if (controlledSessionWindow_) controlledSessionWindow_->Reset();
     if (!sessionEngineStarted_ || !engine_) {
         return;
     }
@@ -578,6 +580,7 @@ void ControllerMainWindow::ApplyInterfaceTheme(bool showFeedback)
         ui::RemoteCTheme::LoadPreference();
     const bool dark = ui::RemoteCTheme::IsDark(preference);
     darkInterfaceTheme_ = dark;
+    if (controlledSessionWindow_) controlledSessionWindow_->ApplyTheme(dark);
 
     setProperty("themeRoot", dark ? QStringLiteral("dark")
                                    : QStringLiteral("light"));

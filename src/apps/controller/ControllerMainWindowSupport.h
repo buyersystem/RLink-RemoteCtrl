@@ -12,6 +12,7 @@
 #include <QPixmap>
 #include <QString>
 #include <QStringList>
+#include "WindowsAutoStart.h"
 
 #include "src/core/DesktopCaptureTypes.h"
 #include "src/core/MediaDevice.h"
@@ -105,15 +106,10 @@ VideoDecoderPreference VideoDecoderPreferenceFromSetting(
 QString InitialClipboardCacheBaseDirectory();
 QString ClipboardCacheRootForBase(const QString& baseDirectory);
 qulonglong SafeClipboardCacheCapacityGiB(const QString& baseDirectory);
-QString WindowsAutoStartCommand();
-bool WindowsAutoStartEnabled();
-bool SetWindowsAutoStartEnabled(bool enabled);
 std::pair<std::uint32_t, std::uint32_t> SavedScreenQualityBounds(
     ScreenQualityTier quality);
 QString FormatBitrate(std::uint64_t bitsPerSecond);
 QString ContentSceneDisplayText(const std::string& scene);
-QString ContentPolicyReasonDisplayText(const std::string& reason);
-QString ContentPolicyExecutionDisplayText(const std::string& status);
 QString FormatByteCount(std::uint64_t bytes);
 QString SampleWindowSuffix(std::uint32_t windowMs);
 QString LatestFrameTimingText(

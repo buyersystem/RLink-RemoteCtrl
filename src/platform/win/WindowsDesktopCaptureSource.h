@@ -89,7 +89,7 @@ public:
 
     explicit WindowsDesktopCaptureSource(
         DesktopCaptureImplementation implementation =
-            DesktopCaptureImplementation::kNativeDxgi,
+            DesktopCaptureImplementation::kLibWebRtc,
         DisplayDescriptor captureTarget = {},
         bool contentAnalyzerEnabled = false,
         std::uint32_t contentAnalyzerRateHz = 3,

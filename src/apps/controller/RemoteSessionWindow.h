@@ -17,6 +17,7 @@
 
 #include "FramelessWindow.h"
 #include "RemoteSessionBinding.h"
+#include "RemoteCursorInbox.h"
 #include "StreamPreferenceRequestState.h"
 #include "src/core/MediaDevice.h"
 #include "src/core/IRemoteSessionControl.h"
@@ -145,6 +146,8 @@ namespace remote::controller {
 
         std::shared_ptr<RemoteInputDispatcher>
             remoteInputDispatcher_;
+        std::shared_ptr<RemoteCursorInbox> remoteCursorInbox_;
+        RemoteCursorContext remoteCursorContext_;
         RemoteSessionBinding binding_;
         QLabel* sessionSourceLabel_ = nullptr;
         QLabel* durationLabel_ = nullptr;

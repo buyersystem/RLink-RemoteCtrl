@@ -150,7 +150,7 @@ void SettingsPage::BuildRemoteDesktopSettingsPage()
         0, controls_.desktopCaptureSelector->findData(
                currentSettings.value(
                    QString::fromLatin1(kDesktopCaptureBackendSetting),
-                   QStringLiteral("native_dxgi")).toString())));
+                   QStringLiteral("libwebrtc")).toString())));
     controls_.desktopCaptureSelector->setFixedWidth(kSettingsControlWidth);
     const auto updateCaptureToolTip = [this](int) {
         controls_.desktopCaptureSelector->setToolTip(
@@ -217,8 +217,8 @@ void SettingsPage::BuildRemoteDesktopSettingsPage()
     layout->addWidget(bppRow);
 
     const auto [qualityRow, qualityLayout] = CreateSettingsRow(
-        page, QStringLiteral("网络波动画质取舍系数"),
-        QStringLiteral("此值影响网络波动下的行为。越大，越优先保持 FPS；\n越小，越优先保持码率（画面清晰）。"));
+        page, QStringLiteral("画质与帧率取舍"),
+        QStringLiteral("网络波动时，数值越小越优先保画质，越大越优先保帧率。开启 AI 场景优化后会自动调整，但不会覆盖你的手动设置。"));
     for (auto* label : qualityLayout->itemAt(0)->widget()->findChildren<QLabel*>()) {
         if (label->property("muted").toBool()) label->setWordWrap(true);
     }

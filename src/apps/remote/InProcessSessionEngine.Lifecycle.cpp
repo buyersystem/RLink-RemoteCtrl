@@ -910,11 +910,6 @@ SessionDiagnosticsSnapshot InProcessSessionEngine::Diagnostics() const
                         captureStats->deliveredFramesPerSecond;
                 }
             }
-            AnnotateContentAwarePolicyShadow(stats,
-                static_cast<std::uint64_t>(
-                    std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::steady_clock::now().time_since_epoch())
-                        .count()));
         };
     const auto annotatePresentation = [](
         const std::string& peerDeviceId,
@@ -1021,7 +1016,8 @@ SessionDiagnosticsSnapshot InProcessSessionEngine::Diagnostics() const
 
 void InProcessSessionEngine::StartStatsPolling()
 {
-    statsPoller_->Start([this] { PollStatsOnce(); });
+    statsPoller_->Start([this] { PollStatsOnce(); }, std::chrono::seconds(1),
+        [this] { UpdateSceneQualityCoefficients(); }, std::chrono::milliseconds(50));
 }
 
 void InProcessSessionEngine::StopStatsPolling()
@@ -1029,25 +1025,46 @@ void InProcessSessionEngine::StopStatsPolling()
     statsPoller_->Stop();
 }
 
+void InProcessSessionEngine::UpdateSceneQualityCoefficients()
+{
+    const auto nowMs = static_cast<std::uint64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch()).count());
+    // This path only computes and publishes a coefficient. It invokes no RTC
+    // proxies or callbacks, and the engine lock protects session lifetimes.
+    std::lock_guard lock(mutex_);
+    if (webRtcSession_) {
+        webRtcSession_->UpdateSceneQualityCoefficient(nowMs);
+    }
+    for (const auto& [pairId, pair] : roomPairs_) {
+        (void)pairId;
+        if (pair && pair->session) {
+            pair->session->UpdateSceneQualityCoefficient(nowMs);
+        }
+    }
+}
+
 void InProcessSessionEngine::PollStatsOnce()
 {
     struct PollTarget {
         std::shared_ptr<RoomPairRuntime> pair;
-        ScreenContentPolicyObservation observation;
+        SceneQualityObservation observation;
         ScreenReceiverFeedback receiverContext;
         std::uint64_t senderGeneration = 0;
         std::uint64_t senderPreference = 0;
-        std::string encoderProfile;
     };
     std::vector<PollTarget> roomPairs;
     ScreenContentActivity screenActivity = ScreenContentActivity::kUnknown;
-    ScreenContentPolicyObservation contentObservation;
-    std::shared_ptr<const media_intelligence::CalibratedStreamQualityModel> calibration;
-    bool allowReference = false;
+    SceneQualityObservation contentObservation;
     {
         std::lock_guard lock(mutex_);
-        calibration = options_.screenQualityCalibration;
-        allowReference = options_.allowScreenReferenceQualityModel;
+        const auto observedAtMs = static_cast<std::uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count());
+        // A source stop is a fresh disabled observation, not a stale/default
+        // timestamp that the session would reject and retain old automation.
+        contentObservation.observedAtMs = observedAtMs;
+        contentObservation.generation = snapshot_.screenShare.generation;
         if (const auto source = screenShare_.CaptureSource()) {
             const auto capture = source->CaptureRuntimeStats();
             switch (capture.activityState) {
@@ -1061,13 +1078,11 @@ void InProcessSessionEngine::PollStatsOnce()
                 screenActivity = ScreenContentActivity::kIdle;
                 break;
             }
-            const auto observedAtMs = static_cast<std::uint64_t>(
-                std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::steady_clock::now().time_since_epoch()).count());
-            contentObservation = BuildScreenContentPolicyObservation(
+            contentObservation = BuildSceneQualityObservation(
                 capture.contentAnalyzerEnabled, snapshot_.screenShare.generation,
-                source->CapturedWidth(), source->CapturedHeight(), screenActivity,
-                capture.contentState, observedAtMs);
+                capture.contentState, observedAtMs,
+                options_.remoteVisionAnalyzer
+                    ? options_.remoteVisionAnalyzer->MaximumSceneAgeMs() : 65000);
         }
         // The legacy direct session is uniquely owned and can be disposed
         // independently of room pairs. Its GetStats call only posts an
@@ -1086,17 +1101,12 @@ void InProcessSessionEngine::PollStatsOnce()
                 context.preferenceSequence = snapshot_.direct.screenPreferenceAcceptedSequence;
             }
             webRtcSession_->SetScreenReceiverFeedbackContext(context);
-            if (options_.screenQualityCalibration) webRtcSession_->SetScreenContentPolicyCalibration(
-                options_.screenQualityCalibration,
-                VideoEncoderQualityProfileForPreset(options_.ffmpegX264Preset).displayName);
-            webRtcSession_->SetScreenContentPolicyReferenceEnabled(allowReference,
-                VideoEncoderQualityProfileForPreset(options_.ffmpegX264Preset).displayName);
             webRtcSession_->SetScreenSenderFeedbackContract(
                 activeDirect && snapshot_.remoteControlRole == RemoteControlRole::kControlled &&
                 screenShare_.HasCaptureSource() ? snapshot_.screenShare.generation : 0,
                 directSession_.screenPreferenceApplied ? directSession_.screenPreference.sequence : 0);
             webRtcSession_->SetScreenContentActivity(screenActivity);
-            webRtcSession_->SetScreenContentPolicyObservation(contentObservation);
+            webRtcSession_->SetSceneQualityObservation(contentObservation);
             webRtcSession_->RequestStats();
         }
         roomPairs.reserve(roomPairs_.size());
@@ -1104,7 +1114,6 @@ void InProcessSessionEngine::PollStatsOnce()
             (void)pairId;
             if (pair && pair->session) {
                 PollTarget target{.pair = pair, .observation = contentObservation};
-                target.encoderProfile = VideoEncoderQualityProfileForPreset(options_.ffmpegX264Preset).displayName;
                 const bool activeRoom = snapshot_.room.membership == RoomMembershipState::kActive &&
                     snapshot_.room.screenShareState == RoomScreenShareState::kActive;
                 if (activeRoom && snapshot_.room.screenSharerDeviceId == snapshot_.localDeviceId) {
@@ -1138,10 +1147,7 @@ void InProcessSessionEngine::PollStatsOnce()
     // hung.
     for (const auto& target : roomPairs) {
         target.pair->session->SetScreenContentActivity(screenActivity);
-        target.pair->session->SetScreenContentPolicyObservation(target.observation);
-        if (calibration) target.pair->session->SetScreenContentPolicyCalibration(
-            calibration, target.encoderProfile);
-        target.pair->session->SetScreenContentPolicyReferenceEnabled(allowReference, target.encoderProfile);
+        target.pair->session->SetSceneQualityObservation(target.observation);
         target.pair->session->SetScreenReceiverFeedbackContext(target.receiverContext);
         target.pair->session->SetScreenSenderFeedbackContract(target.senderGeneration, target.senderPreference);
         target.pair->session->RequestStats();

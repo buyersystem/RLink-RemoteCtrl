@@ -198,7 +198,8 @@ QString SessionRouteText(const std::string& route)
                 QStringLiteral("%1 FPS")
                 .arg(inboundScreen->framesPerSecond, 0, 'f', 0));
             hudFrameRateLabel_->setToolTip(
-                QStringLiteral("当前实际接收并解码的屏幕帧率"));
+                QStringLiteral("最近一秒完成解码的屏幕帧率；网络恢复时积压帧可能集中解码，"
+                               "短时高于发送目标 FPS，不代表采集目标发生变化。"));
         }
     }
 

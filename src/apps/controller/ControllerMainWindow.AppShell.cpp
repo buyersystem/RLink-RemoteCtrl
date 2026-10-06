@@ -23,6 +23,7 @@
 #include <algorithm>
 
 #include "CameraWindow.h"
+#include "ControlledSessionIndicator.h"
 #include "FileTransferWindow.h"
 #include "RemoteCDialog.h"
 #include "RemoteCToast.h"
@@ -357,6 +358,7 @@ void ControllerMainWindow::QuitFromSystemTray()
 
 void ControllerMainWindow::DestroyAuxiliaryWindowsForExit()
 {
+    if (controlledSessionWindow_) delete controlledSessionWindow_.data();
     if (fileTransferWindow_) {
         fileTransferWindow_->DetachController();
         delete fileTransferWindow_.data();

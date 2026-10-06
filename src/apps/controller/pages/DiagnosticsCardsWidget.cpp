@@ -22,10 +22,9 @@ namespace {
 
 QString DiagnosticsMetricExplanation(const QString &label) {
   static const QHash<QString, QString> explanations{
-      {QStringLiteral("估算视频预算"), QStringLiteral("估计可用上行的 95%，最多达到用户视频码率上限；这是分配预算，不是实际流量。")},
-      {QStringLiteral("候选参考需求"), QStringLiteral("模型估算候选规格的画质需求。健康网络保持已有参数，因此参考需求可能高于期望码率；弱网可执行候选必须满足预算。")},
-      {QStringLiteral("候选期望码率"), QStringLiteral("策略准备分配的编码预算；经连续窗口确认后应用，不等于 WebRTC 实际目标码率。")},
-      {QStringLiteral("候选发送上限"), QStringLiteral("候选确认后准备写入 RTP 的码率上限；当前实际应用值见“当前发送上限”，编码器不一定跑满。")},
+      {QStringLiteral("当前取舍系数"), QStringLiteral("当前使用的取舍系数。网络波动时，数值越小越优先保画质，越大越优先保帧率；网络正常时不会主动降低画质。")},
+      {QStringLiteral("场景推荐系数"), QStringLiteral("当前场景的推荐值，默认在一秒内逐步调整到该值，不改变用户设置。")},
+      {QStringLiteral("手动设置值"), QStringLiteral("你手动设置的取舍值。关闭 AI 场景优化后立即使用；识别结果长时间无效时，也会逐步恢复到此值。")},
       {QStringLiteral("状态"),
        QStringLiteral(
            "当前对象的运行状态；等待、连接中或关闭时会随实时状态更新。")},

@@ -507,6 +507,18 @@ void VisionApiFrameAnalyzer::InvalidateResult(
     impl_->state->candidateCount = 0;
 }
 
+std::uint64_t VisionApiFrameAnalyzer::MaximumSceneAgeMs() const noexcept
+{
+    if (!impl_) {
+        return 65000;
+    }
+    // Runtime configuration is immutable. Allow three sampling intervals and
+    // a request timeout, with a brief-failure grace period for fast sampling.
+    return (std::max)(std::uint64_t{15000},
+        std::uint64_t{3} * impl_->config.minimumRequestIntervalMs
+            + impl_->config.endpoint.timeoutMs);
+}
+
 RemoteVisionFrameAnalyzerSnapshot VisionApiFrameAnalyzer::Snapshot()
     const noexcept
 {

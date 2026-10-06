@@ -64,6 +64,7 @@ endif()
 # ---------------------------------------------------------------------------
 list(APPEND CMAKE_PREFIX_PATH "${RLINK_QT_DIR}")
 find_package(Qt6 6.11 REQUIRED COMPONENTS
+  Concurrent
   Core Gui Widgets Network WebSockets NetworkAuth HttpServer Sql)
 
 # Enables AUTOMOC / AUTOUIC / AUTORCC for every target (per project policy:

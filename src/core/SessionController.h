@@ -118,6 +118,14 @@ public:
         std::span<const std::uint8_t> data,
         bool binary,
         std::function<void(SendResult)> completion = {});
+    // Replace an unsent transient update with the newest value for this
+    // channel/key. At most one update waits on the executor for each key.
+    // Use QueueData for reliable events that must all be delivered.
+    bool QueueLatestData(
+        const std::string& channelName,
+        const std::string& key,
+        std::span<const std::uint8_t> data,
+        bool binary);
     void Close();
     SessionControllerSnapshot Snapshot() const;
 

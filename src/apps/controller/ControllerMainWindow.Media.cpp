@@ -31,6 +31,7 @@
 #include "RemoteSessionWindow.h"
 #include "RemoteCToast.h"
 #include "src/apps/remote/ClipboardController.h"
+#include "src/apps/remote/ClipboardFileLimit.h"
 #include "src/apps/remote/EncoderBenchmarkProfileCache.h"
 #include "src/apps/remote/FileTransferController.h"
 #include "src/apps/remote/ISessionMediaAccess.h"
@@ -252,7 +253,7 @@ void ControllerMainWindow::ApplyVideoPipelineSettingsFromUi(
             }
         };
         restore(SettingsControls().desktopCaptureSelector, kDesktopCaptureBackendSetting,
-                QStringLiteral("native_dxgi"));
+                QStringLiteral("libwebrtc"));
         restore(SettingsControls().videoEncoderSelector, kVideoEncoderPreferenceSetting,
                 QStringLiteral("auto"));
         restore(SettingsControls().ffmpegHardwareBackendSelector,
@@ -690,7 +691,7 @@ void ControllerMainWindow::RefreshEncoderBenchmarkSummary(
         HardwareFingerprintForUi(refreshHardwareEnvironment);
     const QString captureBackend = settings.value(
         QString::fromLatin1(kDesktopCaptureBackendSetting),
-        QStringLiteral("native_dxgi")).toString();
+        QStringLiteral("libwebrtc")).toString();
     const QString ffmpegX264Preset = settings.value(
         QString::fromLatin1(kFfmpegX264PresetSetting),
         QStringLiteral("medium")).toString();
@@ -865,7 +866,7 @@ void ControllerMainWindow::StartEncoderBenchmark(bool manualRequest)
     encoderBenchmarkHardwareFingerprint_ = HardwareFingerprintForUi(true);
     encoderBenchmarkCaptureBackend_ = settings.value(
         QString::fromLatin1(kDesktopCaptureBackendSetting),
-        QStringLiteral("native_dxgi")).toString();
+        QStringLiteral("libwebrtc")).toString();
     encoderBenchmarkX264Preset_ = settings.value(
         QString::fromLatin1(kFfmpegX264PresetSetting),
         QStringLiteral("medium")).toString();
@@ -926,7 +927,7 @@ void ControllerMainWindow::FinishEncoderBenchmark(int exitCode)
     const QSettings currentSettings;
     const QString currentCaptureBackend = currentSettings.value(
         QString::fromLatin1(kDesktopCaptureBackendSetting),
-        QStringLiteral("native_dxgi")).toString();
+        QStringLiteral("libwebrtc")).toString();
     const QString testedFingerprint = std::exchange(
         encoderBenchmarkHardwareFingerprint_, QString{});
     const QString testedCaptureBackend = std::exchange(
@@ -1831,6 +1832,9 @@ void ControllerMainWindow::OnClipboardStateChanged(
     };
     const bool needsProgressDialog =
         snapshot.transferActive &&
+        // The sending endpoint already shows progress. Do not duplicate it
+        // on the local receiver when pasting remote files back to this PC.
+        snapshot.transferOutgoing &&
         snapshot.transferContainsFiles &&
         (snapshot.state == "requesting_remote" ||
          snapshot.transferTotalBytes > kRemotePastePopupThresholdBytes);
@@ -1932,7 +1936,8 @@ void ControllerMainWindow::OnClipboardStateChanged(
                 ? visibleRemotePasteDialogId_
                 : pendingRemotePasteDialogId_;
         if (rejectedAdvanced && !snapshot.lastErrorMessage.empty() &&
-            remoteSessionWindow_) {
+            app::ShouldShowClipboardFailure(snapshot.lastErrorCode,
+                                            snapshot.localIsController)) {
             QString message =
                 QString::fromStdString(snapshot.lastErrorMessage);
             if (snapshot.lastErrorCode == "clipboard_transfer_timeout") {
@@ -1986,8 +1991,27 @@ void ControllerMainWindow::OnClipboardStateChanged(
                     "文件完整性校验未能继续，本次粘贴已取消。请重新粘贴；"
                     "若问题持续出现，请检查系统加密服务状态。");
             }
-            remoteSessionWindow_->ShowRemotePasteFailure(
-                completedTransferId, message);
+            if (remoteSessionWindow_) {
+                remoteSessionWindow_->ShowRemotePasteFailure(
+                    completedTransferId, message);
+            } else {
+                // Reverse paste can fail without a remote desktop window.
+                // Reuse one non-modal dialog instead of stacking notifications.
+                auto* dialog = static_cast<RemoteCDialog*>(findChild<QDialog*>(
+                    QStringLiteral("localRemotePasteFailureDialog")));
+                if (!dialog) {
+                    dialog = RemoteCDialog::CreateStatus(
+                        this, QStringLiteral("远程粘贴未完成"), message,
+                        QStringLiteral("知道了"), RemoteCDialog::Tone::kDanger);
+                    dialog->setObjectName(QStringLiteral("localRemotePasteFailureDialog"));
+                    dialog->setAttribute(Qt::WA_DeleteOnClose);
+                    connect(dialog, &QDialog::finished, dialog, &QObject::deleteLater);
+                }
+                dialog->SetContent(QStringLiteral("远程粘贴未完成"), message,
+                                   QStringLiteral("知道了"), RemoteCDialog::Tone::kDanger);
+                dialog->show();
+                dialog->raise();
+            }
         } else if (!completedTransferId.isEmpty() &&
                    remoteSessionWindow_) {
             remoteSessionWindow_->CompleteRemotePasteProgress(
@@ -2004,13 +2028,6 @@ void ControllerMainWindow::OnClipboardStateChanged(
                 ? QStringLiteral("已接收远程粘贴文件")
                 : QStringLiteral("已接收远程粘贴内容"),
             RemoteCToast::Tone::kSuccess);
-    } else if (rejectedAdvanced && !snapshot.lastErrorMessage.empty() &&
-               !remoteSessionWindow_) {
-        RemoteCToast::Show(
-            this,
-            QStringLiteral("远程粘贴未完成：%1")
-                .arg(QString::fromStdString(snapshot.lastErrorMessage)),
-            RemoteCToast::Tone::kError);
     }
     displayedClipboardSentItems_ = snapshot.sentItems;
     displayedClipboardReceivedItems_ = snapshot.receivedItems;

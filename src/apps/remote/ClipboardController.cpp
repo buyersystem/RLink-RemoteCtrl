@@ -2,6 +2,7 @@
 // Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd)
 
 #include "ClipboardController.h"
+#include "ClipboardFileLimit.h"
 
 #ifndef NOMINMAX
 #define NOMINMAX
@@ -732,6 +733,7 @@ void ClipboardController::UpdateSession(ClipboardSessionContext context)
             !context_.transportReady && context.transportReady;
         context_ = std::move(context);
         snapshot_.sessionActive = context_.active;
+        snapshot_.localIsController = context_.localIsController;
         snapshot_.peerDeviceId = context_.peerDeviceId;
         if (changed) {
             CancelTransfers("clipboard_session_changed",
@@ -1702,7 +1704,8 @@ void ClipboardController::ProcessPendingLocalClipboard()
     pendingExplorerConflictOffer_.reset();
     explorerConflictKeepaliveDue_.reset();
     std::string error;
-    if (!BuildOutgoingTransfer(std::move(*content), &error)) {
+    std::string errorCode;
+    if (!BuildOutgoingTransfer(std::move(*content), &error, &errorCode)) {
         const bool superseded = error == "clipboard_superseded";
         if (fulfillingAnnouncedRequest_ &&
             !announcedLocalItemId_.empty()) {
@@ -1712,7 +1715,7 @@ void ClipboardController::ProcessPendingLocalClipboard()
             response.itemId = announcedLocalItemId_;
             response.lamportVersion = announcedLocalVersion_;
             response.errorCode = superseded ? "clipboard_superseded"
-                                            : "clipboard_capture_rejected";
+                : (errorCode.empty() ? "clipboard_capture_rejected" : errorCode);
             response.errorMessage = superseded
                 ? "A newer clipboard item replaced the transfer." : error;
             (void)SendProtocolMessage(response);
@@ -1722,7 +1725,7 @@ void ClipboardController::ProcessPendingLocalClipboard()
         ResetTransferSnapshot();
         snapshot_.state = "ready";
         snapshot_.lastErrorCode = superseded ? std::string{}
-                                             : "clipboard_capture_rejected";
+            : (errorCode.empty() ? "clipboard_capture_rejected" : errorCode);
         snapshot_.lastErrorMessage = superseded ? std::string{} : error;
         if (!superseded) ++snapshot_.rejectedItems;
         PublishSnapshot();
@@ -2459,7 +2462,8 @@ void ClipboardController::ProcessOffer(const ClipboardEnvelope& envelope)
         }
     }
     std::string error;
-    if (!PrepareIncomingTransfer(envelope, &error)) {
+    std::string errorCode;
+    if (!PrepareIncomingTransfer(envelope, &error, &errorCode)) {
         if (cacheManager_) {
             cacheManager_->RemoveEntry(
                 ClipboardCacheRoot() /
@@ -2467,12 +2471,14 @@ void ClipboardController::ProcessOffer(const ClipboardEnvelope& envelope)
             UpdateCacheSnapshot();
         }
         response.type = ClipboardMessageType::kReject;
-        response.errorCode = "clipboard_offer_rejected";
+        response.errorCode = errorCode.empty() ? "clipboard_offer_rejected" : errorCode;
         response.errorMessage = error;
         (void)SendProtocolMessage(response);
         if (answersLocalRequest) {
             failLocalRequest();
         } else {
+            snapshot_.lastErrorCode = response.errorCode;
+            snapshot_.lastErrorMessage = response.errorMessage;
             ++snapshot_.rejectedItems;
             PublishSnapshot();
         }
@@ -3114,8 +3120,9 @@ bool ClipboardController::SendProtocolMessage(
 }
 
 bool ClipboardController::BuildOutgoingTransfer(
-    WindowsClipboardContent content, std::string* error)
+    WindowsClipboardContent content, std::string* error, std::string* errorCode)
 {
+    if (errorCode) errorCode->clear();
     const auto sourceGeneration = content.localChangeGeneration;
     const auto superseded = [this, sourceGeneration] {
         return localClipboardGeneration_.load(std::memory_order_acquire) !=
@@ -3151,11 +3158,14 @@ bool ClipboardController::BuildOutgoingTransfer(
             part.descriptor.size = std::filesystem::file_size(source, sizeError);
             part.sourceWriteTime =
                 std::filesystem::last_write_time(source, timeError);
-            if (sizeError ||
-                timeError ||
-                part.descriptor.size > configuration_.automaticFileLimitBytes ||
-                fileBytes > configuration_.automaticFileLimitBytes -
-                    part.descriptor.size) return false;
+            if (sizeError || timeError) return false;
+            if (ClipboardFilesExceedLimit(fileBytes, part.descriptor.size,
+                                         configuration_.automaticFileLimitBytes)) {
+                if (errorCode) *errorCode = "clipboard_file_limit_exceeded";
+                if (error) *error = ClipboardFileLimitMessage(
+                    configuration_.automaticFileLimitBytes, false);
+                return false;
+            }
             part.sourceSize = part.descriptor.size;
             part.sourceMetadataCaptured = true;
             part.sendHasher = std::make_unique<IncrementalSha256>();
@@ -3221,9 +3231,9 @@ bool ClipboardController::BuildOutgoingTransfer(
             if (!addFile(sourcePart.localPath, remoteName,
                     sourcePart.format, true, addFile)) {
                 if (error) {
-                    *error = superseded()
-                        ? "clipboard_superseded"
-                        : "Copied files exceed the configured limit or cannot be read.";
+                    if (superseded()) *error = "clipboard_superseded";
+                    else if (!errorCode || errorCode->empty())
+                        *error = "Copied files cannot be read or contain unsupported items.";
                 }
                 return false;
             }
@@ -3250,8 +3260,9 @@ bool ClipboardController::BuildOutgoingTransfer(
 }
 
 bool ClipboardController::PrepareIncomingTransfer(
-    const ClipboardEnvelope& envelope, std::string* error)
+    const ClipboardEnvelope& envelope, std::string* error, std::string* errorCode)
 {
+    if (errorCode) errorCode->clear();
     auto transfer = std::make_unique<IncomingTransfer>();
     transfer->itemId = envelope.message.itemId;
     transfer->version = envelope.message.lamportVersion;
@@ -3261,8 +3272,9 @@ bool ClipboardController::PrepareIncomingTransfer(
     std::uint64_t validatedFileBytes = 0;
     for (const auto& descriptor : envelope.message.descriptors) {
         if (!FormatEnabled(descriptor.format, configuration_) ||
-            descriptor.size > FormatLimit(
-                descriptor.format, configuration_) ||
+            ((descriptor.format != ClipboardFormat::kFile &&
+              descriptor.format != ClipboardFormat::kDirectory) &&
+             descriptor.size > FormatLimit(descriptor.format, configuration_)) ||
             incomingBytes >
                 (std::numeric_limits<std::uint64_t>::max)() -
                     descriptor.size) {
@@ -3274,13 +3286,11 @@ bool ClipboardController::PrepareIncomingTransfer(
         incomingBytes += descriptor.size;
         if (descriptor.format == ClipboardFormat::kFile ||
             descriptor.format == ClipboardFormat::kDirectory) {
-            if (descriptor.size > configuration_.automaticFileLimitBytes ||
-                validatedFileBytes >
-                    configuration_.automaticFileLimitBytes -
-                        descriptor.size) {
-                if (error) {
-                    *error = "The copied files exceed the automatic transfer limit.";
-                }
+            if (ClipboardFilesExceedLimit(validatedFileBytes, descriptor.size,
+                                         configuration_.automaticFileLimitBytes)) {
+                if (errorCode) *errorCode = "clipboard_file_limit_exceeded";
+                if (error) *error = ClipboardFileLimitMessage(
+                    configuration_.automaticFileLimitBytes, true);
                 return false;
             }
             validatedFileBytes += descriptor.size;
@@ -3320,10 +3330,11 @@ bool ClipboardController::PrepareIncomingTransfer(
         }
         if (descriptor.format == ClipboardFormat::kFile ||
             descriptor.format == ClipboardFormat::kDirectory) {
-            if (descriptor.size > configuration_.automaticFileLimitBytes ||
-                aggregateFiles > configuration_.automaticFileLimitBytes -
-                    descriptor.size) {
-                if (error) *error = "The copied files exceed the automatic transfer limit.";
+            if (ClipboardFilesExceedLimit(aggregateFiles, descriptor.size,
+                                         configuration_.automaticFileLimitBytes)) {
+                if (errorCode) *errorCode = "clipboard_file_limit_exceeded";
+                if (error) *error = ClipboardFileLimitMessage(
+                    configuration_.automaticFileLimitBytes, true);
                 return false;
             }
             aggregateFiles += descriptor.size;

@@ -21,7 +21,7 @@ media_intelligence::EncodedImage EncodeWebRtcFrameAsJpeg(
     webrtc::scoped_refptr<webrtc::VideoFrameBuffer> frame,
     std::uint32_t maximumDimension =
         media_intelligence::kDefaultVisionApiMaximumImageDimension,
-    int quality = 60,
+    int quality = media_intelligence::kDefaultVisionApiJpegQuality,
     VisionFrameEncodingMetrics* metrics = nullptr);
 
 }  // namespace remote::app

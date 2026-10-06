@@ -35,6 +35,7 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
 
     void RemoteSessionWindow::RefreshControlState()
     {
+        remoteCursorContext_ = {};
         bool enabled = false;
         std::uint32_t remoteDisplayId = 0;
         std::uint64_t remoteDisplayLayoutVersion = 0;
@@ -56,6 +57,12 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
             QStringLiteral("正在建立远程会话");
         if (sessionControl_ && binding_.IsDirect()) {
             const auto snapshot = sessionControl_->Snapshot();
+            if (snapshot.remoteControlRole == RemoteControlRole::kController &&
+                snapshot.peerDeviceId == binding_.peerDeviceId.toStdString()) {
+                remoteCursorContext_ = {
+                    {}, snapshot.peerDeviceId, snapshot.sessionId,
+                    snapshot.direct.remoteScreenShareGeneration, true};
+            }
             if (directPreferenceShareGeneration_ !=
                     snapshot.direct.remoteScreenShareGeneration) {
                 directPreferenceShareGeneration_ =
@@ -333,6 +340,14 @@ bool IsDirectRecoveryFailureCode(const std::string& errorCode)
         }
         if (sessionControl_ && binding_.IsRoom()) {
             const auto snapshot = sessionControl_->Snapshot();
+            if (snapshot.room.membership == RoomMembershipState::kActive &&
+                snapshot.room.screenSharerDeviceId ==
+                    binding_.peerDeviceId.toStdString()) {
+                remoteCursorContext_ = {
+                    binding_.roomPairId.toStdString(),
+                    snapshot.room.screenSharerDeviceId, snapshot.room.roomId,
+                    snapshot.room.screenShareEpoch, false};
+            }
             CompleteMediaDeviceSelections(
                 snapshot.media.localMediaDevices);
             showControlAction =

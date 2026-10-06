@@ -93,7 +93,7 @@ QString VisionApiFailureText(
         }
         return QStringLiteral("服务返回 HTTP %1").arg(result.httpStatus);
     case RemoteClassificationStatus::kResponseTooLarge:
-        return QStringLiteral("服务响应超过大小限制");
+        return QStringLiteral("服务返回的数据过大");
     case RemoteClassificationStatus::kInvalidResponse:
         if (result.error == "response_empty") {
             return QStringLiteral("模型返回了空内容，请重试");
@@ -102,20 +102,20 @@ QString VisionApiFailureText(
             return QStringLiteral("服务响应中缺少 message.content");
         }
         if (result.error == "classification_scene_invalid") {
-            return QStringLiteral("模型返回了不支持的内容类别");
+            return QStringLiteral("模型返回的场景类型不受支持");
         }
         if (result.error == "classification_schema_invalid") {
             return QStringLiteral(
-                "分类 JSON 必须且只能包含 scene 和 confidence");
+                "返回数据必须只包含场景类型（scene）和置信度（confidence）");
         }
         if (result.error.starts_with("json_")) {
-            return QStringLiteral("模型返回的分类内容不是有效 JSON");
+            return QStringLiteral("模型返回的数据不是有效 JSON");
         }
-        return QStringLiteral("模型未返回约定的分类 JSON");
+        return QStringLiteral("模型返回格式不符合要求");
     case RemoteClassificationStatus::kCanceled:
         return QStringLiteral("测试已取消");
     case RemoteClassificationStatus::kCircuitOpen:
-        return QStringLiteral("连续失败后已暂时停止请求");
+        return QStringLiteral("多次识别失败，已暂停请求");
     case RemoteClassificationStatus::kInvalidConfiguration:
         return QStringLiteral("API 配置无效");
     case RemoteClassificationStatus::kInvalidRequest:
@@ -197,12 +197,12 @@ void SettingsPage::BuildContentAwarenessSettingsPage()
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(12);
     AddSettingsDetailHeader(
-        layout, page, QStringLiteral("内容感知"),
-        QStringLiteral("选择本地或远程模型分析共享画面，为自适应串流策略提供内容类型。"));
+        layout, page, QStringLiteral("AI 场景优化"),
+        QStringLiteral("根据画面场景，自动调整网络波动时画质与帧率的取舍。"));
 
     const auto [enabledRow, enabledLayout] = CreateSettingsRow(
-        page, QStringLiteral("内容感知串流"),
-        QStringLiteral("分析画面内容；关闭后不会运行本地模型或发送远程请求。"));
+        page, QStringLiteral("AI 场景优化"),
+        QStringLiteral("开启后根据场景自动调整取舍；关闭后使用手动设置，并停止场景识别。"));
     controls_.contentAwareStreamingSelector =
         new RemoteCComboBox(enabledRow);
     controls_.contentAwareStreamingSelector->setObjectName(
@@ -224,15 +224,15 @@ void SettingsPage::BuildContentAwarenessSettingsPage()
     layout->addWidget(enabledRow);
 
     const auto [modeRow, modeLayout] = CreateSettingsRow(
-        page, QStringLiteral("内容识别方式"),
-        QStringLiteral("当前本地规则仅分析运动，不识别细场景；按场景自动调整需使用远程视觉 API。本地分类模型尚未接入。"));
+        page, QStringLiteral("场景识别方式"),
+        QStringLiteral("本地模型正在开发中，暂不支持场景识别。当前请使用 AI 模型 API。"));
     controls_.contentAnalyzerModeSelector = new RemoteCComboBox(modeRow);
     controls_.contentAnalyzerModeSelector->setObjectName(
         QStringLiteral("capacitySelector"));
     controls_.contentAnalyzerModeSelector->addItem(
-        QStringLiteral("本地运动规则（暂无场景分类）"), QStringLiteral("local"));
+        QStringLiteral("本地模型（开发中）"), QStringLiteral("local"));
     controls_.contentAnalyzerModeSelector->addItem(
-        QStringLiteral("远程视觉大模型 API"), QStringLiteral("vision_api"));
+        QStringLiteral("AI 模型 API"), QStringLiteral("vision_api"));
     controls_.contentAnalyzerModeSelector->setCurrentIndex(std::max(
         0,
         controls_.contentAnalyzerModeSelector->findData(
@@ -254,7 +254,7 @@ void SettingsPage::BuildContentAwarenessSettingsPage()
     visionLayout->setSpacing(12);
 
     auto* apiTitle = new QLabel(
-        QStringLiteral("远程视觉 API"),
+        QStringLiteral("AI 模型 API"),
         controls_.visionApiConfigurationPanel);
     apiTitle->setObjectName(QStringLiteral("settingTitle"));
     visionLayout->addWidget(apiTitle);
@@ -290,7 +290,7 @@ void SettingsPage::BuildContentAwarenessSettingsPage()
     controls_.visionApiProviderSelector->setObjectName(
         QStringLiteral("capacitySelector"));
     controls_.visionApiProviderSelector->addItem(
-        QStringLiteral("OpenAI-compatible"),
+        QStringLiteral("OpenAI 兼容接口"),
         QStringLiteral("openai_compatible"));
     controls_.visionApiProviderSelector->addItem(
         QStringLiteral("DeepSeek"), QStringLiteral("deepseek"));
@@ -302,7 +302,7 @@ void SettingsPage::BuildContentAwarenessSettingsPage()
         0,
         controls_.visionApiProviderSelector->findData(configuredProvider)));
     addVisionField(
-        QStringLiteral("服务类型"), controls_.visionApiProviderSelector);
+        QStringLiteral("API 服务"), controls_.visionApiProviderSelector);
 
     media_intelligence::VisionApiEndpointConfig deepSeekPreset =
         media_intelligence::DeepSeekVisionApiPreset();
@@ -324,7 +324,7 @@ void SettingsPage::BuildContentAwarenessSettingsPage()
         QString::fromLatin1(kVisionApiBaseUrlSetting),
         defaultBaseUrl).toString());
     ConfigureVisionField(controls_.visionApiBaseUrlEdit);
-    addVisionField(QStringLiteral("Base URL"), controls_.visionApiBaseUrlEdit);
+    addVisionField(QStringLiteral("API 地址"), controls_.visionApiBaseUrlEdit);
 
     controls_.visionApiModelEdit = new QLineEdit(
         controls_.visionApiConfigurationPanel);
@@ -332,12 +332,12 @@ void SettingsPage::BuildContentAwarenessSettingsPage()
         QStringLiteral("visionApiInput"));
     controls_.visionApiModelEdit->setMaxLength(256);
     controls_.visionApiModelEdit->setPlaceholderText(
-        QStringLiteral("支持图像输入的模型名称"));
+        QStringLiteral("输入支持图片识别的模型名称"));
     controls_.visionApiModelEdit->setText(currentSettings.value(
         QString::fromLatin1(kVisionApiModelSetting),
         defaultModel).toString());
     ConfigureVisionField(controls_.visionApiModelEdit);
-    addVisionField(QStringLiteral("模型"), controls_.visionApiModelEdit);
+    addVisionField(QStringLiteral("模型名称"), controls_.visionApiModelEdit);
 
     controls_.visionApiKeyEdit = new QLineEdit(
         controls_.visionApiConfigurationPanel);
@@ -370,7 +370,7 @@ void SettingsPage::BuildContentAwarenessSettingsPage()
                 media_intelligence::kDefaultVisionApiRequestIntervalMs));
     ConfigureVisionField(controls_.visionApiRequestIntervalSelector);
     addVisionField(
-        QStringLiteral("请求间隔"),
+        QStringLiteral("识别间隔"),
         controls_.visionApiRequestIntervalSelector);
 
     controls_.visionApiMaximumDimensionSelector = new RemoteCComboBox(
@@ -388,8 +388,10 @@ void SettingsPage::BuildContentAwarenessSettingsPage()
                 QString::fromLatin1(kVisionApiMaximumDimensionSetting),
                 media_intelligence::kDefaultVisionApiMaximumImageDimension).toInt())));
     ConfigureVisionField(controls_.visionApiMaximumDimensionSelector);
+    controls_.visionApiMaximumDimensionSelector->setToolTip(
+        QStringLiteral("按上传图片的最长边计算，保持原有宽高比例。"));
     addVisionField(
-        QStringLiteral("图像最长边"),
+        QStringLiteral("上传图片尺寸"),
         controls_.visionApiMaximumDimensionSelector);
 
     controls_.visionApiJpegQualitySelector = new RemoteCComboBox(
@@ -405,15 +407,15 @@ void SettingsPage::BuildContentAwarenessSettingsPage()
         controls_.visionApiJpegQualitySelector->findData(
             currentSettings.value(
                 QString::fromLatin1(kVisionApiJpegQualitySetting),
-                60).toInt())));
+                media_intelligence::kDefaultVisionApiJpegQuality).toInt())));
     ConfigureVisionField(controls_.visionApiJpegQualitySelector);
     addVisionField(
-        QStringLiteral("JPEG 质量"),
+        QStringLiteral("图片质量"),
         controls_.visionApiJpegQualitySelector);
     visionLayout->addLayout(fields);
 
     controls_.visionApiConsentCheckBox = new QCheckBox(
-        QStringLiteral("我已了解并同意发送低频屏幕缩略图"),
+        QStringLiteral("我同意上传屏幕缩略图用于场景识别"),
         controls_.visionApiConfigurationPanel);
     controls_.visionApiConsentCheckBox->setObjectName(
         QStringLiteral("visionApiConsentCheckBox"));
@@ -435,7 +437,7 @@ void SettingsPage::BuildContentAwarenessSettingsPage()
     controls_.visionApiTestButton->setObjectName(
         QStringLiteral("softButton"));
     controls_.visionApiScreenshotTestButton = new QPushButton(
-        QStringLiteral("截图测试"), controls_.visionApiConfigurationPanel);
+        QStringLiteral("测试截图识别"), controls_.visionApiConfigurationPanel);
     controls_.visionApiScreenshotTestButton->setObjectName(
         QStringLiteral("softButton"));
     controls_.visionApiScreenshotTestButton->setToolTip(
@@ -451,7 +453,7 @@ void SettingsPage::BuildContentAwarenessSettingsPage()
     visionLayout->addLayout(visionActions);
     auto* screenshotTestHint = new QLabel(
         QStringLiteral(
-            "截图测试只读取剪贴板图片；上传副本仅保存在内存中，请求完成后立即释放。"),
+            "测试使用剪贴板中的截图，不会将图片保存到本地。"),
         controls_.visionApiConfigurationPanel);
     screenshotTestHint->setProperty("muted", true);
     screenshotTestHint->setWordWrap(true);
@@ -686,10 +688,10 @@ void SettingsPage::RefreshVisionApiSettingsUi()
                               : QStringLiteral("测试连接"));
     controls_.visionApiScreenshotTestButton->setText(
         visionApiTestRunning_ ? QStringLiteral("正在测试…")
-                              : QStringLiteral("截图测试"));
+                              : QStringLiteral("测试截图识别"));
     if (visionApiTestRunning_) {
         controls_.visionApiStatusLabel->setText(
-            QStringLiteral("正在测试端点和模型的图像分类能力…"));
+            QStringLiteral("正在测试模型连接和场景识别…"));
         return;
     }
 
@@ -705,18 +707,18 @@ void SettingsPage::RefreshVisionApiSettingsUi()
     } else if (revision != 0 && testedRevision == revision) {
         controls_.visionApiStatusLabel->setText(
             controls_.visionApiConsentCheckBox->isChecked()
-                ? QStringLiteral("连接测试已通过，远程分析配置可以生效。")
-                : QStringLiteral("连接测试已通过；确认上传提示后远程分析才会生效。"));
+                ? QStringLiteral("测试通过，可以使用场景识别。")
+                : QStringLiteral("测试通过；同意上传屏幕缩略图后即可使用。"));
     } else {
         controls_.visionApiStatusLabel->setText(
-            QStringLiteral("API 密钥已保存；请测试当前端点和模型。"));
+            QStringLiteral("密钥已保存，请测试连接。"));
     }
 }
 
 void SettingsPage::StartVisionApiConnectionTest()
 {
     StartVisionApiConnectionTestWithImage(
-        nullptr, QStringLiteral("内置合成图"));
+        nullptr, QStringLiteral("内置测试图片"));
 }
 
 void SettingsPage::StartVisionApiScreenshotTest()
@@ -728,7 +730,7 @@ void SettingsPage::StartVisionApiScreenshotTest()
     if (!testImage->IsValid()) {
         controls_.visionApiStatusLabel->setText(
             QStringLiteral(
-                "剪贴板中没有可用图片。请先按 Win+Shift+S 截图，再点击“截图测试”。"));
+                "剪贴板中没有可用图片。请先按 Win+Shift+S 截图，再点击“测试截图识别”。"));
         return;
     }
     StartVisionApiConnectionTestWithImage(
@@ -841,12 +843,12 @@ void SettingsPage::StartVisionApiConnectionTestWithImage(
                         media_intelligence::RemoteClassificationStatus::kSuccess &&
                     currentRevision == revision) {
                     owner->controls_.visionApiStatusLabel->setText(
-                        QStringLiteral("连接测试已通过；%1识别为：%2。")
+                        QStringLiteral("测试通过，%1的识别结果：%2。")
                             .arg(testImageName,
                                  ClassificationText(result.classification)));
                 } else if (currentRevision != revision) {
                     owner->controls_.visionApiStatusLabel->setText(
-                        QStringLiteral("配置已在测试期间改变，请重新测试。"));
+                        QStringLiteral("设置已更改，请重新测试。"));
                 } else {
                     owner->controls_.visionApiStatusLabel->setText(
                         QStringLiteral("连接测试失败：%1")

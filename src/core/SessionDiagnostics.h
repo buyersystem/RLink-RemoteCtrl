@@ -16,46 +16,19 @@ enum class RtpStreamDirection {
     kInbound,
 };
 
-// Read-only recommendations. These fields never represent applied settings.
-struct ContentPolicyShadowSnapshot {
+// Scene recognition owns only the quality/FPS tradeoff coefficient.
+struct SceneQualitySmoothingSnapshot {
+    bool enabled = false;
     bool observed = false;
-    bool hasRecommendation = false;
-    bool estimatedFeasible = false;
-    bool modelCalibrated = false;
-    bool modelReference = false;
-    std::uint32_t width = 0;
-    std::uint32_t height = 0;
-    std::uint32_t senderMaxFps = 0;
-    std::uint64_t estimatedSafeVideoBudgetBps = 0;
-    std::uint64_t requiredVideoBitrateBps = 0;
-    std::uint64_t desiredVideoBitrateBps = 0;
-    std::uint64_t senderMaxBitrateBps = 0;
-    std::string reason;
-};
-
-struct ContentPolicyExecutionSnapshot {
-    bool observed = false;
-    bool eligible = false;
-    bool ownsSender = false;
-    bool applied = false;
-    bool pending = false;
-    std::uint64_t generation = 0;
-    std::uint64_t revision = 0;
-    std::uint32_t appliedWidth = 0;
-    std::uint32_t appliedHeight = 0;
-    std::uint32_t appliedMaxFps = 0;
-    std::uint64_t appliedMaxBitrateBps = 0;
-    std::uint64_t successfulChanges = 0;
+    std::string scene;
+    double minimumCoefficient = 0;
+    double maximumCoefficient = 1;
+    double targetCoefficient = 0.5;
+    double currentCoefficient = 0.5;
+    std::uint32_t manualCoefficientHundredths = 50;
+    std::uint64_t remainingMs = 0;
+    bool transitioning = false;
     std::string status;
-    std::string error;
-    bool networkPressure = false;
-    std::string networkStatus;
-    std::string networkTrigger;
-    std::uint64_t userSpecificationVerifiedBitrateBps = 0;
-    std::uint32_t confirmObservedSamples = 0;
-    std::uint32_t confirmRequiredSamples = 0;
-    std::uint64_t confirmationRemainingMs = 0;
-    std::string confirmationBlock;
 };
 
 // Read-only GoogCC telemetry. RTT/loss are measurements, not locally invented
@@ -205,13 +178,8 @@ struct RtpStreamStatsSnapshot {
     std::uint64_t contentProcessedSamples = 0;
     std::uint64_t contentRejectedSamples = 0;
     std::uint64_t contentDiscardedResults = 0;
-    ContentPolicyShadowSnapshot contentPolicyShadow;
-    ContentPolicyExecutionSnapshot contentPolicyExecution;
+    SceneQualitySmoothingSnapshot sceneQualitySmoothing;
     GoogCcNetworkDiagnostics googCc;
-    bool contentQualityMetricAvailable = false;
-    bool contentQualityVerified = false;
-    bool contentProcessingEvidenceAvailable = false;
-    bool contentProcessingHealthy = false;
     bool receiverFeedbackAvailable = false;
     std::uint32_t receiverFeedbackAgeMs = 0;
     std::uint32_t receiverFeedbackWidth = 0;

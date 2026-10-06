@@ -3,6 +3,7 @@
 
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#include <windows.h>
 
 #include <atomic>
 #include <algorithm>
@@ -43,6 +44,30 @@ bool Check(bool passed, const char* name)
     std::cout << name << '=' << (passed ? "PASS" : "FAIL") << std::endl;
     return passed;
 }
+
+// Sleep(1) can wake only every ~15.6 ms in a background Windows process.
+// That both caps a synthetic source at ~64 FPS and turns the relay's 5-ms
+// credit cap into a fictitious network bottleneck. Keep this test's clock
+// independent of other applications' timer-resolution requests.
+class HighResolutionTick final {
+public:
+    HighResolutionTick() : timer_(CreateWaitableTimerExW(nullptr, nullptr,
+        CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_MODIFY_STATE | SYNCHRONIZE)) {}
+    ~HighResolutionTick() { if (timer_) CloseHandle(timer_); }
+    HighResolutionTick(const HighResolutionTick&) = delete;
+    HighResolutionTick& operator=(const HighResolutionTick&) = delete;
+    bool Valid() const { return timer_ != nullptr; }
+    bool Wait() const
+    {
+        if (!timer_) return false;
+        LARGE_INTEGER due;
+        due.QuadPart = -10'000; // One millisecond, in 100-ns units.
+        return SetWaitableTimerEx(timer_, &due, 0, nullptr, nullptr, nullptr, 0) &&
+            WaitForSingleObject(timer_, INFINITE) == WAIT_OBJECT_0;
+    }
+private:
+    HANDLE timer_ = nullptr;
+};
 
 class Source : public webrtc::AdaptedVideoTrackSource {
 public:
@@ -122,6 +147,7 @@ public:
     std::uint64_t Dropped() const { return dropped_.load(); }
     std::uint64_t ForwardedBytes() const { return forwarded_.load(); }
     std::uint64_t PeakQueuedBytes() const { return peakQueued_.load(); }
+    bool TimingHealthy() const { return tick_.Valid() && timingHealthy_.load(); }
     std::string Rewrite(const std::string& candidate, bool ownerIsSender)
     {
         std::istringstream fields(candidate);
@@ -188,6 +214,7 @@ private:
     }
     void Pump()
     {
+        if (!tick_.Valid()) { timingHealthy_.store(false); return; }
         auto previous = Clock::now();
         double credit = 3000;
         std::size_t queuedBytes = 0;
@@ -245,7 +272,7 @@ private:
                     reverse_.pop_front();
                 }
             }
-            std::this_thread::sleep_for(1ms);
+            if (!tick_.Wait()) { timingHealthy_.store(false); return; }
         }
     }
     std::mutex mutex_;
@@ -254,6 +281,8 @@ private:
     std::atomic<std::uint32_t> capacity_{20'000'000};
     std::atomic<std::uint64_t> dropped_{0}, forwarded_{0}, peakQueued_{0};
     std::atomic<bool> stopping_{false};
+    HighResolutionTick tick_;
+    std::atomic<bool> timingHealthy_{true};
     std::thread thread_;
 };
 
@@ -450,6 +479,9 @@ bool RunShortOutage(webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface
             static_cast<std::uint32_t>(fps), bppHundredths});
     const char* mode = protection ? "quality" : enableRecoveryHints ? "native" : "native_gcc";
     LoopbackShaper shaper;
+    HighResolutionTick sourceTick;
+    if (!Check(shaper.TimingHealthy() && sourceTick.Valid(),
+        "OUTAGE_HIGH_RESOLUTION_SOURCE_AND_RELAY_TIMERS_READY")) return false;
     // Warm-up and restoration must use the SAME declared healthy capacity.
     // Otherwise the full-HD startup probes see 20 Mbps but recovery sees 40.
     shaper.SetCapacity(normalCapacity);
@@ -534,6 +566,7 @@ bool RunShortOutage(webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface
     bool requestedBackendObserved = false;
     double tailFps = 0;
     unsigned tailSamples = 0;
+    bool sourceTimingHealthy = true;
     while (Clock::now() < finish) {
         const auto now = Clock::now();
         if (!limited && now >= limitStart) {
@@ -642,7 +675,7 @@ bool RunShortOutage(webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface
                 }
             }
         }
-        std::this_thread::sleep_for(1ms);
+        if (!sourceTick.Wait()) { sourceTimingHealthy = false; break; }
     }
     std::cout << "SHORT_OUTAGE_RESULT,mode=" << mode << ",backend=" << backend << ",profile=" << profile
         << ",baseline_available_bps="
@@ -673,6 +706,8 @@ bool RunShortOutage(webrtc::scoped_refptr<webrtc::PeerConnectionFactoryInterface
         limitedBytes <= outageMilliseconds * (limitedCapacity / 8.0) / 1000.0 * 1.05 +
             normalCapacity / 1600.0,
         "SHORT_OUTAGE_REAL_PACKET_QUEUE_AND_FEEDBACK_EXERCISED");
+    ok &= Check(sourceTimingHealthy && shaper.TimingHealthy(),
+        "SHORT_OUTAGE_HIGH_RESOLUTION_TIMING_RETAINED");
     ok &= Check(fixedSpecification && coefficientCorrect && (!protection || qualityFormulaObserved) &&
         static_cast<double>(frameIndex) / std::chrono::duration<double>(finish - start).count() >= fps * .98,
         "SHORT_OUTAGE_USER_FPS_CAPTURE_CADENCE_AND_COEFFICIENT_PRESERVED");

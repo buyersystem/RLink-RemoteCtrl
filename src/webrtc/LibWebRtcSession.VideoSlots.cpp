@@ -198,19 +198,11 @@ webrtc::RTCError LibWebRtcSession::SetVideoSlotSendingActive(
             "The requested video slot has no RTP sender.");
     }
     std::unique_lock senderParametersLock(videoSenderParametersMutex_);
-    std::uint32_t restoreWidth = 0, restoreHeight = 0, restoreFps = 0;
-    std::uint64_t restoreBitrate = 0;
     {
         std::lock_guard lock(mutex_);
         const auto found = mediaSlots_->videoSlots_.find(slot);
         if (found == mediaSlots_->videoSlots_.end() || found->second.transceiver != transceiver)
             return webrtc::RTCError::InvalidState("The video slot changed before activation.");
-        if (!active) {
-            restoreWidth = found->second.configuredOutputWidth;
-            restoreHeight = found->second.configuredOutputHeight;
-            restoreFps = found->second.configuredMaxFrameRate;
-            restoreBitrate = found->second.configuredMaxBitrateBps;
-        }
     }
     auto parameters = sender->GetParameters();
     if (parameters.encodings.empty()) {
@@ -219,15 +211,6 @@ webrtc::RTCError LibWebRtcSession::SetVideoSlotSendingActive(
     }
     for (auto& encoding : parameters.encodings) {
         encoding.active = active;
-        // Restore in the same transaction that stops sending. Otherwise a
-        // later activation without a new user request would retain old scene
-        // parameters after its execution state has been discarded.
-        if (restoreWidth && restoreHeight && restoreFps && restoreBitrate) {
-            encoding.max_framerate = static_cast<double>(restoreFps);
-            encoding.max_bitrate_bps = static_cast<int>(restoreBitrate);
-            encoding.scale_resolution_down_to = webrtc::Resolution{
-                static_cast<int>(restoreWidth), static_cast<int>(restoreHeight)};
-        }
     }
     auto result = sender->SetParameters(parameters);
     if (!result.ok()) {
@@ -246,23 +229,8 @@ webrtc::RTCError LibWebRtcSession::SetVideoSlotSendingActive(
             found->second.transceiver == transceiver) {
             found->second.sendingActive = active;
             if (!active) {
-                if (restoreWidth && restoreHeight && restoreFps && restoreBitrate) {
-                    found->second.effectiveWidth = restoreWidth;
-                    found->second.effectiveHeight = restoreHeight;
-                    found->second.effectiveMaxFps = restoreFps;
-                    found->second.effectiveDesiredBitrateBps = restoreBitrate;
-                    found->second.effectiveMaxBitrateBps = restoreBitrate;
-                }
                 found->second.startBitrateBootstrapPending = true;
-                found->second.contentPolicyState = {};
-                found->second.contentPolicyRecommendation = {};
-                found->second.contentPolicyExecution = {};
-                found->second.contentPolicyNeedsRestore = false;
-                found->second.contentQualityMetricAvailable = found->second.contentQualityVerified = false;
-                found->second.contentProcessingEvidenceAvailable = found->second.contentProcessingHealthy = false;
-                ++found->second.contentPolicyRevision;
                 if (slot == kScreenMainVideoSlot) {
-                    ++screenContentPolicyEpoch_;
                     progressiveBitrateCeiling_ = {};
                     ++progressiveBitrateCeilingRevision_;
                     progressiveBitrateCeilingError_.clear();
@@ -313,7 +281,7 @@ void LibWebRtcSession::SetAdaptiveDesktopNetworkFrameRateEnabled(
 {
     std::lock_guard lock(mutex_);
     // The public switch enables encoder quality protection, not the legacy
-    // FPS-cap controller. Content awareness keeps ownership of scene R/F/B.
+    // FPS-cap controller. Content awareness only supplies a smooth coefficient.
     adaptiveDesktopNetworkFrameRate_ = enabled;
     const auto found = mediaSlots_->videoSlots_.find(kScreenMainVideoSlot);
     if (found != mediaSlots_->videoSlots_.end()) {
@@ -583,8 +551,12 @@ void LibWebRtcSession::SetScreenQualityDeficitShare(std::uint32_t hundredths)
 {
     std::lock_guard lock(mutex_);
     screenQualityDeficitShareHundredths_ = NormalizeScreenQualityDeficitShareHundredths(hundredths);
-    if (googCcTelemetry_)
-        googCcTelemetry_->SetScreenQualityDeficitShare(screenQualityDeficitShareHundredths_);
+    const auto now = (std::max)(SteadyNowMs(), sceneQualityLastTickMs_);
+    if (!sceneQualityObservation_.enabled)
+        sceneQualitySmoother_.Reset(screenQualityDeficitShareHundredths_ / 100.0, now);
+    else if (sceneQualitySmoother_.Scene() == media_intelligence::ScreenScene::kUnknown)
+        sceneQualitySmoother_.SetTarget(screenQualityDeficitShareHundredths_ / 100.0, now);
+    UpdateSceneQualityCoefficientLocked(now);
 }
 
 webrtc::RTCError LibWebRtcSession::SetVideoSlotEncodingPolicy(
@@ -653,8 +625,7 @@ webrtc::RTCError LibWebRtcSession::SetVideoSlotEncodingPolicy(
     // libwebrtc otherwise caps every singlecast stream above 960x540 at its
     // generic 2.5 Mbps default. Bound media by the requested workload,
     // separately from the user-configured connection reference.
-    // These are ceilings, not a substitute for GoogCC's safe allocation or
-    // the future calibrated scene-specific quality demand.
+    // These are user ceilings, not a substitute for GoogCC's safe allocation.
     auto screenPolicy = ResolveScreenStreamPolicy(
         width, height, policyRequest);
     if (slot != kScreenMainVideoSlot) {
@@ -712,16 +683,7 @@ webrtc::RTCError LibWebRtcSession::SetVideoSlotEncodingPolicy(
             found->second.effectiveMaxFps = framesPerSecond;
             found->second.effectiveDesiredBitrateBps = bitrate;
             found->second.effectiveMaxBitrateBps = bitrate;
-            found->second.contentPolicyState = {};
-            found->second.contentPolicyRecommendation = {};
-            found->second.contentPolicyExecution = {};
-            found->second.contentPolicyNeedsRestore = false;
-            ++found->second.contentPolicyRevision;
-            found->second.contentPolicyEvidenceNotBeforeMs = SteadyNowMs();
-            found->second.contentQualityMetricAvailable = found->second.contentQualityVerified = false;
-            found->second.contentProcessingEvidenceAvailable = found->second.contentProcessingHealthy = false;
             if (slot == kScreenMainVideoSlot) {
-                ++screenContentPolicyEpoch_;
                 ResetAdaptiveScreenFrameRate(
                     &found->second.adaptiveFrameRate,
                     false,

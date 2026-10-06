@@ -22,6 +22,7 @@
 #include <QWidget>
 
 #include "RemoteDesktopCanvas.h"
+#include "RemoteCursorInbox.h"
 #include "RemoteInputDispatcher.h"
 #include "RemoteSessionWindowConstants.h"
 #include "src/apps/remote/ISessionMediaAccess.h"
@@ -173,6 +174,13 @@ namespace remote::controller {
         const bool bindingChanged =
             sessionControl_ != sessionControl || sessionMedia_ != media ||
             !binding_.SameTransport(binding);
+        // Even a same-transport sink retry replaces the callback. Retire its
+        // inbox so queued tasks and in-flight copies cannot cross the binding.
+        if (remoteCursorInbox_) {
+            remoteCursorInbox_->Deactivate();
+            remoteCursorInbox_.reset();
+        }
+        remoteCursorContext_ = {};
         if (bindingChanged && sessionMedia_) {
             sessionMedia_->SetRemoteCursorCallback({});
         }
@@ -202,16 +210,21 @@ namespace remote::controller {
         binding_ = std::move(binding);
         if (sessionMedia_) {
             const QPointer<RemoteSessionWindow> self(this);
+            const auto inbox = std::make_shared<RemoteCursorInbox>();
+            remoteCursorInbox_ = inbox;
             sessionMedia_->SetRemoteCursorCallback(
-                [self](const std::string& pairId,
+                [self, inbox](const std::string& pairId,
                        const RemoteCursorEnvelope& envelope) {
-                    if (!self) return;
+                    if (!self || !inbox->Push(pairId, envelope)) return;
                     QMetaObject::invokeMethod(
                         self,
-                        [self, pairId, envelope] {
-                            if (self) {
+                        [self, inbox] {
+                            if (!self || self->remoteCursorInbox_ != inbox) {
+                                return;
+                            }
+                            for (const auto& message : inbox->Take()) {
                                 self->HandleRemoteCursorMessage(
-                                    pairId, envelope);
+                                    message.pairId, message.envelope);
                             }
                         },
                         Qt::QueuedConnection);
@@ -322,14 +335,14 @@ namespace remote::controller {
         const std::string& pairId,
         const RemoteCursorEnvelope& envelope)
     {
-        if (!desktopCanvas_ ||
+        if (!desktopCanvas_ || !sessionControl_ ||
             envelope.senderDeviceId !=
                 binding_.peerDeviceId.toStdString()) {
             return;
         }
-        if (binding_.IsDirect()) {
-            if (!pairId.empty()) return;
-        } else if (pairId != binding_.roomPairId.toStdString()) {
+        // Revalidate against UI session-state cache: no engine lock or large
+        // SessionEngineSnapshot copy is performed at pointer frequency.
+        if (!remoteCursorContext_.Matches(pairId, envelope)) {
             return;
         }
         static_cast<RemoteDesktopCanvas*>(desktopCanvas_)

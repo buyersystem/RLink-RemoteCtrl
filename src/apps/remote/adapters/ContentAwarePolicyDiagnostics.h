@@ -4,24 +4,17 @@
 #pragma once
 
 #include <cstdint>
-#include "src/core/SessionDiagnostics.h"
-#include "src/webrtc/ScreenContentPolicy.h"
+
+#include "src/webrtc/SceneQualityObservation.h"
 #include "media_intelligence/core/ContentState.h"
 
 namespace remote::app {
 
-// Capture activity is independent from the last confirmed semantic identity.
-// A missing classifier result stays unknown; it is never promoted to mixed.
-ScreenContentPolicyObservation BuildScreenContentPolicyObservation(
+// Only the analyzer's confirmed semantic result is forwarded. Capture motion,
+// theoretical bitrate demand, and diagnostics reads never select a scene.
+SceneQualityObservation BuildSceneQualityObservation(
     bool enabled, std::uint64_t generation,
-    std::uint32_t sourceWidth, std::uint32_t sourceHeight,
-    ScreenContentActivity activity,
     const media_intelligence::ContentState& contentState,
-    std::uint64_t nowMs) noexcept;
-
-// Runs only during diagnostics collection, on outbound screen streams whose
-// content analyzer is enabled. Never schedules capture or changes a sender.
-void AnnotateContentAwarePolicyShadow(
-    WebRtcSessionStatsSnapshot& stats, std::uint64_t nowMs);
+    std::uint64_t nowMs, std::uint64_t maximumSceneAgeMs = 65000) noexcept;
 
 }  // namespace remote::app

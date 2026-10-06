@@ -2,6 +2,7 @@
 // Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd)
 
 #include "SettingsPage.h"
+#include <QSignalBlocker>
 #include "SettingsPageUi.h"
 
 #include <algorithm>
@@ -90,7 +91,7 @@ SettingsPage::SettingsPage(QWidget* parent)
     auto* generalCategoryButton = makeCategoryButton(
         QStringLiteral("常规"), 0);
     makeCategoryButton(QStringLiteral("远程桌面"), 1);
-    makeCategoryButton(QStringLiteral("内容感知"), 2);
+    makeCategoryButton(QStringLiteral("AI 场景优化"), 2);
     makeCategoryButton(QStringLiteral("音视频设备"), 3);
     makeCategoryButton(QStringLiteral("文件传输"), 4);
     makeCategoryButton(QStringLiteral("远程粘贴"), 5);
@@ -234,8 +235,23 @@ void SettingsPage::BuildGeneralSettingsPage()
     controls_.autoStartSelector->setObjectName(QStringLiteral("capacitySelector"));
     controls_.autoStartSelector->addItem(QStringLiteral("关闭"), false);
     controls_.autoStartSelector->addItem(QStringLiteral("开启"), true);
-    controls_.autoStartSelector->setCurrentIndex(std::max(
-        0, controls_.autoStartSelector->findData(WindowsAutoStartEnabled())));
+    controls_.autoStartSelector->setEnabled(false);
+    const auto updateAutoStart = [selector = controls_.autoStartSelector](bool enabled) {
+            const QSignalBlocker blocker(selector);
+            selector->setCurrentIndex(std::max(0, selector->findData(enabled)));
+            selector->setEnabled(true);
+        };
+    if (qApp->property("remoteCInitializeAutoStartDefault").toBool()) {
+        InitializeWindowsAutoStartAsync(controls_.autoStartSelector,
+            [this, updateAutoStart](bool enabled, const QString& error) {
+                updateAutoStart(enabled);
+                if (!error.isEmpty()) RemoteCToast::Show(window(),
+                    QStringLiteral("默认开机启动设置失败：%1").arg(error), RemoteCToast::Tone::kError);
+            });
+    } else {
+        // UI and authentication probes must not register real startup tasks.
+        QueryWindowsAutoStartAsync(controls_.autoStartSelector, updateAutoStart);
+    }
     controls_.autoStartSelector->setFixedWidth(kSettingsControlWidth);
     autoStartLayout->addWidget(
         controls_.autoStartSelector, 0, Qt::AlignVCenter);

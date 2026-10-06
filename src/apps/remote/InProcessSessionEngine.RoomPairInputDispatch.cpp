@@ -94,8 +94,23 @@ void InProcessSessionEngine::DispatchRoomPairInputData(
         }
     }
     if (sink) {
-        sink->OnRemoteInput(input.event);
-        cursorMonitor_->SetLastAppliedInputSequence(input.sequence);
+        // Recheck after dispatch preparation: a local safety stop may have
+        // revoked this lease while the packet was waiting for injection.
+        // Serialize injection with ReleaseRoomControl's revoke + ReleaseAll.
+        {
+            std::lock_guard lock(mutex_);
+            if (snapshot_.room.membership != RoomMembershipState::kActive ||
+                snapshot_.room.screenShareState != RoomScreenShareState::kActive ||
+                roomSession_.controlGrantId_ != input.controlGrantId ||
+                snapshot_.room.activeControllerDeviceId != input.senderDeviceId ||
+                snapshot_.room.screenSharerDeviceId != snapshot_.localDeviceId ||
+                remoteInputSink_ != sink) {
+                recordInputDrop();
+                return;
+            }
+            sink->OnRemoteInput(input.event);
+            cursorMonitor_->SetLastAppliedInputSequence(input.sequence);
+        }
         // Wake capture only after SendInput has run, matching Chrome Remote
         // Desktop's input-to-frame ordering instead of racing the injection.
         if (sourceToBoost) {

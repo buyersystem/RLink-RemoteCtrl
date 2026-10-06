@@ -191,6 +191,56 @@ void TestQueueData()
           "closed transport completion reports not-started instead of false send success");
 }
 
+void TestLatestTransientData()
+{
+    FakeSession session;
+    FakeSignaling signaling;
+    ControllerSessionController controller(session, signaling);
+    const std::vector<std::uint8_t> initial{1};
+    Check(controller.QueueLatestData("telemetry", "cursor-position", initial, true),
+          "first transient cursor send accepted");
+    Check(session.WaitEntered(), "blocked transport holds the in-flight cursor");
+    const auto begin = std::chrono::steady_clock::now();
+    bool accepted = true;
+    for (int i = 0; i < 1200; ++i) {
+        const std::vector<std::uint8_t> update{4,
+            static_cast<std::uint8_t>(i >> 8), static_cast<std::uint8_t>(i)};
+        accepted = controller.QueueLatestData("telemetry", "cursor-position", update, true)
+            && accepted;
+    }
+    std::vector<std::uint8_t> other{5, 42};
+    Check(controller.QueueLatestData("telemetry", "receiver-feedback", other, false),
+          "other transient key is not overwritten by cursor positions");
+    other.assign({99});
+    Check(controller.QueueLatestData("other-channel", "cursor-position", initial, true),
+          "transient keys are isolated between channels");
+    Check(controller.QueueData("control-reliable", initial, true),
+          "reliable shape/reset events keep their normal queue");
+    Check(accepted && session.Sends().size() == 1,
+          "1200 cursor positions return without blocking or sending obsolete backlog");
+    std::cout << "TIMING coalesce_1200_cursor_positions "
+              << std::chrono::duration<double, std::milli>(
+                     std::chrono::steady_clock::now() - begin).count() << " ms\n";
+    session.Release();
+    Check(controller.SendData("barrier", initial, true) == SendResult::kSent,
+          "queued transient sends complete before the transport barrier");
+    const auto sends = session.Sends();
+    Check(sends.size() == 6 && sends[1].channel == "telemetry" &&
+          sends[1].payload == std::vector<std::uint8_t>{4, 4, 175},
+          "busy cursor transport sends only in-flight and newest pending position");
+    Check(sends.size() == 6 && sends[2].payload == std::vector<std::uint8_t>{5, 42} &&
+          !sends[2].binary && sends[3].channel == "other-channel" &&
+          sends[4].channel == "control-reliable",
+          "coalescing owns payloads, separates keys and preserves reliable events");
+    const std::vector<std::uint8_t> afterDrain{6};
+    Check(controller.QueueLatestData("telemetry", "cursor-position", afterDrain, true) &&
+          controller.SendData("barrier", initial, true) == SendResult::kSent,
+          "drained cursor key schedules the next update without a lost wakeup");
+    const auto finalSends = session.Sends();
+    Check(finalSends.size() == 8 && finalSends[6].payload == afterDrain,
+          "newest-only queue resumes after it becomes empty");
+}
+
 void TestExecutorCancellation()
 {
     SerialExecutor executor;
@@ -247,6 +297,7 @@ void TestExecutorCancellation()
 int main()
 {
     TestQueueData();
+    TestLatestTransientData();
     TestExecutorCancellation();
     std::cout << "RESULT session_controller_queue " << failures << " failures\n";
     return failures == 0 ? 0 : 1;

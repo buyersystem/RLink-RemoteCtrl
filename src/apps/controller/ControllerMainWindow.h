@@ -51,6 +51,7 @@ class QVBoxLayout;
 namespace remote::controller {
 
 class CameraWindow;
+class ControlledSessionIndicator;
 class FileTransferWindow;
 class DiagnosticsPage;
 class DirectConnectPage;
@@ -115,6 +116,8 @@ private:
     void ShowFromSystemTray();
     void QuitFromSystemTray();
     void DestroyAuxiliaryWindowsForExit();
+    void UpdateControlledSessionIndicator(const SessionEngineSnapshot& snapshot);
+    void EndIndicatedRemoteControl(const QString& identity);
     void CheckForSoftwareUpdates(bool manualRequest);
     void HandleSoftwareUpdateState(
         const update::SoftwareUpdateController::Snapshot& snapshot);
@@ -327,6 +330,7 @@ private:
     bool roomScreenShareViewApprovalPromptPending_ = false;
     QString lastRoomDecisionAlertKey_;
     QPointer<CameraWindow> cameraWindow_;
+    QPointer<ControlledSessionIndicator> controlledSessionWindow_;
     QPointer<FileTransferWindow> fileTransferWindow_;
     QPointer<RemoteSessionWindow> remoteSessionWindow_;
     QPointer<RoomCameraWindow> roomCameraWindow_;

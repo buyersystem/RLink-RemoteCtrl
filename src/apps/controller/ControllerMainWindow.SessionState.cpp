@@ -2,6 +2,7 @@
 // Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd)
 
 #include "ControllerMainWindow.h"
+#include "ControlledSessionIndicator.h"
 #include "ControllerMainWindowSupport.h"
 
 #include <QDateTime>
@@ -44,6 +45,7 @@ void ControllerMainWindow::OnSessionEngineSnapshot(
     }
 
     ApplyEngineInitializationState(snapshot);
+    UpdateControlledSessionIndicator(snapshot);
     UpdateLocalMediaDevicesUi(snapshot);
     UpdateClipboardSession(snapshot);
 

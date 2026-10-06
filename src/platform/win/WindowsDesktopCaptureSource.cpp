@@ -2,6 +2,7 @@
 // Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd)
 
 #include "WindowsDesktopCaptureSource.h"
+#include "DesktopCaptureTiming.h"
 
 #include <Windows.h>
 
@@ -33,8 +34,6 @@ constexpr auto kIdleTransitionDelay = std::chrono::milliseconds(500);
 constexpr auto kLibWebRtcKeepAliveInterval = std::chrono::seconds(2);
 constexpr auto kInputBoostDuration = std::chrono::milliseconds(50);
 constexpr auto kStartupPrimeDuration = std::chrono::seconds(2);
-constexpr auto kCaptureSpinThreshold =
-    std::chrono::microseconds(200);
 
 std::int64_t SteadyNowUs()
 {
@@ -176,11 +175,7 @@ UniqueWinHandle CreateCaptureTimer()
     return UniqueWinHandle(timer);
 }
 
-enum class CaptureWaitResult {
-    kDeadlineReached,
-    kScheduleChanged,
-    kStopped,
-};
+using CaptureWaitResult = desktop_capture_timing::WaitResult;
 
 CaptureWaitResult WaitForLibWebRtcCaptureDeadline(
     HANDLE timer,
@@ -189,67 +184,8 @@ CaptureWaitResult WaitForLibWebRtcCaptureDeadline(
     std::chrono::steady_clock::time_point deadline,
     std::stop_token stopToken)
 {
-    const auto coarseDeadline = deadline - kCaptureSpinThreshold;
-    auto now = std::chrono::steady_clock::now();
-    if (now < coarseDeadline) {
-        const auto remaining100ns =
-            (std::max<std::int64_t>)(
-                1,
-                std::chrono::duration_cast<std::chrono::nanoseconds>(
-                    coarseDeadline - now)
-                        .count() /
-                    100);
-        LARGE_INTEGER dueTime{};
-        dueTime.QuadPart = -remaining100ns;
-        if (timer &&
-            SetWaitableTimerEx(
-                timer, &dueTime, 0, nullptr, nullptr, nullptr, 0)) {
-            const HANDLE waits[] = {
-                stopEvent, scheduleWakeEvent, timer};
-            const DWORD result =
-                WaitForMultipleObjects(3, waits, FALSE, INFINITE);
-            if (result == WAIT_OBJECT_0) {
-                return CaptureWaitResult::kStopped;
-            }
-            if (result == WAIT_OBJECT_0 + 1) {
-                CancelWaitableTimer(timer);
-                return CaptureWaitResult::kScheduleChanged;
-            }
-        } else {
-            const auto remainingMs =
-                (std::max<std::int64_t>)(
-                    1,
-                    std::chrono::duration_cast<std::chrono::milliseconds>(
-                        coarseDeadline - now)
-                        .count());
-            const HANDLE waits[] = {stopEvent, scheduleWakeEvent};
-            const DWORD result = WaitForMultipleObjects(
-                2,
-                waits,
-                FALSE,
-                static_cast<DWORD>((std::min<std::int64_t>)(
-                    remainingMs, MAXDWORD - 1)));
-            if (result == WAIT_OBJECT_0) {
-                return CaptureWaitResult::kStopped;
-            }
-            if (result == WAIT_OBJECT_0 + 1) {
-                return CaptureWaitResult::kScheduleChanged;
-            }
-        }
-    }
-
-    while (!stopToken.stop_requested() &&
-           std::chrono::steady_clock::now() < deadline) {
-        if (scheduleWakeEvent &&
-            WaitForSingleObject(scheduleWakeEvent, 0) ==
-                WAIT_OBJECT_0) {
-            return CaptureWaitResult::kScheduleChanged;
-        }
-        YieldProcessor();
-    }
-    return stopToken.stop_requested()
-        ? CaptureWaitResult::kStopped
-        : CaptureWaitResult::kDeadlineReached;
+    return desktop_capture_timing::WaitForDeadline(
+        timer, stopEvent, scheduleWakeEvent, deadline, stopToken);
 }
 
 struct UpdateBounds {
@@ -557,8 +493,8 @@ bool WindowsDesktopCaptureSource::SetTargetFrameRate(
         framesPerSecond > kMaximumCaptureFrameRate) {
         return false;
     }
-    targetFrameRate_.store(framesPerSecond, std::memory_order_release);
-    SignalCaptureSchedule();
+    if (targetFrameRate_.exchange(framesPerSecond, std::memory_order_acq_rel) != framesPerSecond)
+        SignalCaptureSchedule();
     return true;
 }
 
@@ -1148,37 +1084,37 @@ void WindowsDesktopCaptureSource::CaptureLoop(std::stop_token stopToken)
                     windowHeartbeats = currentHeartbeats;
                 }
 
-                const auto framesPerSecond =
+                auto framesPerSecond =
                     targetFrameRate_.load(
                         std::memory_order_acquire);
-                const auto interval =
-                    std::chrono::microseconds(
-                        1'000'000 /
-                        (std::max)(framesPerSecond, 1u));
                 // Keep an absolute cadence instead of rebuilding the deadline
                 // from the end of every capture. This prevents sub-millisecond
                 // wake-up error from accumulating over the session.
-                nextFrameAt += interval;
                 const auto now =
                     std::chrono::steady_clock::now();
-                if (now - nextFrameAt >= interval) {
-                    // Do not emit a burst of stale catch-up frames after a
-                    // debugger pause or a temporary GPU scheduling stall.
-                    nextFrameAt = now;
-                }
-                const auto waitResult =
-                    WaitForLibWebRtcCaptureDeadline(
+                nextFrameAt = desktop_capture_timing::AdvanceDeadline(
+                    nextFrameAt, startedAt, now, framesPerSecond);
+                bool stopCapture = false;
+                for (;;) {
+                    const auto waitResult = WaitForLibWebRtcCaptureDeadline(
                         captureTimer.get(),
                         stopEvent.get(),
                         scheduleWakeEvent.get(),
                         nextFrameAt,
                         stopToken);
-                if (waitResult == CaptureWaitResult::kStopped) {
-                    break;
+                    if (waitResult == CaptureWaitResult::kStopped ||
+                        waitResult == CaptureWaitResult::kFailed) {
+                        nativeFailed = waitResult == CaptureWaitResult::kFailed;
+                        stopCapture = true;
+                        break;
+                    }
+                    if (waitResult == CaptureWaitResult::kDeadlineReached) break;
+                    const auto revisedFps = targetFrameRate_.load(std::memory_order_acquire);
+                    nextFrameAt = desktop_capture_timing::RetuneDeadline(
+                        nextFrameAt, startedAt, framesPerSecond, revisedFps);
+                    framesPerSecond = revisedFps;
                 }
-                if (waitResult == CaptureWaitResult::kScheduleChanged) {
-                    nextFrameAt = std::chrono::steady_clock::now();
-                }
+                if (stopCapture) break;
             }
             {
                 std::lock_guard lock(mutex_);
@@ -1347,22 +1283,16 @@ void WindowsDesktopCaptureSource::CaptureLoop(std::stop_token stopToken)
             windowChanged = currentChanged;
             windowHeartbeats = currentHeartbeats;
         }
-        const std::uint32_t framesPerSecond =
+        auto framesPerSecond =
             targetFrameRate_.load(std::memory_order_acquire);
-        // Input activity wakes the scheduler immediately, but it must not
-        // silently raise a 30/60 FPS user preference to the encoder's 120 FPS
-        // ceiling. The wake-up reduces phase latency while this interval
-        // remains the hard capture-rate limit.
-        const auto interval = std::chrono::microseconds(
-            1'000'000 / (std::max)(framesPerSecond, 1u));
+        // Input wakes the scheduler to observe refresh requests, but does not
+        // advance the capture deadline at the same user target FPS.
         // Keep the same absolute, high-resolution cadence as the native DXGI
         // path. A repeated one-millisecond sleep loses several capture slots
         // per second at 60 FPS and aliases with desktop presentation timing.
-        nextFrameAt += interval;
         const auto now = std::chrono::steady_clock::now();
-        if (now - nextFrameAt >= interval) {
-            nextFrameAt = now;
-        }
+        nextFrameAt = desktop_capture_timing::AdvanceDeadline(
+            nextFrameAt, startedAt, now, framesPerSecond);
         bool stopCapture = false;
         for (;;) {
             const auto waitResult =
@@ -1376,31 +1306,22 @@ void WindowsDesktopCaptureSource::CaptureLoop(std::stop_token stopToken)
                 stopCapture = true;
                 break;
             }
+            if (waitResult == CaptureWaitResult::kFailed) {
+                SetInitializationFailure("The desktop capture scheduler wait failed.");
+                stopCapture = true;
+                break;
+            }
             if (waitResult ==
                 CaptureWaitResult::kDeadlineReached) {
                 break;
             }
 
-            const auto scheduleNow =
-                std::chrono::steady_clock::now();
-            if (forcedRefreshFramesRemaining_.load(
-                    std::memory_order_acquire)) {
-                nextFrameAt = scheduleNow;
-                break;
-            }
-            const auto revisedInterval = std::chrono::microseconds(
-                1'000'000 /
-                (std::max)(
-                    targetFrameRate_.load(
-                        std::memory_order_acquire),
-                    1u));
-            // A wake-up advances the next deadline but never permits input
-            // messages to exceed the configured target frame rate.
-            nextFrameAt = (std::min)(
-                nextFrameAt, startedAt + revisedInterval);
-            if (nextFrameAt <= scheduleNow) {
-                break;
-            }
+            // Refresh bypasses static-frame suppression at the next capture,
+            // not the user's cadence. Same-rate input wakes keep the phase.
+            const auto revisedFps = targetFrameRate_.load(std::memory_order_acquire);
+            nextFrameAt = desktop_capture_timing::RetuneDeadline(
+                nextFrameAt, startedAt, framesPerSecond, revisedFps);
+            framesPerSecond = revisedFps;
         }
         if (stopCapture) {
             break;

@@ -23,7 +23,7 @@ public:
     struct FrameEncodingOptions {
         std::uint32_t maximumImageDimension =
             media_intelligence::kDefaultVisionApiMaximumImageDimension;
-        int jpegQuality = 60;
+        int jpegQuality = media_intelligence::kDefaultVisionApiJpegQuality;
     };
     using EncodingOptionsProvider =
         std::function<FrameEncodingOptions()>;
@@ -34,7 +34,7 @@ public:
         QString credentialDirectory;
         std::uint32_t maximumImageDimension =
             media_intelligence::kDefaultVisionApiMaximumImageDimension;
-        int jpegQuality = 60;
+        int jpegQuality = media_intelligence::kDefaultVisionApiJpegQuality;
     };
 
     static std::shared_ptr<VisionApiFrameAnalyzer> Create(
@@ -57,6 +57,7 @@ public:
         std::uint64_t sessionToken) noexcept override;
     [[nodiscard]] RemoteVisionFrameAnalyzerSnapshot Snapshot()
         const noexcept override;
+    [[nodiscard]] std::uint64_t MaximumSceneAgeMs() const noexcept override;
 
 private:
     struct Impl;

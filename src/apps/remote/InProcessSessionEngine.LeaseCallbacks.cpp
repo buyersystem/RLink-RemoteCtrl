@@ -427,6 +427,7 @@ void InProcessSessionEngine::OnRoomControlGranted(
         std::lock_guard lock(mutex_);
         if (snapshot_.room.roomId != granted.roomId ||
             granted.grantId.empty() ||
+            roomSession_.locallyRevokedControlGrantIds_.contains(granted.grantId) ||
             (granted.screenSharerDeviceId != snapshot_.localDeviceId &&
              granted.controllerDeviceId != snapshot_.localDeviceId)) {
             return;

@@ -191,12 +191,12 @@ void InProcessSessionEngine::OnLocalCursorObservation(
     std::vector<std::uint8_t> encoded;
     if (!EncodeRemoteCursorMessage(position, &encoded)) return;
     if (directController) {
-        (void)directController->QueueData(
-            std::string(kTelemetryChannel), encoded, true);
+        (void)directController->QueueLatestData(
+            std::string(kTelemetryChannel), "cursor-position", encoded, true);
     }
     for (const auto& pair : roomRecipients) {
-        (void)pair->controller->QueueData(
-            std::string(kTelemetryChannel), encoded, true);
+        (void)pair->controller->QueueLatestData(
+            std::string(kTelemetryChannel), "cursor-position", encoded, true);
     }
 }
 

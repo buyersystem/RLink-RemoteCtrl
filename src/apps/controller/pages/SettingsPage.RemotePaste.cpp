@@ -88,7 +88,7 @@ void SettingsPage::BuildRemotePasteSettingsPage()
 
     const auto [fileLimitRow, fileLimitLayout] = CreateSettingsRow(
         page, QStringLiteral("单次文件粘贴上限"),
-        QStringLiteral("超过上限的文件或目录会被拒绝，避免误传大目录。"));
+        QStringLiteral("限制发送和接收的文件总大小，双方以较小上限为准。"));
     controls_.clipboardLargeFileLimitSelector =
         new RemoteCComboBox(fileLimitRow);
     controls_.clipboardLargeFileLimitSelector->setObjectName(
@@ -106,6 +106,9 @@ void SettingsPage::BuildRemotePasteSettingsPage()
                configuredFileLimitMiB)));
     controls_.clipboardLargeFileLimitSelector->setFixedWidth(
         kSettingsControlWidth);
+    controls_.clipboardLargeFileLimitSelector->setToolTip(QStringLiteral(
+        "本机发送和接收都会检查单次粘贴的全部文件总大小，包含目录内文件。"
+        "双方设置不同时，以较小上限为准；不影响独立的文件传输。"));
     fileLimitLayout->addWidget(
         controls_.clipboardLargeFileLimitSelector, 0, Qt::AlignVCenter);
     layout->addWidget(fileLimitRow);

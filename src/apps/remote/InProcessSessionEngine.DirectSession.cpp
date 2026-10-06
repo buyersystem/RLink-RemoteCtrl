@@ -179,6 +179,10 @@ SessionCommandResult InProcessSessionEngine::Disconnect()
             return Success();
         }
         directSession_.sessionCloseRequested_ = true;
+        if (snapshot_.remoteControlRole == RemoteControlRole::kControlled && remoteInputSink_) {
+            // Local safety stop precedes asynchronous controller teardown.
+            remoteInputSink_->ReleaseAllRemoteInputs();
+        }
         signaling = signaling_.get();
         sessionId = snapshot_.sessionId;
         if (sessionController_) {

@@ -8,6 +8,7 @@
 
 #include <functional>
 #include <memory>
+#include <vector>
 
 #include "src/auth/AuthConfig.h"
 #include "src/auth/AuthTypes.h"
@@ -69,7 +70,9 @@ public:
 private:
     void EnsureLoginWindow();
     void EnsureLoginStatusWindow();
+    void BeginStartupAuthentication();
     void ContinueAuthenticatedStartup();
+    void DispatchAuthCallback(std::function<void()> callback);
     void ShowAccountWindow();
     void ShowMainWindowAfterStartup();
     void CompleteStartupSignedOut();
@@ -96,6 +99,9 @@ private:
         setAccountDeletionResultCallback_;
     bool interactiveLoginRequested_ = false;
     bool startupAuthenticationPending_ = false;
+    bool startupUiReady_ = false;
+    QString startupAuthConfigurationError_;
+    std::vector<std::function<void()>> deferredStartupAuthCallbacks_;
     bool authenticated_ = false;
     bool accountDeletionPending_ = false;
     QString accountLabel_;

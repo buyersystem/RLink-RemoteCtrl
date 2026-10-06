@@ -105,8 +105,8 @@ void DiagnosticsPage::BuildWorkspace()
     makeCategory(QStringLiteral("鼠标与键盘"), 5);
     makeCategory(QStringLiteral("远程粘贴"), 6);
     makeCategory(QStringLiteral("最近错误"), 7);
-    makeCategory(QStringLiteral("视觉分析性能"), 8);
-    makeCategory(QStringLiteral("内容策略观察"), 9);
+    makeCategory(QStringLiteral("场景识别性能"), 8);
+    makeCategory(QStringLiteral("场景优化状态"), 9);
     debugCategoryLayout->addStretch(1);
     debugWorkspace->addWidget(debugCategories, 0, Qt::AlignTop);
 
@@ -336,13 +336,13 @@ void DiagnosticsPage::BuildWorkspace()
     errorLayout->addStretch(1);
 
     auto* visionPerformanceLayout = makeDetail(
-        QStringLiteral("视觉分析性能"),
+        QStringLiteral("场景识别性能"),
         QStringLiteral(
-            "显示实际远控最近一次远程视觉缩略图的处理开销；测试按钮的数据不计入。"));
+            "显示远控过程中最近一次场景识别的图片处理耗时，不包含设置页的测试数据。"));
     addValue(
         visionPerformanceLayout,
         QStringLiteral("visionScaleConvertTime"),
-        QStringLiteral("缩放转换耗时"));
+        QStringLiteral("图片缩放与转换耗时"));
     addValue(
         visionPerformanceLayout,
         QStringLiteral("visionJpegEncodeTime"),
@@ -354,31 +354,31 @@ void DiagnosticsPage::BuildWorkspace()
     addValue(
         visionPerformanceLayout,
         QStringLiteral("visionReturnedScene"),
-        QStringLiteral("最近返回场景"));
+        QStringLiteral("最近识别结果"));
     addValue(
         visionPerformanceLayout,
         QStringLiteral("visionReturnedConfidence"),
-        QStringLiteral("返回置信度"));
+        QStringLiteral("识别置信度"));
     addValue(visionPerformanceLayout, QStringLiteral("visionAcceptedScene"),
-             QStringLiteral("当前采用场景"));
+             QStringLiteral("当前场景"));
     addValue(visionPerformanceLayout, QStringLiteral("visionResultAge"),
-             QStringLiteral("最近结果年龄"));
+             QStringLiteral("距上次识别"));
     auto* visionResultHint = new QLabel(QStringLiteral(
-        "显示最近一次成功返回的分类，包括尚未通过稳定性过滤的结果。"));
+        "显示最近一次识别结果，该结果不一定已被采用。"));
     visionResultHint->setWordWrap(true);
     visionPerformanceLayout->addWidget(visionResultHint);
     visionPerformanceLayout->addStretch(1);
 
     auto* policyLayout = makeDetail(
-        QStringLiteral("内容策略观察"),
-        QStringLiteral("网络受限时按稳定场景分配码率、分辨率和发送帧率；区分候选与实际应用参数。"));
+        QStringLiteral("场景优化状态"),
+        QStringLiteral("根据识别到的场景调整画质与帧率取舍，不改变采集帧率和用户设置。"));
     policyCardsWidget_ = new DiagnosticsCardsWidget(policyLayout->parentWidget());
     policyCardsWidget_->setObjectName(QStringLiteral("contentPolicyCards"));
     static_cast<DiagnosticsCardsWidget*>(policyCardsWidget_)->SetSections({},
-        QStringLiteral("暂无策略数据\n开启内容感知并共享屏幕后，按连接显示场景与执行状态。"));
+        QStringLiteral("暂无场景优化数据\n开启 AI 场景优化并共享屏幕后，可查看每个连接的场景和取舍设置。"));
     policyLayout->addWidget(policyCardsWidget_);
     auto* policyHint = new QLabel(QStringLiteral(
-        "网络无明显压力时保持当前规格。参考码率不是强制需求；受限候选经连续窗口确认后才会应用。"));
+        "场景优化只调整网络波动时的画质与帧率取舍。关闭后使用手动设置，原有网络控制保持不变。"));
     policyHint->setWordWrap(true);
     policyHint->setProperty("muted", true);
     policyLayout->addWidget(policyHint);

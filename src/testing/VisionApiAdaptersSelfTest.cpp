@@ -324,6 +324,19 @@ int main(int argc, char** argv)
         return uploadAllowed;
     };
     hostOptions.credentialDirectory = secretDirectory.path();
+    // Sampling cadence changes the grace period, without refreshing the actual
+    // classification timestamp or issuing any request in this check.
+    bool allIntervalsHaveGrace = true;
+    for (const auto [interval, expectedAge] : {
+        std::pair{500u, 15000ull}, {1000u, 15000ull}, {2000u, 15000ull},
+        {5000u, 17000ull}, {10000u, 32000ull}, {20000u, 62000ull},
+        {30000u, 92000ull}, {60000u, 182000ull}}) {
+        auto ageConfig = analyzerConfig;
+        ageConfig.minimumRequestIntervalMs = interval;
+        auto ageAnalyzer = remote::app::VisionApiFrameAnalyzer::Create(ageConfig, hostOptions, &error);
+        allIntervalsHaveGrace &= ageAnalyzer && ageAnalyzer->MaximumSceneAgeMs() == expectedAge;
+    }
+    passed &= Check(allIntervalsHaveGrace, "ALL_SAMPLING_INTERVALS_USE_MODEL_RESULT_GRACE");
     auto analyzer = remote::app::VisionApiFrameAnalyzer::Create(
         analyzerConfig, std::move(hostOptions), &error);
     passed &= Check(

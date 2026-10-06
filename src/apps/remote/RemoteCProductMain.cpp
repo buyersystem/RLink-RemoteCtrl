@@ -64,6 +64,7 @@
 #include "ScreenShareCoordinator.h"
 #include "EncoderBenchmarkProfileCache.h"
 #include "src/platform/win/WindowsDesktopCaptureSource.h"
+#include "src/platform/win/DesktopCaptureTiming.h"
 #include "src/platform/win/WindowsHardwareFingerprint.h"
 #include "src/platform/win/MfD3D11H264DecoderBenchmark.h"
 #include "src/platform/win/FfmpegD3D11H264Decoder.h"
@@ -886,7 +887,7 @@ remote::DesktopCaptureImplementation ConfiguredDesktopCaptureImplementation()
 {
     const QString configured = QSettings().value(
         QStringLiteral("media/desktopCaptureBackend"),
-        QStringLiteral("native_dxgi")).toString();
+        QStringLiteral("libwebrtc")).toString();
     if (configured == QStringLiteral("libwebrtc")) {
         return remote::DesktopCaptureImplementation::kLibWebRtc;
     }
@@ -1032,7 +1033,7 @@ std::unique_ptr<remote::app::InProcessSessionEngine> CreateSessionEngine(
                                     current.value(
                                         QStringLiteral(
                                             "media/visionApiJpegQuality"),
-                                        60).toInt(),
+                                        remote::media_intelligence::kDefaultVisionApiJpegQuality).toInt(),
                                     30,
                                     90)};
                     },
@@ -1047,7 +1048,7 @@ std::unique_ptr<remote::app::InProcessSessionEngine> CreateSessionEngine(
                     .jpegQuality = std::clamp(
                         mediaSettings.value(
                             QStringLiteral("media/visionApiJpegQuality"),
-                            60).toInt(),
+                            remote::media_intelligence::kDefaultVisionApiJpegQuality).toInt(),
                         30,
                         90),
                 });
@@ -1065,7 +1066,7 @@ std::unique_ptr<remote::app::InProcessSessionEngine> CreateSessionEngine(
         QString::fromStdString(hardwareFingerprint);
     const QString configuredCaptureBackend = mediaSettings.value(
         QStringLiteral("media/desktopCaptureBackend"),
-        QStringLiteral("native_dxgi")).toString();
+        QStringLiteral("libwebrtc")).toString();
     const QJsonObject encoderProfile =
         remote::app::LoadEncoderBenchmarkProfile(
             mediaSettings, currentFingerprint, configuredCaptureBackend,
@@ -1507,6 +1508,18 @@ int RunScreenShareCoordinatorSelfTest()
 int RunAuthCoordinatorSelfTest()
 {
     QTemporaryDir temporaryDirectory;
+    if (!temporaryDirectory.isValid()) {
+        QTextStream(stdout) << "AUTH_COORDINATOR_SELF_TEST=FAIL" << Qt::endl;
+        return 1;
+    }
+    // This self-test exits the process afterwards. Isolate both scopes before
+    // any coordinator/UI settings access, especially the failure callback that
+    // removes persisted account labels.
+    QSettings::setDefaultFormat(QSettings::IniFormat);
+    QSettings::setPath(QSettings::IniFormat, QSettings::UserScope,
+                      temporaryDirectory.path());
+    QSettings::setPath(QSettings::IniFormat, QSettings::SystemScope,
+                      temporaryDirectory.path());
     int mainWindowFactoryCalls = 0;
     remote::app::RemoteCApplicationCoordinator::Options options;
     options.authenticationRequired = true;
@@ -1556,8 +1569,114 @@ int RunAuthCoordinatorSelfTest()
         previousQuitOnLastWindowClosed);
     const bool mainWindowCreatedAfterStartupYield =
         mainWindowFactoryCalls == 1;
+
+    class StartupTokenStore final : public remote::auth::TokenStore {
+    public:
+        StartupTokenStore(remote::auth::TokenStoreLoadStatus status,
+                          int* loadCalls)
+            : status_(status), loadCalls_(loadCalls) {}
+
+        remote::auth::TokenStoreLoadStatus Load(
+            remote::auth::StoredRefreshToken*, QString* error) override
+        {
+            ++*loadCalls_;
+            if (status_ == remote::auth::TokenStoreLoadStatus::kError && error) {
+                *error = QStringLiteral("expected credential read failure");
+            }
+            return status_;
+        }
+        bool Save(const remote::auth::StoredRefreshToken&, QString*) override
+        {
+            return false;
+        }
+        bool Clear(QString*) override { return true; }
+
+    private:
+        remote::auth::TokenStoreLoadStatus status_;
+        int* loadCalls_;
+    };
+
+    const auto verifyEarlyRestore = [](
+        remote::auth::TokenStoreLoadStatus status) {
+        QSettings settings;
+        settings.setValue(QStringLiteral("auth/accountLabel"),
+                          QStringLiteral("isolated self-test account"));
+        settings.sync();
+        int loadCalls = 0;
+        int factoryCalls = 0;
+        int tokenUpdates = 0;
+        bool storeLoadedBeforeFactory = false;
+        remote::controller::ControllerMainWindow* mainWindow = nullptr;
+        remote::app::InProcessSessionEngine* engine = nullptr;
+        remote::app::RemoteCApplicationCoordinator::Options restoreOptions;
+        restoreOptions.authenticationRequired = true;
+        restoreOptions.authConfig.issuer = QUrl(
+            QStringLiteral("https://example.invalid"));
+        restoreOptions.authConfig.clientId = QStringLiteral("selftest");
+        remote::app::RemoteCApplicationCoordinator restoreCoordinator(
+            std::move(restoreOptions),
+            [&](const QString& token) {
+                ++factoryCalls;
+                storeLoadedBeforeFactory = loadCalls == 1 && token.isEmpty();
+                auto sessionEngine =
+                    std::make_unique<remote::app::InProcessSessionEngine>();
+                engine = sessionEngine.get();
+                remote::app::RemoteCApplicationCoordinator::MainWindowSession
+                    session;
+                session.window = std::make_unique<
+                    remote::controller::ControllerMainWindow>(
+                        std::move(sessionEngine), false);
+                mainWindow = session.window.get();
+                session.updateAccessToken = [&](const QString&) {
+                    ++tokenUpdates;
+                    return true;
+                };
+                return session;
+            },
+            std::make_unique<StartupTokenStore>(status, &loadCalls));
+        const bool restoreStarted = restoreCoordinator.Start();
+        const bool restorationPrecedesUi = loadCalls == 1 && factoryCalls == 0;
+        const bool synchronousFailureDeferred = settings.contains(
+            QStringLiteral("auth/accountLabel"));
+        QEventLoop restoreLoop;
+        QTimer::singleShot(150, &restoreLoop, &QEventLoop::quit);
+        restoreLoop.exec();
+
+        QWidget* restoredLogin = mainWindow
+            ? mainWindow->findChild<QWidget*>(QStringLiteral("loginWindow"))
+            : nullptr;
+        QLabel* loginStatus = restoredLogin
+            ? restoredLogin->findChild<QLabel*>(QStringLiteral("loginStatus"))
+            : nullptr;
+        const bool errorExpected =
+            status == remote::auth::TokenStoreLoadStatus::kError;
+        const bool correctLoginState = loginStatus &&
+            loginStatus->property("tone").toString() ==
+                (errorExpected ? QStringLiteral("error")
+                               : QStringLiteral("ready")) &&
+            (!errorExpected || loginStatus->text() ==
+                QStringLiteral("expected credential read failure"));
+        const bool accountSettingsCorrect =
+            settings.contains(QStringLiteral("auth/accountLabel")) !=
+                errorExpected;
+        // Both fake stores terminate before OIDC discovery, so no network
+        // request or token validation can occur. The real engine stays stopped.
+        const bool engineStopped = engine &&
+            engine->Snapshot().state == remote::SessionEngineState::kStopped &&
+            tokenUpdates == 0;
+        return restoreStarted && restorationPrecedesUi &&
+            synchronousFailureDeferred && storeLoadedBeforeFactory &&
+            factoryCalls == 1 && mainWindow && mainWindow->isVisible() &&
+            restoredLogin && restoredLogin->isVisible() && correctLoginState &&
+            accountSettingsCorrect && engineStopped;
+    };
+    const bool missingCredentialsPassed = verifyEarlyRestore(
+        remote::auth::TokenStoreLoadStatus::kNotFound);
+    const bool unreadableCredentialsPassed = verifyEarlyRestore(
+        remote::auth::TokenStoreLoadStatus::kError);
     const bool passed = started && loginWindowCreated &&
-        mainWindowCreatedAfterStartupYield && loginWindowAcceptsApplicationExit;
+        mainWindowCreatedAfterStartupYield && loginWindowAcceptsApplicationExit &&
+        missingCredentialsPassed && unreadableCredentialsPassed;
     QTextStream output(stdout);
     output << "AUTH_LOGIN_WINDOW="
            << (loginWindowCreated ? "PASS" : "FAIL") << Qt::endl;
@@ -1567,6 +1686,10 @@ int RunAuthCoordinatorSelfTest()
     output << "AUTH_LOGIN_WINDOW_ACCEPTS_APP_EXIT="
            << (loginWindowAcceptsApplicationExit ? "PASS" : "FAIL")
            << Qt::endl;
+    output << "AUTH_RESTORE_BEFORE_UI_MISSING_CREDENTIALS="
+           << (missingCredentialsPassed ? "PASS" : "FAIL") << Qt::endl;
+    output << "AUTH_RESTORE_BEFORE_UI_UNREADABLE_CREDENTIALS="
+           << (unreadableCredentialsPassed ? "PASS" : "FAIL") << Qt::endl;
     output << "AUTH_COORDINATOR_SELF_TEST="
            << (passed ? "PASS" : "FAIL") << Qt::endl;
     return passed ? 0 : 1;
@@ -2001,6 +2124,8 @@ int main(int argc, char* argv[])
         const bool ready = source->StartCapture();
         bool activityReady = false;
         bool deliveryReady = false;
+        const bool wakeStress = application.arguments().contains(
+            QStringLiteral("--desktop-capture-wake-stress"));
         QTextStream output(stdout);
         output << "DESKTOP_CAPTURE_FIRST_FRAME="
                << (ready ? "YES" : "NO") << Qt::endl;
@@ -2036,7 +2161,42 @@ int main(int argc, char* argv[])
             const auto deliveredBefore = smokeSink.frames.load();
             const auto dispatchBefore = source->CaptureRuntimeStats().totalDeliveredFrames;
             const auto deliveryStarted = std::chrono::steady_clock::now();
+            std::atomic<bool> wakeStressHealthy{true};
+            std::atomic<std::uint64_t> wakeRequests{0};
+            std::jthread wakeStorm;
+            if (wakeStress) {
+                wakeStorm = std::jthread([&](std::stop_token token) {
+                    const auto timer = CreateWaitableTimerExW(nullptr, nullptr,
+                        CREATE_WAITABLE_TIMER_HIGH_RESOLUTION, TIMER_MODIFY_STATE | SYNCHRONIZE);
+                    const auto stop = CreateEventW(nullptr, TRUE, FALSE, nullptr);
+                    const auto wake = CreateEventW(nullptr, FALSE, FALSE, nullptr);
+                    {
+                        std::stop_callback cancel(token, [stop] { if (stop) SetEvent(stop); });
+                        wakeStressHealthy = timer && stop && wake;
+                        while (wakeStressHealthy && !token.stop_requested()) {
+                            // Refresh/input flags must not override the capture period,
+                            // including repeated writes of the same user target.
+                            source->SetTargetFrameRate(testFps);
+                            source->NotifyRemoteInputActivity();
+                            source->RequestRefreshFrame();
+                            ++wakeRequests;
+                            const auto result = remote::desktop_capture_timing::WaitForDeadline(
+                                timer, stop, wake, std::chrono::steady_clock::now() +
+                                    std::chrono::milliseconds(2), token);
+                            if (result == remote::desktop_capture_timing::WaitResult::kFailed)
+                                wakeStressHealthy = false;
+                        }
+                    }
+                    if (wake) CloseHandle(wake);
+                    if (stop) CloseHandle(stop);
+                    if (timer) CloseHandle(timer);
+                });
+            }
             std::this_thread::sleep_for(std::chrono::seconds(3));
+            if (wakeStorm.joinable()) {
+                wakeStorm.request_stop();
+                wakeStorm.join();
+            }
             const double duration = std::chrono::duration<double>(
                 std::chrono::steady_clock::now() - deliveryStarted).count();
             const auto sinkFrames = smokeSink.frames.load() - deliveredBefore;
@@ -2051,6 +2211,13 @@ int main(int argc, char* argv[])
                 sinkFrames <= dispatchFrames + 1 && sinkFps <= testFps * 1.10;
             if (implementation == remote::DesktopCaptureImplementation::kNativeDxgi)
                 deliveryReady = deliveryReady && sinkFps >= testFps * .90;
+            if (wakeStress) {
+                deliveryReady = deliveryReady && wakeStressHealthy && wakeRequests > 100 &&
+                    dispatchFps <= testFps + 1.0 && sinkFps <= testFps + 1.0;
+                output << "DESKTOP_CAPTURE_STRESS_WAKE_REQUESTS=" << wakeRequests.load() << Qt::endl;
+                output << "DESKTOP_CAPTURE_WAKE_STORM_RESPECTS_TARGET="
+                       << (deliveryReady ? "PASS" : "FAIL") << Qt::endl;
+            }
             output << "DESKTOP_CAPTURE_USER_TARGET_FPS=" << testFps << Qt::endl;
             output << "DESKTOP_CAPTURE_DISPATCH_INPUT_FPS=" << QString::number(dispatchFps, 'f', 3) << Qt::endl;
             output << "DESKTOP_CAPTURE_ACTUAL_SINK_FPS=" << QString::number(sinkFps, 'f', 3) << Qt::endl;
@@ -2328,15 +2495,15 @@ int main(int argc, char* argv[])
     }
 
     if (application.arguments().contains(QStringLiteral("--content-policy-layout-preview"))) {
-        // Render synthetic diagnostics without starting a connection or changing settings.
+        // Render synthetic coefficient diagnostics without connections or settings writes.
         using namespace remote::controller;
         using namespace remote::controller::detail;
         DiagnosticsPage page;
         page.setAttribute(Qt::WA_DontShowOnScreen, true);
-        page.resize(1340, 1080);
+        page.resize(1100, 850);
         auto* cards = static_cast<DiagnosticsCardsWidget*>(page.PolicyCardsWidget());
         for (auto* button : page.findChildren<QPushButton*>()) {
-            if (button->text() == QStringLiteral("内容策略观察")) button->click();
+            if (button->text() == QStringLiteral("场景优化状态")) button->click();
         }
         remote::RtpStreamStatsSnapshot stream;
         stream.statsId = "outbound-current";
@@ -2347,47 +2514,18 @@ int main(int argc, char* argv[])
         stream.sampleWindowMs = 1000;
         stream.bitrateBps = 12'000'000;
         stream.bytes = 100;
-        stream.contentScene = "web_app";
-        stream.contentAnalyzerBackend = "vision_api";
         stream.frameWidth = 1920;
         stream.frameHeight = 1080;
         stream.encodedFramesPerSecond = 59.8;
-        stream.configuredMaxFrameRate = 60;
-        stream.effectiveNetworkFrameRate = 60;
-        stream.configuredMaxBitrateBps = 18'662'400;
-        stream.userVideoBitrateBppHundredths = 15;
-        stream.userVideoBitrateLimitBps = 18'662'400;
-        stream.windowQpAvailable = true;
-        stream.windowQp = 24;
-        stream.contentQualityMetricAvailable = stream.contentQualityVerified = true;
-        stream.contentProcessingEvidenceAvailable = true;
-        stream.contentProcessingHealthy = false;
-        stream.contentPolicyShadow = {.observed = true, .hasRecommendation = true,
-            .estimatedFeasible = true, .modelReference = true, .width = 1920,
-            .height = 1080, .senderMaxFps = 60, .estimatedSafeVideoBudgetBps = 18'050'000,
-            .requiredVideoBitrateBps = 21'460'000, .desiredVideoBitrateBps = 18'662'400,
-            .senderMaxBitrateBps = 18'662'400, .reason = "healthy_hold"};
-        stream.contentPolicyExecution.observed = true;
-        stream.contentPolicyExecution.status = "healthy_hold";
-        stream.contentPolicyExecution.networkStatus = "normal";
-        stream.contentPolicyExecution.userSpecificationVerifiedBitrateBps = 12'500'000;
-        stream.googCc.controllerObserved = stream.googCc.delayObserved = true;
-        stream.googCc.feedbackFresh = true;
-        stream.googCc.delayState = "normal";
-        stream.googCc.feedbackAtMs = 1000;
-        stream.googCc.feedbackAgeMs = 180;
-        stream.googCc.targetRateBps = stream.googCc.effectiveTargetRateBps = 19'000'000;
-        stream.googCc.roundTripTimeMs = 25;
-        stream.googCc.lossPercent = 0.03;
-        stream.receiverFeedbackAvailable = true;
-        stream.receiverFeedbackAgeMs = 293;
-        stream.receiverFeedbackWidth = 1920;
-        stream.receiverFeedbackHeight = 1080;
-        stream.receiverFeedbackDecodedFrames = 60;
-        stream.receiverFeedbackDecodeTimeAvailable = true;
-        stream.receiverFeedbackDecodeTimeMs = 0.53;
-        stream.receiverFeedbackProcessingTimeAvailable = true;
-        stream.receiverFeedbackProcessingTimeMs = 9.22;
+        stream.sceneQualitySmoothing.enabled = true;
+        stream.sceneQualitySmoothing.observed = true;
+        stream.sceneQualitySmoothing.scene = "web_app";
+        stream.sceneQualitySmoothing.minimumCoefficient = 0.35;
+        stream.sceneQualitySmoothing.maximumCoefficient = 0.65;
+        stream.sceneQualitySmoothing.targetCoefficient = 0.50;
+        stream.sceneQualitySmoothing.currentCoefficient = 0.50;
+        stream.sceneQualitySmoothing.manualCoefficientHundredths = 50;
+        stream.sceneQualitySmoothing.status = "已应用场景推荐设置";
         const auto selected = MakeContentPolicySections("peer-a", "916955702", {stream});
         auto inactive = stream;
         inactive.statsId = "outbound-inactive";
@@ -2397,6 +2535,7 @@ int main(int argc, char* argv[])
         inactive.frameWidth = 640;
         inactive.frameHeight = 360;
         inactive.bytes = 1'000'000;
+        inactive.sceneQualitySmoothing.currentCoefficient = 0.01;
         auto inbound = stream;
         inbound.statsId = "inbound-mirror";
         inbound.direction = remote::RtpStreamDirection::kInbound;
@@ -2407,16 +2546,18 @@ int main(int argc, char* argv[])
         auto audio = stream;
         audio.statsId = "outbound-audio";
         audio.kind = "audio";
-        auto duplicate = MakeContentPolicySections("peer-a", "916955702",
+        const auto duplicate = MakeContentPolicySections("peer-a", "916955702",
             {inactive, inbound, repair, audio, stream});
         auto noDimensions = stream;
         noDimensions.statsId = "outbound-missing-size";
         noDimensions.frameWidth = noDimensions.frameHeight = 0;
         noDimensions.bytes = 3'000'000;
+        noDimensions.sceneQualitySmoothing.currentCoefficient = 0.02;
         auto smallerCounter = stream;
         smallerCounter.statsId = "outbound-other-primary";
         smallerCounter.bytes = 99;
         smallerCounter.encodedFramesPerSecond = 25;
+        smallerCounter.sceneQualitySmoothing.currentCoefficient = 0.03;
         const auto qualified = MakeContentPolicySections("peer-a", "916955702",
             {noDimensions, smallerCounter, stream});
         auto secondSlot = stream;
@@ -2433,57 +2574,55 @@ int main(int argc, char* argv[])
             distinctSlots[0].key != distinctSlots[1].key && stable.size() == 1 &&
             stable[0].key == selected[0].key && otherPeer.size() == 1 &&
             otherPeer[0].key != selected[0].key;
-        auto missingUserSettings = stream;
-        missingUserSettings.userVideoBitrateBppHundredths = 0;
-        missingUserSettings.userVideoBitrateLimitBps = 0;
-        const auto missingCopy = ContentPolicyCopyText(
-            MakeContentPolicySections("peer-a", "916955702", {missingUserSettings}));
-        const bool userCapPassed = copyText.contains(QStringLiteral("用户视频系数：0.15")) &&
-            copyText.contains(QStringLiteral("用户目标帧率：60 FPS")) &&
-            copyText.contains(QStringLiteral("用户视频总上限：%1").arg(FormatBitrate(18'662'400))) &&
-            missingCopy.contains(QStringLiteral("用户视频系数：未报告")) &&
-            missingCopy.contains(QStringLiteral("用户视频总上限：未报告"));
-        auto confirming = stream;
-        confirming.contentPolicyExecution.status = "observing";
-        confirming.contentPolicyExecution.networkPressure = true;
-        confirming.contentPolicyExecution.networkStatus = "episode_retained";
-        confirming.contentPolicyExecution.confirmationBlock = "awaiting_stable_time";
-        confirming.contentPolicyExecution.confirmObservedSamples = 2;
-        confirming.contentPolicyExecution.confirmRequiredSamples = 3;
-        confirming.contentPolicyExecution.confirmationRemainingMs = 1000;
-        const auto confirmationCopy = ContentPolicyCopyText(
-            MakeContentPolicySections("peer-a", "916955702", {confirming}));
-        const bool timingCopyPassed = confirmationCopy.contains(QStringLiteral("当前负载已稳定，仍按受限预算运行")) &&
-            !confirmationCopy.contains(QStringLiteral("拥塞已缓解")) &&
-            confirmationCopy.contains(QStringLiteral("连续确认窗口：2 / 3")) &&
-            confirmationCopy.contains(QStringLiteral("内部确认剩余时间：1.0 秒（不含等待网络预算）"));
-        auto emergency = confirming;
-        emergency.contentPolicyShadow.reason = "emergency_network_reduction";
-        emergency.contentPolicyShadow.estimatedFeasible = false;
-        emergency.contentPolicyExecution.status = "observing_emergency";
-        const auto emergencyCopy = ContentPolicyCopyText(
-            MakeContentPolicySections("peer-a", "916955702", {emergency}));
-        const bool emergencyCopyPassed = emergencyCopy.contains(QStringLiteral("正在确认按场景逐步降级")) &&
-            emergencyCopy.contains(QStringLiteral("当前预算仍不足以满足参考画质")) &&
-            !emergencyCopy.contains(QStringLiteral("候选符合估算预算"));
-        auto restoring = emergency;
-        restoring.contentPolicyShadow.reason = "user_specification_restore";
-        restoring.contentPolicyExecution.status = "observing_user_restore";
-        const auto restoreCopy = ContentPolicyCopyText(
-            MakeContentPolicySections("peer-a", "916955702", {restoring}));
-        const bool restoreCopyPassed = restoreCopy.contains(QStringLiteral("正在确认恢复用户原规格")) &&
-            restoreCopy.contains(QStringLiteral("参考画质仍待验证")) &&
-            !restoreCopy.contains(QStringLiteral("候选符合估算预算"));
-        QTextStream(stdout) << "CONTENT_POLICY_PER_PEER_SLOT_SELECTION=" <<
+        const bool singleCardPassed = selected.size() == 1 && selected[0].cards.size() == 1 &&
+            copyText.contains(QStringLiteral("当前取舍系数：0.50")) &&
+            copyText.contains(QStringLiteral("场景推荐系数：0.50")) &&
+            copyText.contains(QStringLiteral("场景推荐范围：0.35 ～ 0.65")) &&
+            copyText.contains(QStringLiteral("手动设置值：0.50")) &&
+            !copyText.contains(QStringLiteral("候选规格")) &&
+            !copyText.contains(QStringLiteral("码率预算")) &&
+            !copyText.contains(QStringLiteral("GoogCC 网络判断")) &&
+            !copyText.contains(QStringLiteral("质量门槛"));
+        auto transitioning = stream;
+        transitioning.sceneQualitySmoothing.scene = "code_terminal";
+        transitioning.sceneQualitySmoothing.minimumCoefficient = 0.15;
+        transitioning.sceneQualitySmoothing.maximumCoefficient = 0.35;
+        transitioning.sceneQualitySmoothing.targetCoefficient = 0.25;
+        transitioning.sceneQualitySmoothing.currentCoefficient = 0.38;
+        transitioning.sceneQualitySmoothing.remainingMs = 500;
+        transitioning.sceneQualitySmoothing.transitioning = true;
+        transitioning.sceneQualitySmoothing.status = "正在调整取舍";
+        const auto transitionText = ContentPolicyCopyText(
+            MakeContentPolicySections("peer-a", "916955702", {transitioning}));
+        const bool transitionPassed = transitionText.contains(QStringLiteral("当前场景：编程与终端")) &&
+            transitionText.contains(QStringLiteral("当前取舍系数：0.38")) &&
+            transitionText.contains(QStringLiteral("场景推荐系数：0.25")) &&
+            transitionText.contains(QStringLiteral("调整剩余时间：0.50 秒"));
+        auto waiting = stream;
+        waiting.sceneQualitySmoothing.observed = false;
+        waiting.sceneQualitySmoothing.scene.clear();
+        waiting.sceneQualitySmoothing.status.clear();
+        const auto waitingText = ContentPolicyCopyText(
+            MakeContentPolicySections("peer-a", "916955702", {waiting}));
+        const bool waitingPassed = waitingText.contains(QStringLiteral("当前场景：尚未确认")) &&
+            waitingText.contains(QStringLiteral("场景推荐系数：尚未确定")) &&
+            waitingText.contains(QStringLiteral("场景推荐范围：尚未确定")) &&
+            waitingText.contains(QStringLiteral("等待场景识别，保持当前设置"));
+        auto disabled = waiting;
+        disabled.sceneQualitySmoothing.enabled = false;
+        const bool disabledPassed = MakeContentPolicySections("peer-a", "916955702", {disabled}).empty() &&
+            ContentPolicyCopyText({MakeContentPolicySection("disabled", "916955702", disabled)})
+                .contains(QStringLiteral("AI 场景优化已关闭，使用手动设置"));
+        QTextStream(stdout) << "SCENE_SMOOTHING_PER_PEER_SLOT_SELECTION=" <<
             (selectionPassed ? "PASS" : "FAIL") << Qt::endl;
-        QTextStream(stdout) << "CONTENT_POLICY_USER_BPP_CAP_DIAGNOSTICS=" <<
-            (userCapPassed ? "PASS" : "FAIL") << Qt::endl;
-        QTextStream(stdout) << "CONTENT_POLICY_CONFIRMATION_AND_LIMITED_QUEUE_TEXT=" <<
-            (timingCopyPassed ? "PASS" : "FAIL") << Qt::endl;
-        QTextStream(stdout) << "CONTENT_POLICY_EMERGENCY_QUALITY_TEXT=" <<
-            (emergencyCopyPassed ? "PASS" : "FAIL") << Qt::endl;
-        QTextStream(stdout) << "CONTENT_POLICY_USER_RESTORE_QUALITY_TEXT=" <<
-            (restoreCopyPassed ? "PASS" : "FAIL") << Qt::endl;
+        QTextStream(stdout) << "SCENE_SMOOTHING_SINGLE_CARD=" <<
+            (singleCardPassed ? "PASS" : "FAIL") << Qt::endl;
+        QTextStream(stdout) << "SCENE_SMOOTHING_TRANSITION_DIAGNOSTICS=" <<
+            (transitionPassed ? "PASS" : "FAIL") << Qt::endl;
+        QTextStream(stdout) << "SCENE_SMOOTHING_UNKNOWN_SCENE_DIAGNOSTICS=" <<
+            (waitingPassed ? "PASS" : "FAIL") << Qt::endl;
+        QTextStream(stdout) << "SCENE_SMOOTHING_DISABLED_DIAGNOSTICS=" <<
+            (disabledPassed ? "PASS" : "FAIL") << Qt::endl;
         cards->SetSections({MakeContentPolicySection("preview", "916955702", stream)}, {});
         page.show();
         bool saved = true;
@@ -2495,70 +2634,14 @@ int main(int argc, char* argv[])
         };
         saved &= capture("light", false);
         saved &= capture("dark", true);
-        // Detailed measurements remain available in collapsed reference cards.
-        for (auto* button : cards->findChildren<QToolButton*>()) {
-            if (button->text() == QStringLiteral("质量与耗时参考") ||
-                button->text() == QStringLiteral("网络测量参考") ||
-                button->text() == QStringLiteral("接收端反馈")) button->setChecked(true);
-        }
-        page.resize(1080, 1400);
-        saved &= capture("details", true);
-        page.verticalScrollBar()->setValue(page.verticalScrollBar()->maximum());
-        saved &= capture("feedback", true);
-        page.verticalScrollBar()->setValue(0);
-        stream.contentPolicyShadow.width = 1920;
-        stream.contentPolicyShadow.height = 1080;
-        stream.contentPolicyShadow.senderMaxFps = 20;
-        stream.contentPolicyShadow.reason = "protect_resolution";
-        stream.contentPolicyExecution.status = "observing";
-        stream.contentPolicyExecution.confirmationBlock = "awaiting_samples";
-        stream.contentPolicyExecution.confirmObservedSamples = 1;
-        stream.contentPolicyExecution.confirmRequiredSamples = 2;
-        stream.contentPolicyExecution.confirmationRemainingMs = 500;
-        stream.contentPolicyExecution.networkPressure = true;
-        stream.contentPolicyExecution.networkStatus = "delay_and_congestion_window";
-        stream.contentPolicyExecution.networkTrigger = "delay_and_congestion_window";
-        stream.googCc.delayState = "overuse";
-        stream.googCc.congestionWindowReduction = 0.12;
-        stream.googCc.targetRateBps = 12'000'000;
-        stream.googCc.effectiveTargetRateBps = 10'560'000;
-        stream.contentPolicyShadow.estimatedSafeVideoBudgetBps = 10'032'000;
-        stream.contentPolicyShadow.requiredVideoBitrateBps = 7'153'920;
-        stream.contentPolicyShadow.desiredVideoBitrateBps = 10'032'000;
-        stream.contentPolicyShadow.senderMaxBitrateBps = 10'032'000;
-        cards->SetSections({MakeContentPolicySection("preview", "916955702", stream)}, {});
-        page.resize(1080, 1000);
-        saved &= capture("weak-network", false);
-        stream.contentPolicyExecution.networkStatus = "episode_retained";
-        stream.googCc.delayState = "normal";
-        stream.googCc.congestionWindowReduction = 0;
-        stream.googCc.targetRateBps = stream.googCc.effectiveTargetRateBps = 10'000'000;
-        stream.effectiveNetworkFrameRate = 20;
-        stream.encodedFramesPerSecond = 20;
-        stream.configuredMaxBitrateBps = 9'500'000;
-        stream.contentPolicyShadow.estimatedSafeVideoBudgetBps = 9'500'000;
-        stream.contentPolicyShadow.desiredVideoBitrateBps = 9'500'000;
-        stream.contentPolicyShadow.senderMaxBitrateBps = 9'500'000;
-        cards->SetSections({MakeContentPolicySection("preview", "916955702", stream)}, {});
-        saved &= capture("low-budget-normal", true);
-        stream.contentPolicyExecution.networkStatus = "stale_feedback";
-        stream.contentPolicyExecution.status = "awaiting_network_evidence";
-        stream.contentPolicyShadow.reason = "capacity_unavailable";
-        stream.googCc.feedbackFresh = false;
-        stream.googCc.feedbackAgeMs = 4200;
-        cards->SetSections({MakeContentPolicySection("preview", "916955702", stream)}, {});
-        saved &= capture("stale-feedback", false);
-        stream.contentPolicyExecution.networkPressure = false;
-        stream.contentPolicyExecution.networkStatus = "unavailable";
-        stream.contentPolicyExecution.networkTrigger.clear();
-        stream.googCc = {};
-        cards->SetSections({MakeContentPolicySection("preview", "916955702", stream)}, {});
-        saved &= capture("unknown-network", false);
-        cards->SetSections({}, QStringLiteral("暂无策略数据\n开启内容感知并共享屏幕后，按连接显示场景与执行状态。"));
-        page.resize(1080, 850);
+        cards->SetSections({MakeContentPolicySection("preview", "916955702", transitioning)}, {});
+        saved &= capture("transition", true);
+        cards->SetSections({MakeContentPolicySection("preview", "916955702", waiting)}, {});
+        saved &= capture("waiting-scene", false);
+        cards->SetSections({}, QStringLiteral("暂无场景优化数据\n开启 AI 场景优化并共享屏幕后，可查看每个连接的场景和取舍设置。"));
         saved &= capture("empty", false);
-        QTextStream(stdout) << "CONTENT_POLICY_LAYOUT_CAPTURE=" << (saved ? "PASS" : "FAIL") << Qt::endl;
-        return saved && selectionPassed && userCapPassed && timingCopyPassed && emergencyCopyPassed && restoreCopyPassed ? 0 : 1;
+        QTextStream(stdout) << "SCENE_SMOOTHING_LAYOUT_CAPTURE=" << (saved ? "PASS" : "FAIL") << Qt::endl;
+        return saved && selectionPassed && singleCardPassed && transitionPassed && waitingPassed && disabledPassed ? 0 : 1;
     }
 
     if (application.arguments().contains(
@@ -2581,6 +2664,8 @@ int main(int argc, char* argv[])
         return passed ? 0 : 1;
     }
 
+    // Set only for normal primary-client startup, after all isolated self-tests.
+    application.setProperty("remoteCInitializeAutoStartDefault", true);
     const StartupSignalingConfiguration startupConfiguration =
         LoadStartupSignalingConfiguration();
     if (!startupConfiguration.sslBackend.isEmpty() &&

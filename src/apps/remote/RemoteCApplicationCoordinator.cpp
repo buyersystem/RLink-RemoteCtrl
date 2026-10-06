@@ -101,6 +101,7 @@ bool RemoteCApplicationCoordinator::Start() {
         QStringLiteral("auth/accountLabel"),
         QStringLiteral("RLink 账户")).toString());
     loginStatusWindow_->ShowAndActivate();
+    BeginStartupAuthentication();
     QTimer::singleShot(50, this, [this] {
         ContinueAuthenticatedStartup();
     });
@@ -109,6 +110,14 @@ bool RemoteCApplicationCoordinator::Start() {
 
 void RemoteCApplicationCoordinator::ContinueAuthenticatedStartup() {
     if (!CreateMainWindow({})) {
+        // Discard early results and stop restoration before reporting a UI
+        // construction failure. Cancel() can synchronously emit signed-out.
+        deferredStartupAuthCallbacks_.clear();
+        startupAuthenticationPending_ = false;
+        if (authManager_) {
+            authManager_->SetCallbacks({});
+            authManager_->Cancel();
+        }
         if (loginStatusWindow_) {
             loginStatusWindow_->HideAndReleaseTopmost();
         }
@@ -119,6 +128,7 @@ void RemoteCApplicationCoordinator::ContinueAuthenticatedStartup() {
         return;
     }
     EnsureLoginWindow();
+    startupUiReady_ = true;
     if (!options_.configurationError.isEmpty()) {
         if (loginStatusWindow_) {
             loginStatusWindow_->HideAndReleaseTopmost();
@@ -134,57 +144,75 @@ void RemoteCApplicationCoordinator::ContinueAuthenticatedStartup() {
         return;
     }
 
-    QString errorMessage;
-    if (!authManager_ ||
-        !authManager_->Configure(options_.authConfig, &errorMessage)) {
+    if (!startupAuthConfigurationError_.isEmpty()) {
         if (loginStatusWindow_) {
             loginStatusWindow_->HideAndReleaseTopmost();
         }
         loginWindow_->ShowError(
-            errorMessage.isEmpty()
-                ? QStringLiteral("Logto 登录配置不可用。")
-                : errorMessage,
+            startupAuthConfigurationError_,
             false);
         mainWindow_->SetAccountSignedOut(
-            errorMessage.isEmpty()
-                ? QStringLiteral("Logto 登录配置不可用。")
-                : errorMessage);
+            startupAuthConfigurationError_);
         ShowMainWindowAfterStartup();
         loginWindow_->ShowAndActivate();
         return;
     }
+
+    // RestoreSession can finish synchronously (missing/unreadable credentials)
+    // or while the initial UI delay runs. Apply those events only after the
+    // main window and its signaling-token callback are ready.
+    auto callbacks = std::move(deferredStartupAuthCallbacks_);
+    deferredStartupAuthCallbacks_.clear();
+    for (auto& callback : callbacks) {
+        callback();
+    }
+}
+
+void RemoteCApplicationCoordinator::DispatchAuthCallback(
+    std::function<void()> callback) {
+    if (!startupUiReady_) {
+        deferredStartupAuthCallbacks_.push_back(std::move(callback));
+        return;
+    }
+    callback();
+}
+
+void RemoteCApplicationCoordinator::BeginStartupAuthentication() {
+    if (!options_.configurationError.isEmpty()) {
+        return;
+    }
+    QString errorMessage;
+    if (!authManager_ ||
+        !authManager_->Configure(options_.authConfig, &errorMessage)) {
+        startupAuthConfigurationError_ = errorMessage.isEmpty()
+            ? QStringLiteral("Logto 登录配置不可用。")
+            : errorMessage;
+        return;
+    }
     authManager_->SetCallbacks({
-        [this](auth::AuthState state) { HandleAuthState(state); },
+        [this](auth::AuthState state) {
+            DispatchAuthCallback([this, state] { HandleAuthState(state); });
+        },
         [this](const auth::AuthTokenSnapshot& tokens) {
-            HandleAuthenticated(tokens);
+            DispatchAuthCallback(
+                [this, tokens] { HandleAuthenticated(tokens); });
         },
         [this](const auth::AuthError& error) {
-            HandleAuthFailure(error);
+            DispatchAuthCallback([this, error] { HandleAuthFailure(error); });
         },
     });
 
     startupAuthenticationPending_ = true;
 
-    // First inspect the encrypted credential store through RestoreSession().
-    // The status window is only useful when a stored session really exists;
-    // signed-out users should go straight to the main/login UI without a
-    // misleading "signing in" flash.
-    QTimer::singleShot(0, authManager_.get(), [this] {
-        if (!authManager_) {
-            return;
-        }
-        authManager_->RestoreSession();
-        if (!startupAuthenticationPending_) {
-            return;
-        }
-        if (authManager_->state() == auth::AuthState::kSignedOut &&
-            startupAuthenticationPending_) {
-            CompleteStartupSignedOut();
-            return;
-        }
-        // The startup window is already visible. Keep it in place while the
-        // stored refresh token is being validated over the network.
-    });
+    // Start discovery before the heavy widget tree. The existing startup delay
+    // gives Qt networking a chance to dispatch the request, without processing
+    // events recursively or exposing the main UI before token validation.
+    authManager_->RestoreSession();
+    if (authManager_->state() == auth::AuthState::kSignedOut) {
+        // Configure already set signed-out, so a missing store need not emit
+        // another stateChanged callback.
+        DispatchAuthCallback([this] { CompleteStartupSignedOut(); });
+    }
 }
 
 void RemoteCApplicationCoordinator::ActivateFromExternalLaunch() {
@@ -712,7 +740,10 @@ void RemoteCApplicationCoordinator::HandleAccountDeletionResult(
 }
 
 void RemoteCApplicationCoordinator::ExitApplication() {
+    deferredStartupAuthCallbacks_.clear();
+    startupAuthenticationPending_ = false;
     if (authManager_) {
+        authManager_->SetCallbacks({});
         authManager_->Cancel();
     }
     if (mainWindow_) {

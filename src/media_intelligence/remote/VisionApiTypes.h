@@ -15,8 +15,9 @@ namespace remote::media_intelligence {
 
 inline constexpr std::uint32_t kMinimumVisionApiRequestIntervalMs = 500;
 inline constexpr std::uint32_t kMaximumVisionApiRequestIntervalMs = 60000;
-inline constexpr std::uint32_t kDefaultVisionApiRequestIntervalMs = 1000;
-inline constexpr std::uint32_t kDefaultVisionApiMaximumImageDimension = 1280;
+inline constexpr std::uint32_t kDefaultVisionApiRequestIntervalMs = 2000;
+inline constexpr std::uint32_t kDefaultVisionApiMaximumImageDimension = 1024;
+inline constexpr int kDefaultVisionApiJpegQuality = 50;
 
 // Settings are stored in seconds, including fractional values such as 0.5.
 // Validate before converting to integral milliseconds.

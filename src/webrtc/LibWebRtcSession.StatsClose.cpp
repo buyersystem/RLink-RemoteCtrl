@@ -12,34 +12,31 @@ using namespace webrtc_session_detail;
 void LibWebRtcSession::RequestStats()
 {
     if (statsCollector_) {
-        std::uint64_t observationEpoch;
         std::uint64_t feedbackEpoch;
         {
             std::lock_guard lock(mutex_);
-            observationEpoch = screenContentPolicyEpoch_;
             feedbackEpoch = receiverFeedbackEpoch_;
         }
         const auto gate = callbackGate_;
         statsCollector_->Request(
             PeerConnection(),
-            [gate, observationEpoch, feedbackEpoch] {
+            [gate, feedbackEpoch] {
                 const auto lease = gate ? gate->Enter()
                                         : CallbackGate::Lease{};
                 if (auto* owner = lease.Owner()) {
-                    owner->HandleCompletedStatsSample(observationEpoch, feedbackEpoch);
+                    owner->HandleCompletedStatsSample(feedbackEpoch);
                 }
             });
     }
 }
 
-void LibWebRtcSession::HandleCompletedStatsSample(std::uint64_t observationEpoch, std::uint64_t feedbackEpoch)
+void LibWebRtcSession::HandleCompletedStatsSample(std::uint64_t feedbackEpoch)
 {
     // A user edit is applied before consuming an old allocation sample.
     // No capture restart, SDP renegotiation or startup bitrate prior.
     if (ApplyPendingScreenVideoBitrateBpp()) return;
     {
         std::lock_guard lock(mutex_);
-        if (observationEpoch != screenContentPolicyEpoch_) return;
         UpdateScreenQualityProtectionLocked();
     }
     const auto snapshot = StatsSnapshot();
@@ -72,18 +69,12 @@ void LibWebRtcSession::HandleCompletedStatsSample(std::uint64_t observationEpoch
     if (!hasActiveScreenSender) {
         return;
     }
-    (void)HandleContentAwareStreamSample(snapshot, observationEpoch);
-    {
-        std::lock_guard lock(mutex_);
-        UpdateScreenQualityProtectionLocked();
-    }
 
     ProgressiveBitrateCeilingDecision decision;
     ProgressiveBitrateCeilingState previousState;
     std::uint64_t decisionRevision = 0;
     {
         std::lock_guard lock(mutex_);
-        if (observationEpoch != screenContentPolicyEpoch_) return;
         const auto screen = mediaSlots_->videoSlots_.find(kScreenMainVideoSlot);
         if (screen == mediaSlots_->videoSlots_.end() ||
             !screen->second.sendingActive) {
@@ -106,24 +97,22 @@ void LibWebRtcSession::HandleCompletedStatsSample(std::uint64_t observationEpoch
 void LibWebRtcSession::UpdateScreenQualityProtectionLocked()
 {
     if (!googCcTelemetry_) return;
-    googCcTelemetry_->SetScreenQualityDeficitShare(screenQualityDeficitShareHundredths_);
+    UpdateSceneQualityCoefficientLocked(SteadyNowMs());
     const auto found = mediaSlots_->videoSlots_.find(kScreenMainVideoSlot);
     if (found != mediaSlots_->videoSlots_.end()) {
         const auto& binding = found->second;
         googCcTelemetry_->SetScreenQualityTarget(binding.configuredMaxFrameRate,
             static_cast<std::uint32_t>((std::min)(binding.configuredMaxBitrateBps,
                 static_cast<std::uint64_t>((std::numeric_limits<std::uint32_t>::max)()))));
-    } else googCcTelemetry_->SetScreenQualityTarget(0, 0);
+    } else {
+        googCcTelemetry_->SetScreenQualityTarget(0, 0);
+    }
     googCcTelemetry_->SetScreenRecoveryProbeEnabled(
         found != mediaSlots_->videoSlots_.end() && found->second.sendingActive &&
         found->second.configuredMaxFrameRate != 0 &&
         found->second.configuredMaxBitrateBps != 0);
-    const bool enabled = adaptiveDesktopNetworkFrameRate_ &&
-        !screenContentPolicyObservation_.enabled &&
-        found != mediaSlots_->videoSlots_.end() && found->second.sendingActive &&
-        !found->second.contentPolicyNeedsRestore &&
-        !found->second.contentPolicyExecution.pending &&
-        !found->second.contentPolicyExecution.applied;
+    const bool enabled = (adaptiveDesktopNetworkFrameRate_ || sceneQualityObservation_.enabled) &&
+        found != mediaSlots_->videoSlots_.end() && found->second.sendingActive;
     // Quality protection cooperates with the native frame dropper. It never
     // writes RTP max_framerate, reschedules capture, or lowers the probe cap.
     googCcTelemetry_->SetScreenQualityProtection(enabled);
@@ -160,12 +149,8 @@ bool LibWebRtcSession::ApplyPendingScreenVideoBitrateBpp()
         policy = ResolveScreenStreamPolicy(binding.configuredOutputWidth, binding.configuredOutputHeight,
             {binding.configuredOutputWidth, binding.configuredOutputHeight,
              binding.configuredMaxFrameRate, requestedBpp});
-        // Preserve an already applied scene allocation; increasing a user
-        // ceiling cannot undo a weak-network FPS/resolution/bitrate decision.
-        senderCeiling = binding.contentPolicyExecution.applied
-            ? (std::min)(binding.effectiveMaxBitrateBps,
-                static_cast<std::uint64_t>(policy.maxBitrateBps))
-            : policy.maxBitrateBps;
+        // The user ceiling remains independent of scene coefficients. GCC owns actual B.
+        senderCeiling = policy.maxBitrateBps;
     }
     auto sender = transceiver ? transceiver->sender() : nullptr;
     if (!sender) return true;
@@ -199,21 +184,8 @@ bool LibWebRtcSession::ApplyPendingScreenVideoBitrateBpp()
         // reapply a start prior to the connection that is currently sending.
         binding.configuredStartBitrateBps = policy.startBitrateBps;
         binding.effectiveMaxBitrateBps = senderCeiling;
-        binding.effectiveDesiredBitrateBps = binding.contentPolicyExecution.applied
-            ? (std::min)(binding.effectiveDesiredBitrateBps, senderCeiling) : senderCeiling;
-        if (binding.contentPolicyExecution.applied)
-            binding.contentPolicyExecution.appliedMaxBitrateBps = senderCeiling;
-        // Invalidate pending decisions using the old budget but retain the
-        // applied dimensions/FPS and the scene itself.
-        binding.contentPolicyState = {};
-        binding.contentPolicyRecommendation = {};
-        binding.contentPolicyExecution.pending = false;
-        ++binding.contentPolicyRevision;
+        binding.effectiveDesiredBitrateBps = senderCeiling;
         ++binding.adaptiveFrameRateRevision;
-        ++screenContentPolicyEpoch_;
-        binding.contentPolicyEvidenceNotBeforeMs = SteadyNowMs();
-        binding.contentQualityMetricAvailable = binding.contentQualityVerified = false;
-        binding.contentProcessingEvidenceAvailable = binding.contentProcessingHealthy = false;
         for (const auto& [slot, value] : mediaSlots_->videoSlots_) {
             if (!value.sendingActive) continue;
             globalCeiling = (std::max)(globalCeiling, value.configuredNetworkProbeMaxBitrateBps);
@@ -319,9 +291,6 @@ WebRtcSessionStatsSnapshot LibWebRtcSession::StatsSnapshot() const
         std::uint64_t effectiveMaxBitrateBps = 0;
         std::uint32_t videoBppHundredths = 0;
         std::uint32_t effectiveMaxFps = 0;
-        bool qualityMetric = false, qualityVerified = false, processingEvidence = false, processingHealthy = false;
-        ContentPolicyShadowSnapshot contentRecommendation;
-        ContentPolicyExecutionSnapshot contentExecution;
         AdaptiveScreenFrameRateState adaptiveFrameRate;
         std::string adaptiveFrameRateError;
         std::uint32_t bootstrapAttempts = 0;
@@ -334,6 +303,7 @@ WebRtcSessionStatsSnapshot LibWebRtcSession::StatsSnapshot() const
     };
     std::unordered_map<std::string, EncodingPolicy> policies;
     ProgressiveBitrateCeilingState progressiveCeiling;
+    SceneQualitySmoothingSnapshot sceneSmoothing;
     ScreenReceiverFeedback receiverFeedback;
     std::uint64_t receiverReceivedAt = 0;
     std::string progressiveCeilingError;
@@ -342,6 +312,7 @@ WebRtcSessionStatsSnapshot LibWebRtcSession::StatsSnapshot() const
         videoSlots = mediaSlots_->videoSlotOrder_;
         audioSlot = mediaSlots_->audioSlot_.name;
         progressiveCeiling = progressiveBitrateCeiling_;
+        sceneSmoothing = SceneQualitySnapshotLocked(SteadyNowMs());
         receiverFeedback = receiverFeedback_;
         receiverReceivedAt = receiverFeedbackReceivedAtMs_;
         progressiveCeilingError = progressiveBitrateCeilingError_;
@@ -359,12 +330,6 @@ WebRtcSessionStatsSnapshot LibWebRtcSession::StatsSnapshot() const
                     .effectiveMaxBitrateBps = binding.effectiveMaxBitrateBps,
                     .videoBppHundredths = binding.configuredVideoBppHundredths,
                     .effectiveMaxFps = binding.effectiveMaxFps,
-                    .qualityMetric = binding.contentQualityMetricAvailable,
-                    .qualityVerified = binding.contentQualityVerified,
-                    .processingEvidence = binding.contentProcessingEvidenceAvailable,
-                    .processingHealthy = binding.contentProcessingHealthy,
-                    .contentRecommendation = binding.contentPolicyRecommendation,
-                    .contentExecution = binding.contentPolicyExecution,
                     .adaptiveFrameRate = binding.adaptiveFrameRate,
                     .adaptiveFrameRateError =
                         binding.adaptiveFrameRateError,
@@ -431,14 +396,9 @@ WebRtcSessionStatsSnapshot LibWebRtcSession::StatsSnapshot() const
             if (stream.direction == RtpStreamDirection::kOutbound && stream.slot == kScreenMainVideoSlot) {
                 stream.userVideoBitrateBppHundredths = policy->second.videoBppHundredths;
                 stream.userVideoBitrateLimitBps = policy->second.maxBitrateBps;
+                stream.sceneQualitySmoothing = sceneSmoothing;
             }
-            stream.contentPolicyShadow = policy->second.contentRecommendation;
-            stream.contentPolicyExecution = policy->second.contentExecution;
             stream.googCc = snapshot.transport.googCc;
-            stream.contentQualityMetricAvailable = policy->second.qualityMetric;
-            stream.contentQualityVerified = policy->second.qualityVerified;
-            stream.contentProcessingEvidenceAvailable = policy->second.processingEvidence;
-            stream.contentProcessingHealthy = policy->second.processingHealthy;
             if (stream.direction == RtpStreamDirection::kOutbound && stream.slot == kScreenMainVideoSlot && receiverReceivedAt) {
                 const auto now = SteadyNowMs();
                 const auto age = now >= receiverReceivedAt ? now - receiverReceivedAt : 3001;
@@ -540,8 +500,10 @@ void LibWebRtcSession::Close()
         ++progressiveBitrateCeilingRevision_;
         progressiveBitrateCeilingError_.clear();
         screenContentActivity_ = ScreenContentActivity::kUnknown;
-        screenContentPolicyObservation_ = {};
-        ++screenContentPolicyEpoch_;
+        sceneQualityObservation_ = {};
+        sceneQualityLastResultMs_ = 0;
+        sceneQualityLastTickMs_ = 0;
+        sceneQualitySmoother_.Reset(screenQualityDeficitShareHundredths_ / 100.0, SteadyNowMs());
         receiverFeedbackContext_ = {};
         ++receiverFeedbackEpoch_;
         receiverFeedback_ = {};

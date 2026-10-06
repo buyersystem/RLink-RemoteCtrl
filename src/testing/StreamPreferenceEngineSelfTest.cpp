@@ -4,6 +4,7 @@
 #include "src/apps/remote/InProcessSessionEngineInternal.h"
 #include "src/protocol/DataChannelCatalog.h"
 #include "src/protocol/ScreenShareControlProtocol.h"
+#include "src/protocol/RemoteInputProtocol.h"
 
 #include <QCoreApplication>
 #include <chrono>
@@ -17,6 +18,13 @@ namespace remote::testing {
 namespace {
 using namespace std::chrono_literals;
 int failures = 0;
+class CountingInputSink final : public IRemoteInputSink {
+public:
+    void OnRemoteInput(const RemoteInputEvent&) override { ++inputs; }
+    void ReleaseAllRemoteInputs() override { ++releases; }
+    int inputs = 0;
+    int releases = 0;
+};
 void Check(bool value, const char* description)
 {
     (value ? std::cout : std::cerr) << (value ? "PASS " : "FAIL ")
@@ -112,6 +120,8 @@ class InProcessSessionEngineTestAccess {
 public:
     static void Run()
     {
+        TestLocalRoomControlStop();
+        TestLocalDirectControlStop();
         FakeSession directTransport, roomTransport;
         FakeSignaling signaling;
         app::InProcessSessionEngine engine;
@@ -284,6 +294,121 @@ public:
         engine.Stop();
     }
 private:
+    static void TestLocalDirectControlStop()
+    {
+        CountingInputSink sink;
+        app::InProcessSessionEngine engine;
+        {
+            std::lock_guard lock(engine.mutex_);
+            engine.snapshot_.localDeviceId = "local";
+            engine.snapshot_.peerDeviceId = "peer";
+            engine.snapshot_.sessionId = "controlled-direct";
+            engine.snapshot_.state = SessionEngineState::kActive;
+            engine.snapshot_.purpose = SessionPurpose::kRemoteControl;
+            engine.snapshot_.remoteControlRole = RemoteControlRole::kControlled;
+            engine.remoteInputSink_ = &sink;
+        }
+        RemoteInputEnvelope input;
+        input.roomId = input.controlGrantId = "controlled-direct";
+        input.senderDeviceId = "peer";
+        input.sequence = 1;
+        input.timestampUs = 1;
+        input.event.type = RemoteInputMessageType::kKey;
+        input.event.virtualKey = 0x41;
+        input.event.pressed = true;
+        std::vector<std::uint8_t> bytes;
+        Check(EncodeRemoteInput(input, &bytes), "encode direct controlled key packet");
+        engine.OnDataMessage(std::string(kControlReliableChannel), bytes, true);
+        Check(sink.inputs == 1, "authorized direct input reaches sink before local stop");
+        // No session controller in this synthetic case: closure cannot finish,
+        // but the immediate safety gate must still prevent more input.
+        engine.Disconnect();
+        Check(sink.releases == 1, "direct local stop releases held inputs before teardown");
+        input.sequence = 2;
+        EncodeRemoteInput(input, &bytes);
+        engine.OnDataMessage(std::string(kControlReliableChannel), bytes, true);
+        Check(sink.inputs == 1, "direct close-request gate rejects subsequent input");
+        { std::lock_guard lock(engine.mutex_); engine.remoteInputSink_ = nullptr; }
+        engine.Stop();
+    }
+    static void TestLocalRoomControlStop()
+    {
+        CountingInputSink sink;
+        app::InProcessSessionEngine engine;
+        {
+            std::lock_guard lock(engine.mutex_);
+            engine.snapshot_.localDeviceId = "sharer";
+            engine.snapshot_.room.roomId = "control-room";
+            engine.snapshot_.room.membership = RoomMembershipState::kActive;
+            engine.snapshot_.room.screenShareState = RoomScreenShareState::kActive;
+            engine.snapshot_.media.localMicrophone = LocalMicrophoneState::kPublishing;
+            engine.remoteInputSink_ = &sink;
+            auto pair = std::make_shared<app::InProcessSessionEngine::RoomPairRuntime>();
+            pair->peerDeviceId = "viewer";
+            pair->roomId = "control-room";
+            engine.roomPairs_["control-pair"] = std::move(pair);
+        }
+        SignalingRoomControlGranted grant;
+        grant.roomId = "control-room";
+        grant.grantId = "old-control-grant";
+        grant.screenSharerDeviceId = "sharer";
+        grant.controllerDeviceId = "viewer";
+        engine.OnRoomControlGranted(grant);
+        Check(engine.Snapshot().roomControlGrantActive, "room control starts with authenticated grant");
+        RemoteInputEnvelope input;
+        input.roomId = grant.roomId;
+        input.senderDeviceId = grant.controllerDeviceId;
+        input.controlGrantId = grant.grantId;
+        input.sequence = 1;
+        input.timestampUs = 1;
+        input.event.type = RemoteInputMessageType::kKey;
+        input.event.virtualKey = 0x41;
+        input.event.pressed = true;
+        std::vector<std::uint8_t> bytes;
+        Check(EncodeRemoteInput(input, &bytes), "encode controlled key packet");
+        engine.DispatchRoomPairInputData("control-pair", bytes, false);
+        Check(sink.inputs == 1, "authorized room input reaches local sink before stop");
+        const auto stopped = engine.ReleaseRoomControl();
+        const auto after = engine.Snapshot();
+        Check(stopped.accepted && stopped.errorCode == "room_control_ended_locally" &&
+              !after.roomControlGrantActive && after.room.activeControllerDeviceId.empty() &&
+              sink.releases == 1, "offline sharer stops control and releases held inputs immediately");
+        Check(after.room.membership == RoomMembershipState::kActive &&
+              after.room.screenShareState == RoomScreenShareState::kActive &&
+              after.media.localMicrophone == LocalMicrophoneState::kPublishing,
+              "local control stop preserves room sharing and microphone");
+        engine.OnRoomControlGranted(grant);
+        Check(!engine.Snapshot().roomControlGrantActive,
+              "delayed old grant cannot restore locally revoked control");
+        auto staleRoom = after.room;
+        staleRoom.activeControllerDeviceId = "viewer";
+        engine.OnRoomState(staleRoom);
+        Check(!engine.Snapshot().roomControlGrantActive,
+              "stale room broadcast cannot restore an authenticated control lease");
+        input.sequence = 2;
+        EncodeRemoteInput(input, &bytes);
+        engine.DispatchRoomPairInputData("control-pair", bytes, false);
+        Check(sink.inputs == 1, "revoked lease packets never reach input sink");
+        grant.grantId = "new-control-grant";
+        engine.OnRoomControlGranted(grant);
+        Check(engine.Snapshot().roomControlGrantActive,
+              "newly approved control grant still works after local stop");
+        engine.ReleaseRoomControl();
+        {
+            std::lock_guard lock(engine.mutex_);
+            engine.snapshot_.localDeviceId = "viewer";
+        }
+        grant.grantId = "controller-side-grant";
+        engine.OnRoomControlGranted(grant);
+        const auto controllerStop = engine.ReleaseRoomControl();
+        Check(!controllerStop.accepted && controllerStop.errorCode == "signaling_not_online" &&
+              engine.Snapshot().roomControlGrantActive,
+              "offline controller retains existing server-confirmed release behavior");
+        {
+            std::lock_guard lock(engine.mutex_);
+            engine.remoteInputSink_ = nullptr;
+        }
+    }
     static ScreenStreamPreferenceApplied Ack(std::string room, std::uint64_t sequence,
                                              std::uint64_t generation, bool accepted)
     {

@@ -320,7 +320,7 @@ void TestDiagnosticsPage() {
   const QStringList categoryNames{QStringLiteral("设备与信令"), QStringLiteral("媒体能力"),
       QStringLiteral("连接质量"), QStringLiteral("房间状态"), QStringLiteral("成员连接"),
       QStringLiteral("鼠标与键盘"), QStringLiteral("远程粘贴"), QStringLiteral("最近错误"),
-      QStringLiteral("视觉分析性能"), QStringLiteral("内容策略观察")};
+      QStringLiteral("场景识别性能"), QStringLiteral("场景优化状态")};
   int refreshes = 0;
   QObject::connect(page, &DiagnosticsPage::RefreshRequested, [&] { ++refreshes; });
   for (int i = 0; i < categoryNames.size(); ++i) {

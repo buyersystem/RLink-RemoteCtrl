@@ -377,7 +377,8 @@ void InProcessSessionEngine::OnDataMessage(
     webrtc::scoped_refptr<WindowsDesktopCaptureSource> sourceToBoost;
     {
         std::lock_guard lock(mutex_);
-        if (snapshot_.state != SessionEngineState::kActive ||
+        if (directSession_.sessionCloseRequested_ ||
+            snapshot_.state != SessionEngineState::kActive ||
             snapshot_.remoteControlRole != RemoteControlRole::kControlled ||
             input.roomId != snapshot_.sessionId ||
             input.senderDeviceId != snapshot_.peerDeviceId ||
@@ -414,8 +415,18 @@ void InProcessSessionEngine::OnDataMessage(
         }
     }
     if (sink) {
-        sink->OnRemoteInput(input.event);
-        cursorMonitor_->SetLastAppliedInputSequence(input.sequence);
+        {
+            std::lock_guard lock(mutex_);
+            // Serialize final authorization/injection with a local stop so an
+            // in-flight press cannot arrive after ReleaseAllRemoteInputs().
+            if (directSession_.sessionCloseRequested_ ||
+                snapshot_.state != SessionEngineState::kActive ||
+                snapshot_.remoteControlRole != RemoteControlRole::kControlled ||
+                snapshot_.sessionId != input.roomId ||
+                snapshot_.peerDeviceId != input.senderDeviceId || remoteInputSink_ != sink) return;
+            sink->OnRemoteInput(input.event);
+            cursorMonitor_->SetLastAppliedInputSequence(input.sequence);
+        }
         if (sourceToBoost) {
             sourceToBoost->NotifyRemoteInputActivity();
         }

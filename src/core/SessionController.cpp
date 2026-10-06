@@ -350,6 +350,53 @@ public:
         return snapshot_;
     }
 
+    bool QueueLatestData(std::string channelName,
+                         std::string key,
+                         std::vector<std::uint8_t> payload,
+                         bool binary)
+    {
+        // This mutex is never held over a transport call. A busy transport
+        // keeps only its in-flight update plus one newest unsent position.
+        std::lock_guard lock(latestSendMutex_);
+        auto& channel = latestSends_[channelName];
+        if (const auto found = channel.find(key); found != channel.end()) {
+            found->second->payload = std::move(payload);
+            found->second->binary = binary;
+            return true;
+        }
+        auto pending = std::make_shared<LatestSend>();
+        pending->payload = std::move(payload);
+        pending->binary = binary;
+        channel.emplace(key, pending);
+        const auto remove = [this, channelName, key, pending] {
+            auto channelIt = latestSends_.find(channelName);
+            if (channelIt == latestSends_.end()) return;
+            auto found = channelIt->second.find(key);
+            if (found != channelIt->second.end() && found->second == pending) {
+                channelIt->second.erase(found);
+                if (channelIt->second.empty()) latestSends_.erase(channelIt);
+            }
+        };
+        const bool accepted = executor_.PostWithCancellation(
+            [this, channelName, pending, remove] {
+                std::vector<std::uint8_t> newest;
+                bool binary = false;
+                {
+                    std::lock_guard lock(latestSendMutex_);
+                    newest = std::move(pending->payload);
+                    binary = pending->binary;
+                    remove();
+                }
+                (void)session_.SendData(channelName, newest, binary);
+            },
+            [this, remove] {
+                std::lock_guard lock(latestSendMutex_);
+                remove();
+            });
+        if (!accepted) remove();
+        return accepted;
+    }
+
     void OnSessionStateChanged(WebRtcSessionState state)
     {
         executor_.Post([this, state] {
@@ -1092,6 +1139,14 @@ private:
     SerialExecutor executor_;
     SessionControllerConfig config_;
 
+    struct LatestSend {
+        std::vector<std::uint8_t> payload;
+        bool binary = true;
+    };
+    std::mutex latestSendMutex_;
+    std::unordered_map<std::string,
+        std::unordered_map<std::string, std::shared_ptr<LatestSend>>> latestSends_;
+
     mutable std::mutex snapshotMutex_;
     SessionControllerSnapshot snapshot_;
     mutable std::mutex observerMutex_;
@@ -1204,6 +1259,16 @@ bool SessionControllerBase::QueueData(
         std::vector<std::uint8_t>(data.begin(), data.end()),
         binary,
         std::move(completion));
+}
+
+bool SessionControllerBase::QueueLatestData(
+    const std::string& channelName,
+    const std::string& key,
+    std::span<const std::uint8_t> data,
+    bool binary)
+{
+    return impl_->QueueLatestData(channelName, key,
+        std::vector<std::uint8_t>(data.begin(), data.end()), binary);
 }
 
 void SessionControllerBase::Close()

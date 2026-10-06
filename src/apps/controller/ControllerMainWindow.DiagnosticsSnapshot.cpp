@@ -596,7 +596,7 @@ void ControllerMainWindow::RefreshDiagnosticsSnapshotUi(
         const QString encoderSelectionCaptureBackend =
             encoderSelectionSettings.value(
                 QString::fromLatin1(kDesktopCaptureBackendSetting),
-                QStringLiteral("native_dxgi")).toString();
+                QStringLiteral("libwebrtc")).toString();
         const QString encoderSelectionX264Preset =
             encoderSelectionSettings.value(
                 QString::fromLatin1(kFfmpegX264PresetSetting),

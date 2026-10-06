@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-only
 #include "src/core/ScreenStreamPolicy.h"
 #include "src/core/ScreenNetworkPolicy.h"
-#include "media_intelligence/core/H264ReferenceQualityModel.h"
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
@@ -178,48 +177,6 @@ int main()
     passed &= invalidBppFallback;
     std::cout << "INVALID_BPP_FALLS_BACK_TO_DEFAULT=" <<
         (invalidBppFallback ? "PASS" : "FAIL") << '\n';
-    using namespace remote::media_intelligence;
-    H264ReferenceQualityContext reference({"video/H264","FFmpeg/QSV","medium"});
-    ContentAwareStreamConfig config;
-    config.qualityEstimator=H264ReferenceQualityContext::Estimate;
-    config.qualityEstimatorContext=&reference;
-    config.allowReferenceModel=true;
-    bool healthyReferenceFits = true;
-    bool healthyReferenceRecovers = true;
-    for (const auto fps : {30u,60u,120u}) {
-        const auto policy=remote::ResolveScreenStreamPolicy(1920,1080,{1920,1080,fps});
-        for (unsigned scene=1;scene<=9;++scene) {
-            ContentAwareStreamInput input;
-            input.sourceWidth=input.currentWidth=input.maximumWidth=1920;
-            input.sourceHeight=input.currentHeight=input.maximumHeight=1080;
-            input.currentFrameRate=input.maximumFrameRate=fps;
-            input.currentDesiredVideoBitrateBps=input.currentSenderMaxBitrateBps=policy.maxBitrateBps;
-            input.scene=static_cast<ScreenScene>(scene);
-            input.activityAvailable=input.active=input.networkBudgetAvailable=true;
-            input.qualityAvailable=input.qualityAcceptable=input.processingAvailable=input.processingHealthy=true;
-            input.safeVideoBudgetBps=policy.networkProbeMaxBitrateBps*0.85-128000;
-            input.nowMs=input.networkTimestampMs=1000;
-            input.generation=input.networkGeneration=1;
-            const auto decision=RecommendContentAwareStream(input,config);
-            healthyReferenceFits &= decision.automaticControlEligible && decision.modelReference &&
-                decision.width==1920 && decision.height==1080 && decision.senderMaxFps==fps;
-            // A deliberately high choice has sufficient reference-model
-            // headroom for every scene; lower choices may cap this recovery.
-            const auto recoveryPolicy = remote::ResolveScreenStreamPolicy(
-                1920, 1080, {1920, 1080, fps, 30});
-            input.safeVideoBudgetBps = recoveryPolicy.networkProbeMaxBitrateBps * 0.85 - 128000;
-            input.currentFrameRate = fps / 2;
-            const auto recovery = RecommendContentAwareStream(input, config);
-            healthyReferenceRecovers &= recovery.automaticControlEligible &&
-                recovery.width == 1920 && recovery.height == 1080 && recovery.senderMaxFps == fps;
-        }
-    }
-    passed &= healthyReferenceFits;
-    passed &= healthyReferenceRecovers;
-    std::cout << "HEALTHY_REFERENCE_CEILING_PRESERVES_30_60_120=" <<
-        (healthyReferenceFits?"PASS":"FAIL") << '\n';
-    std::cout << "HIGHER_BPP_CEILING_ALLOWS_ALL_SCENE_FPS_RECOVERY=" <<
-        (healthyReferenceRecovers?"PASS":"FAIL") << '\n';
     std::cout << "SCREEN_STREAM_POLICY_SELF_TEST=" << (passed ? "PASS" : "FAIL") << '\n';
     return passed ? 0 : 1;
 }

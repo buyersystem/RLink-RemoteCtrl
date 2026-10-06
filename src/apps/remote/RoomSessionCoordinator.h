@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 #include "src/core/ISessionEngine.h"
@@ -72,6 +73,9 @@ private:
     std::string controlGrantId_;
     std::string controlGrantScreenSharerDeviceId_;
     std::string controlGrantControllerDeviceId_;
+    // A delayed grant event must never re-enable control ended by the sharer.
+    // Scoped to the current room and reset when room membership is discarded.
+    std::unordered_set<std::string> locallyRevokedControlGrantIds_;
     std::uint64_t nextInputSequence_ = 0;
     std::uint64_t nextScreenControlSequence_ = 0;
     std::uint32_t localScreenFrameRate_ = kDefaultScreenFrameRate;

@@ -25,7 +25,6 @@
 #include "src/platform/win/MfH264EncoderCapabilityProbe.h"
 #include "src/webrtc/VideoDecoderRuntimeStatus.h"
 #include "src/webrtc/VideoEncoderRuntimeStatus.h"
-#include "media_intelligence/core/CalibratedStreamQualityModel.h"
 
 namespace remote {
 
@@ -60,16 +59,10 @@ struct InProcessSessionEngineOptions {
     std::function<std::uint32_t()> screenVideoBitrateBppProvider;
     std::function<std::uint32_t()> screenQualityDeficitShareProvider;
     DesktopCaptureImplementation desktopCaptureImplementation =
-        DesktopCaptureImplementation::kNativeDxgi;
+        DesktopCaptureImplementation::kLibWebRtc;
     bool contentAnalyzerEnabled = false;
     std::uint32_t contentAnalyzerRateHz = 3;
     std::shared_ptr<IRemoteVisionFrameAnalyzer> remoteVisionAnalyzer;
-    // Optional immutable calibration measured for this codec/backend/profile.
-    // No built-in sample table or generic QP threshold is promoted to verified.
-    std::shared_ptr<const media_intelligence::CalibratedStreamQualityModel> screenQualityCalibration;
-    // Allow a shared H.264 reference curve when no matching measurement is
-    // available. Runtime QP/processing and user/network limits still gate it.
-    bool allowScreenReferenceQualityModel = true;
     VideoEncoderPreference videoEncoderPreference =
         VideoEncoderPreference::kAutomatic;
     FfmpegX264Preset ffmpegX264Preset = FfmpegX264Preset::kMedium;
@@ -418,6 +411,7 @@ private:
     void StartStatsPolling();
     void StopStatsPolling();
     void PollStatsOnce();
+    void UpdateSceneQualityCoefficients();
     bool DispatchScreenReceiverFeedback(const std::string& pairId, const std::string& label,
         std::span<const std::uint8_t> payload);
 

@@ -215,6 +215,10 @@ public:
 int main()
 {
     bool passed = true;
+    passed &= Check(kDefaultVisionApiRequestIntervalMs == 2000 &&
+        kDefaultVisionApiMaximumImageDimension == 1024 &&
+        kDefaultVisionApiJpegQuality == 50,
+        "DEFAULT_SCREENSHOT_ENCODING_AND_INTERVAL");
     passed &= Check(NormalizeVisionApiRequestIntervalMs(0.5) == 500 &&
         NormalizeVisionApiRequestIntervalMs(1.0) == 1000 &&
         NormalizeVisionApiRequestIntervalMs(2.0) == 2000 &&

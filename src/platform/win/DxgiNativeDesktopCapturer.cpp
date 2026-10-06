@@ -2,6 +2,7 @@
 // Copyright (c) 2026 dyhwdnmd (https://github.com/dyhwdnmd)
 
 #include "DxgiNativeDesktopCapturer.h"
+#include "DxgiDesktopFramePolicy.h"
 
 #include <algorithm>
 #include <array>
@@ -253,11 +254,30 @@ public:
             timeoutMs, &information, &resource);
         if (acquire == DXGI_ERROR_WAIT_TIMEOUT) {
             *resultFrame = lastFrame;
-            return lastFrame ? Result::kTimeout : Result::kFailed;
+            error.clear();
+            return Result::kTimeout;
         }
         if (FAILED(acquire) || !resource) {
             error = HResultText("AcquireNextFrame", acquire);
             return Result::kFailed;
+        }
+
+        // AcquireNextFrame can succeed for a pointer-only update. In that
+        // case the returned desktop surface is not a new image and some
+        // drivers return unstable contents/formats (also handled by FFmpeg's
+        // ddagrab). Reuse our immutable last valid copy instead of reading it.
+        if (!HasDxgiDesktopImageUpdate(information.LastPresentTime.QuadPart,
+                                       information.AccumulatedFrames)) {
+            const HRESULT release = duplication->ReleaseFrame();
+            if (FAILED(release)) {
+                error = HResultText("ReleaseFrame", release);
+                return Result::kFailed;
+            }
+            *resultFrame = lastFrame;
+            error.clear();
+            // A null cache during startup means wait for the first real frame,
+            // not fail initialization or publish uninitialized pixels.
+            return Result::kTimeout;
         }
 
         ComPtr<ID3D11Texture2D> desktopTexture;

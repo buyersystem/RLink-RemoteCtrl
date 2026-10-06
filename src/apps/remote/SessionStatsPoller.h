@@ -23,7 +23,9 @@ public:
 
     void Start(
         PollAction action,
-        std::chrono::milliseconds interval = std::chrono::seconds(1));
+        std::chrono::milliseconds interval = std::chrono::seconds(1),
+        PollAction tickAction = {},
+        std::chrono::milliseconds tickInterval = std::chrono::milliseconds(50));
     void Stop();
 
 private:

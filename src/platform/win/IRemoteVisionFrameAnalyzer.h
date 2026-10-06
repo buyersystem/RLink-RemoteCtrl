@@ -46,6 +46,12 @@ public:
         std::uint64_t sessionToken) noexcept = 0;
     [[nodiscard]] virtual RemoteVisionFrameAnalyzerSnapshot Snapshot()
         const noexcept = 0;
+    // A result may survive missed requests, but must eventually give way to
+    // the host's manual coefficient. Backends can account for their cadence.
+    [[nodiscard]] virtual std::uint64_t MaximumSceneAgeMs() const noexcept
+    {
+        return 65000;
+    }
 };
 
 }  // namespace remote

@@ -919,8 +919,8 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                 if (stream.screenQualityProtectionAvailable) {
                     streamCard.chips << DiagnosticsChip{
                         QStringLiteral("nativeScreenQualityProtection"),
-                        QStringLiteral("原生丢帧 / 画质优先"),
-                        QStringLiteral("%1 · 用户上限 %2 FPS\n视频目标预算 B：%3 · 单帧画质参考 A：%4\n编码器名义速率 C：%5（不是实际发送码率）\n网络波动取舍系数 %6\nWebRTC 编码修正值：%7 · 视频带宽分配：%8")
+                        QStringLiteral("网络波动时的画质保护"),
+                        QStringLiteral("%1 · 用户上限 %2 FPS\n视频目标预算 B：%3 · 单帧画质参考 A：%4\n编码器名义速率 C：%5（不是实际发送码率）\n当前取舍系数 %6\nWebRTC 编码修正值：%7 · 视频带宽分配：%8")
                             .arg(stream.screenQualityProtectionActive
                                 ? QStringLiteral("保护画质，由 WebRTC 临时丢帧")
                                 : QStringLiteral("按当前网络预算编码"))
@@ -1103,11 +1103,11 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                                          .arg(
                                              stream.captureChangedFramesPerSecond,
                                              0, 'f', 1)
-                                   : QStringLiteral("内容分析已关闭"),
+                                   : QStringLiteral("画面分析已关闭"),
                                "normal", true}
                         << DiagnosticsChip{
                                QStringLiteral("contentMotion"),
-                               QStringLiteral("内容运动观察"),
+                               QStringLiteral("画面运动情况"),
                                stream.contentAnalyzerEnabled &&
                                        stream.contentSourceFrameId > 0
                                    ? QStringLiteral(
@@ -1131,15 +1131,15 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                                          .arg(stream.contentSourceFrameId)
                                          .arg(stream.contentStateAgeMs)
                                    : (stream.contentAnalyzerEnabled
-                                          ? QStringLiteral("等待首个分析样本")
-                                          : QStringLiteral("规则观察已关闭")),
+                                          ? QStringLiteral("等待首次分析")
+                                          : QStringLiteral("画面运动分析已关闭")),
                                stream.contentAnalyzerEnabled
                                    ? QByteArray("good")
                                    : QByteArray("normal"),
                                true}
                         << DiagnosticsChip{
                                QStringLiteral("contentSemantic"),
-                               QStringLiteral("内容语义观察"),
+                               QStringLiteral("场景识别结果"),
                                stream.contentAnalyzerEnabled &&
                                        stream.contentScene != "unknown"
                                    ? QStringLiteral("%1 · 置信度 %2 · %3")
@@ -1152,21 +1152,21 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                                          .arg(
                                              stream.contentAnalyzerBackend ==
                                                      "rules+vision_api"
-                                                 ? QStringLiteral("远程视觉 API")
-                                                 : QStringLiteral("本地后端"))
+                                                 ? QStringLiteral("AI 模型 API")
+                                                 : QStringLiteral("本地分析"))
                                    : (stream.contentAnalyzerBackend ==
                                               "rules+vision_api"
                                           ? QStringLiteral(
-                                                "等待稳定的远程分类；失败时继续使用本地运动规则")
+                                                "等待确认场景；识别失败时仍保留画面运动分析")
                                           : QStringLiteral(
-                                                "当前本地规则后端暂不提供语义分类")),
+                                                "本地模型开发中，暂不支持场景识别")),
                                stream.contentScene != "unknown"
                                    ? QByteArray("good")
                                    : QByteArray("normal"),
                                true}
                         << DiagnosticsChip{
                                QStringLiteral("contentAnalysisQueue"),
-                               QStringLiteral("内容分析队列"),
+                               QStringLiteral("画面分析任务"),
                                stream.contentAnalyzerEnabled
                                    ? QStringLiteral(
                                          "提交 %1 · 完成 %2 · 替换 %3 · %4 us")
@@ -1175,7 +1175,7 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                                          .arg(stream.contentReplacedSamples)
                                          .arg(
                                              stream.contentLatestAnalysisTimeUs)
-                                   : QStringLiteral("未启动工作线程"),
+                                   : QStringLiteral("分析任务未启动"),
                                stream.contentRejectedSamples > 0 ||
                                        stream.contentDiscardedResults > 0
                                    ? QByteArray("warning")
@@ -1821,10 +1821,10 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
     setInputDebugValue(
         QStringLiteral("visionReturnedScene"),
         visionReturnedScene.isEmpty()
-            ? QStringLiteral("暂无成功返回的分类") : visionReturnedScene,
+            ? QStringLiteral("暂无识别结果") : visionReturnedScene,
         visionReturnedScene.isEmpty() ? "muted" : "normal");
     setInputDebugValue(QStringLiteral("visionAcceptedScene"),
-        visionAcceptedScene.isEmpty() ? QStringLiteral("等待稳定分类")
+        visionAcceptedScene.isEmpty() ? QStringLiteral("等待确认场景")
                                      : visionAcceptedScene,
         visionAcceptedScene.isEmpty() ? "muted" : "normal");
     setInputDebugValue(QStringLiteral("visionResultAge"),
@@ -1834,7 +1834,7 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
     if (diagnosticsPageVisible && debugPage_->CurrentCategory() == 9 &&
         debugPage_->PolicyCardsWidget()) {
         static_cast<DiagnosticsCardsWidget*>(debugPage_->PolicyCardsWidget())->SetSections(
-            policySections, QStringLiteral("暂无策略数据\n开启内容感知并共享屏幕后，按连接显示场景与执行状态。"));
+            policySections, QStringLiteral("暂无场景优化数据\n开启 AI 场景优化并共享屏幕后，可查看每个连接的场景和取舍设置。"));
     }
     setInputDebugValue(
         QStringLiteral("visionReturnedConfidence"),
@@ -1864,7 +1864,7 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                 .arg(visionJpegBytes),
             "normal");
     } else {
-        const QString waiting = QStringLiteral("暂无实际远控样本");
+        const QString waiting = QStringLiteral("尚无远控识别数据");
         setInputDebugValue(
             QStringLiteral("visionScaleConvertTime"), waiting, "muted");
         setInputDebugValue(
@@ -1946,7 +1946,7 @@ void ControllerMainWindow::RefreshDiagnosticsUi()
                 QStringLiteral("发送媒体流：\n%1").arg(outboundText),
                 QStringLiteral("接收媒体流：\n%1").arg(inboundText),
                 QStringLiteral("DataChannel：\n%1").arg(dataChannelText),
-                QStringLiteral("内容策略：\n%1").arg(ContentPolicyCopyText(policySections)),
+                QStringLiteral("场景优化：\n%1").arg(ContentPolicyCopyText(policySections)),
                 QStringLiteral("鼠标与键盘：\n%1").arg(inputDebugText)}
                 .join(QStringLiteral("\n\n"));
     }

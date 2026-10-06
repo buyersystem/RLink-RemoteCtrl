@@ -222,6 +222,7 @@ void RoomSessionCoordinator::ResetActiveState()
     controlGrantId_.clear();
     controlGrantScreenSharerDeviceId_.clear();
     controlGrantControllerDeviceId_.clear();
+    locallyRevokedControlGrantIds_.clear();
     nextInputSequence_ = 0;
     nextScreenControlSequence_ = 0;
     localScreenFrameRate_ = kDefaultScreenFrameRate;

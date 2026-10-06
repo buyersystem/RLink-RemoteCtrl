@@ -361,21 +361,18 @@ void ControllerMainWindow::ConnectUiSignals()
             this, [this](int) {
                 const bool enabled =
                     SettingsControls().autoStartSelector->currentData().toBool();
-                if (!SetWindowsAutoStartEnabled(enabled)) {
-                    const QSignalBlocker blocker(SettingsControls().autoStartSelector);
-                    SettingsControls().autoStartSelector->setCurrentIndex(std::max(
-                        0, SettingsControls().autoStartSelector->findData(
-                            WindowsAutoStartEnabled())));
-                    RemoteCToast::Show(
-                        this, QStringLiteral("开机启动设置失败"),
-                        RemoteCToast::Tone::kError);
-                    return;
-                }
-                RemoteCToast::Show(
-                    this,
-                    enabled ? QStringLiteral("已开启开机启动")
-                            : QStringLiteral("已关闭开机启动"),
-                    RemoteCToast::Tone::kSuccess);
+                SettingsControls().autoStartSelector->setEnabled(false);
+                SetWindowsAutoStartAsync(enabled, this,
+                    [this, enabled](bool success, bool actualEnabled, QString error) {
+                        auto* selector = SettingsControls().autoStartSelector;
+                        const QSignalBlocker blocker(selector);
+                        selector->setCurrentIndex(std::max(0, selector->findData(actualEnabled)));
+                        selector->setEnabled(true);
+                        RemoteCToast::Show(this,
+                            success ? (enabled ? QStringLiteral("已开启开机启动") : QStringLiteral("已关闭开机启动"))
+                                    : QStringLiteral("开机启动设置失败：%1").arg(error),
+                            success ? RemoteCToast::Tone::kSuccess : RemoteCToast::Tone::kError);
+                    });
             });
     connect(SettingsControls().startupVisibilitySelector, &QComboBox::currentIndexChanged,
             this, [this](int) {

@@ -34,14 +34,8 @@ add_library(media_intelligence_core STATIC
   "${_src}/media_intelligence/core/ContentState.h"
   "${_src}/media_intelligence/core/ScreenScene.cpp"
   "${_src}/media_intelligence/core/ScreenScene.h"
-  "${_src}/media_intelligence/core/ContentAwareStreamPolicy.cpp"
-  "${_src}/media_intelligence/core/ContentAwareStreamPolicy.h"
-  "${_src}/media_intelligence/core/GoogCcNetworkPressure.cpp"
-  "${_src}/media_intelligence/core/GoogCcNetworkPressure.h"
-  "${_src}/media_intelligence/core/CalibratedStreamQualityModel.cpp"
-  "${_src}/media_intelligence/core/CalibratedStreamQualityModel.h"
-  "${_src}/media_intelligence/core/H264ReferenceQualityModel.cpp"
-  "${_src}/media_intelligence/core/H264ReferenceQualityModel.h"
+  "${_src}/media_intelligence/core/SceneQualityCoefficientSmoother.cpp"
+  "${_src}/media_intelligence/core/SceneQualityCoefficientSmoother.h"
   "${_src}/media_intelligence/core/ContentMotionAnalyzer.cpp"
   "${_src}/media_intelligence/core/ContentMotionAnalyzer.h"
   "${_src}/media_intelligence/core/EncodedImageView.h"
@@ -434,6 +428,8 @@ add_executable(RLinkAPP WIN32
   "${_src}/apps/controller/ControllerMainWindow.Session.cpp"
   "${_src}/apps/controller/ControllerMainWindowSupport.cpp"
   "${_src}/apps/controller/ControllerMainWindowSupport.h"
+  "${_src}/apps/controller/WindowsAutoStart.cpp"
+  "${_src}/apps/controller/WindowsAutoStart.h"
   "${_src}/apps/controller/CurrentPageStack.cpp"
   "${_src}/apps/controller/CurrentPageStack.h"
   "${_src}/apps/controller/MediaControls.cpp"
@@ -450,6 +446,8 @@ add_executable(RLinkAPP WIN32
   "${_src}/apps/controller/ControllerMainWindow.DiagnosticsSnapshot.cpp"
   "${_src}/apps/controller/ControllerMainWindow.DiagnosticsPage.cpp"
   "${_src}/apps/controller/ControllerMainWindow.SessionState.cpp"
+  "${_src}/apps/controller/ControllerMainWindow.ControlledSession.cpp"
+  "${_src}/apps/controller/ControlledSessionIndicator.cpp"
   "${_src}/apps/controller/ControllerMainWindow.DeviceRecentPages.cpp"
   "${_src}/apps/controller/ControllerMainWindow.Room.cpp"
   "${_src}/apps/controller/ControllerMainWindow.RoomUi.cpp"
@@ -493,6 +491,7 @@ add_executable(RLinkAPP WIN32
   "${_src}/apps/controller/RoundedPopupMenu.cpp"
   "${_src}/apps/controller/RemoteCursorRenderState.cpp"
   "${_src}/apps/controller/RemoteCursorRenderState.h"
+  "${_src}/apps/controller/RemoteCursorInbox.h"
   "${_src}/apps/controller/RemoteSessionActionTile.cpp"
   "${_src}/apps/controller/RemoteSessionActionTile.h"
   "${_src}/apps/controller/RemoteTransferStatusButton.cpp"
@@ -525,11 +524,14 @@ set_target_properties(RLinkAPP PROPERTIES
 target_link_libraries(RLinkAPP PRIVATE
   rlink_session_engine rlink_auth rlink_vision_api_adapters
   Qt6::Core Qt6::Gui Qt6::Widgets Qt6::Network Qt6::WebSockets Qt6::NetworkAuth
-  d3dcompiler)
+  Qt6::Concurrent d3dcompiler taskschd ole32 oleaut32 advapi32)
 target_compile_definitions(RLinkAPP PRIVATE
   RLINK_ENABLE_CONTENT_ANALYZER=$<BOOL:${RLINK_ENABLE_CONTENT_ANALYZER}>
   RLINK_ENABLE_REMOTE_VISION_API=$<BOOL:${RLINK_ENABLE_REMOTE_VISION_API}>)
 target_link_options(RLinkAPP PRIVATE
+  # RemoteCApp.manifest is the sole UAC declaration; do not merge the
+  # linker's default asInvoker fragment with requireAdministrator.
+  "/MANIFESTUAC:NO"
   "/ENTRY:mainCRTStartup"
   "/MAP:$<TARGET_FILE_DIR:RLinkAPP>/RLinkAPP.map")
 add_custom_command(TARGET RLinkAPP POST_BUILD
@@ -543,6 +545,12 @@ rlink_copy_licenses(RLinkAPP)
 
 # Focused component test. It is excluded from the default application build
 # and can be built without starting Qt or WebRTC runtime services.
+add_executable(WindowsAutoStartSelfTest EXCLUDE_FROM_ALL
+  "${_src}/testing/WindowsAutoStartSelfTest.cpp")
+rlink_apply_common(WindowsAutoStartSelfTest)
+target_link_libraries(WindowsAutoStartSelfTest PRIVATE
+  Qt6::Core Qt6::Concurrent taskschd ole32 oleaut32 advapi32)
+
 add_executable(MediaIntelligenceSelfTest EXCLUDE_FROM_ALL
   "${_src}/testing/MediaIntelligenceSelfTest.cpp")
 rlink_apply_common(MediaIntelligenceSelfTest)
@@ -552,21 +560,29 @@ set_target_properties(MediaIntelligenceSelfTest PROPERTIES
 target_link_libraries(MediaIntelligenceSelfTest PRIVATE
   media_intelligence_runtime)
 
-add_executable(ContentAwareStreamPolicySelfTest EXCLUDE_FROM_ALL
-  "${_src}/testing/ContentAwareStreamPolicySelfTest.cpp")
-rlink_apply_common(ContentAwareStreamPolicySelfTest)
-set_target_properties(ContentAwareStreamPolicySelfTest PROPERTIES
+add_executable(SceneQualityCoefficientSmootherSelfTest EXCLUDE_FROM_ALL
+  "${_src}/testing/SceneQualityCoefficientSmootherSelfTest.cpp")
+media_intelligence_apply_common(SceneQualityCoefficientSmootherSelfTest)
+set_target_properties(SceneQualityCoefficientSmootherSelfTest PROPERTIES
   AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
   INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
-target_link_libraries(ContentAwareStreamPolicySelfTest PRIVATE
+target_link_libraries(SceneQualityCoefficientSmootherSelfTest PRIVATE
   media_intelligence_core)
 
-add_executable(GoogCcNetworkPressureSelfTest EXCLUDE_FROM_ALL
-  "${_src}/testing/GoogCcNetworkPressureSelfTest.cpp")
-rlink_apply_common(GoogCcNetworkPressureSelfTest)
-set_target_properties(GoogCcNetworkPressureSelfTest PROPERTIES
+add_executable(SceneQualityCoefficientIntegrationSelfTest EXCLUDE_FROM_ALL
+  "${_src}/testing/SceneQualityCoefficientIntegrationSelfTest.cpp")
+rlink_apply_common(SceneQualityCoefficientIntegrationSelfTest)
+set_target_properties(SceneQualityCoefficientIntegrationSelfTest PROPERTIES
   AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
-target_link_libraries(GoogCcNetworkPressureSelfTest PRIVATE media_intelligence_core)
+target_link_libraries(SceneQualityCoefficientIntegrationSelfTest PRIVATE
+  rlink_webrtc_transport)
+
+add_executable(SessionStatsPollerSelfTest EXCLUDE_FROM_ALL
+  "${_src}/testing/SessionStatsPollerSelfTest.cpp"
+  "${_src}/apps/remote/SessionStatsPoller.cpp")
+rlink_apply_common(SessionStatsPollerSelfTest)
+set_target_properties(SessionStatsPollerSelfTest PROPERTIES
+  AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 add_executable(GoogCcTelemetrySelfTest EXCLUDE_FROM_ALL
   "${_src}/testing/GoogCcTelemetrySelfTest.cpp")
@@ -574,6 +590,13 @@ rlink_apply_common(GoogCcTelemetrySelfTest)
 set_target_properties(GoogCcTelemetrySelfTest PROPERTIES
   AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 target_link_libraries(GoogCcTelemetrySelfTest PRIVATE rlink_webrtc_transport)
+
+# Exercise the production capture deadline helpers and real Win32 wait failures.
+add_executable(DesktopCaptureTimingSelfTest EXCLUDE_FROM_ALL
+  "${_src}/testing/DesktopCaptureTimingSelfTest.cpp")
+rlink_apply_common(DesktopCaptureTimingSelfTest)
+set_target_properties(DesktopCaptureTimingSelfTest PROPERTIES
+  AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 # Actual localhost ICE/DTLS/RTP traffic exercises the injected controller gate.
 # Mock controller tests cannot establish that the real Call uses this factory.
@@ -596,25 +619,6 @@ if(MSVC AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 19.34)
     PROPERTIES COMPILE_OPTIONS "/Zc:nrvo")
 endif()
 
-add_executable(ContentAwarePolicyDiagnosticsSelfTest EXCLUDE_FROM_ALL
-  "${_src}/testing/ContentAwarePolicyDiagnosticsSelfTest.cpp"
-  "${_src}/apps/remote/adapters/ContentAwarePolicyDiagnostics.cpp")
-rlink_apply_common(ContentAwarePolicyDiagnosticsSelfTest)
-set_target_properties(ContentAwarePolicyDiagnosticsSelfTest PROPERTIES
-  AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
-  INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
-target_link_libraries(ContentAwarePolicyDiagnosticsSelfTest PRIVATE
-  media_intelligence_core)
-
-# Real libwebrtc RTP transactions with synthetic, explicitly test-only evidence.
-add_executable(ContentAwareStreamExecutionSelfTest EXCLUDE_FROM_ALL
-  "${_src}/testing/ContentAwareStreamExecutionSelfTest.cpp")
-rlink_apply_common(ContentAwareStreamExecutionSelfTest)
-set_target_properties(ContentAwareStreamExecutionSelfTest PROPERTIES
-  AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
-target_link_libraries(ContentAwareStreamExecutionSelfTest PRIVATE
-  rlink_webrtc_transport rlink_core)
-
 add_executable(ScreenReceiverFeedbackProtocolSelfTest EXCLUDE_FROM_ALL
   "${_src}/testing/ScreenReceiverFeedbackProtocolSelfTest.cpp")
 rlink_apply_common(ScreenReceiverFeedbackProtocolSelfTest)
@@ -634,32 +638,6 @@ rlink_apply_common(ScreenFeedbackPreferenceSelfTest)
 set_target_properties(ScreenFeedbackPreferenceSelfTest PROPERTIES
   AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 target_link_libraries(ScreenFeedbackPreferenceSelfTest PRIVATE rlink_session_engine)
-
-add_executable(CalibratedStreamQualityModelSelfTest EXCLUDE_FROM_ALL
-  "${_src}/testing/CalibratedStreamQualityModelSelfTest.cpp")
-media_intelligence_apply_common(CalibratedStreamQualityModelSelfTest)
-target_link_libraries(CalibratedStreamQualityModelSelfTest PRIVATE media_intelligence_core)
-
-add_executable(H264ReferenceQualityModelSelfTest EXCLUDE_FROM_ALL
-  "${_src}/testing/H264ReferenceQualityModelSelfTest.cpp")
-media_intelligence_apply_common(H264ReferenceQualityModelSelfTest)
-set_target_properties(H264ReferenceQualityModelSelfTest PROPERTIES
-  AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
-target_link_libraries(H264ReferenceQualityModelSelfTest PRIVATE media_intelligence_core)
-
-add_executable(EncoderQualityEvidenceSelfTest EXCLUDE_FROM_ALL
-  "${_src}/testing/EncoderQualityEvidenceSelfTest.cpp")
-rlink_apply_common(EncoderQualityEvidenceSelfTest)
-target_link_libraries(EncoderQualityEvidenceSelfTest PRIVATE rlink_webrtc_transport)
-
-add_executable(ContentAwarePolicyExample EXCLUDE_FROM_ALL
-  "${CMAKE_SOURCE_DIR}/examples/content_aware_policy/main.cpp")
-media_intelligence_apply_common(ContentAwarePolicyExample)
-set_target_properties(ContentAwarePolicyExample PROPERTIES
-  AUTOMOC OFF AUTOUIC OFF AUTORCC OFF
-  INTERPROCEDURAL_OPTIMIZATION_RELEASE TRUE)
-target_link_libraries(ContentAwarePolicyExample PRIVATE
-  RLinkMediaIntelligence::core)
 
 add_executable(FfmpegHardwareBitrateProbe EXCLUDE_FROM_ALL
   "${_src}/testing/FfmpegHardwareBitrateProbe.cpp"
@@ -683,14 +661,18 @@ add_executable(ScreenStreamPolicySelfTest EXCLUDE_FROM_ALL
 rlink_apply_common(ScreenStreamPolicySelfTest)
 set_target_properties(ScreenStreamPolicySelfTest PROPERTIES
   AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
-target_link_libraries(ScreenStreamPolicySelfTest PRIVATE media_intelligence_core)
-
 add_executable(ScreenFrameQualitySelfTest EXCLUDE_FROM_ALL
   "${_src}/testing/ScreenFrameQualitySelfTest.cpp")
 rlink_apply_common(ScreenFrameQualitySelfTest)
 set_target_properties(ScreenFrameQualitySelfTest PROPERTIES
   AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 target_link_libraries(ScreenFrameQualitySelfTest PRIVATE rlink_webrtc_transport)
+
+add_executable(ClipboardFileLimitSelfTest EXCLUDE_FROM_ALL
+  "${_src}/testing/ClipboardFileLimitSelfTest.cpp")
+rlink_apply_common(ClipboardFileLimitSelfTest)
+set_target_properties(ClipboardFileLimitSelfTest PROPERTIES
+  AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 add_executable(VisionApiSelfTest EXCLUDE_FROM_ALL
   "${_src}/testing/VisionApiSelfTest.cpp")
@@ -793,6 +775,14 @@ target_compile_definitions(DiagnosticsUiSelfTest PRIVATE
 target_link_libraries(DiagnosticsUiSelfTest PRIVATE Qt6::Widgets dwmapi)
 
 # Synthetic camera presentation probe; does not open devices or start sessions.
+add_executable(ControlledSessionUiSelfTest EXCLUDE_FROM_ALL
+  "${_src}/testing/ControlledSessionUiSelfTest.cpp"
+  "${_src}/apps/controller/ControlledSessionIndicator.cpp"
+  "${_src}/apps/controller/ui/RemoteCTheme.cpp")
+rlink_apply_common(ControlledSessionUiSelfTest)
+target_link_libraries(ControlledSessionUiSelfTest PRIVATE Qt6::Widgets user32)
+
+# Synthetic camera presentation probe; does not open devices or start sessions.
 add_executable(RoomCameraUiSelfTest EXCLUDE_FROM_ALL
   "${_src}/testing/RoomCameraUiSelfTest.cpp"
   "${_src}/apps/controller/RoomCameraWindow.cpp"
@@ -811,6 +801,12 @@ add_executable(SessionControllerQueueSelfTest EXCLUDE_FROM_ALL
   "${_src}/testing/SessionControllerQueueSelfTest.cpp")
 rlink_apply_common(SessionControllerQueueSelfTest)
 set_target_properties(SessionControllerQueueSelfTest PROPERTIES
+  AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
+
+add_executable(RemoteCursorInboxSelfTest EXCLUDE_FROM_ALL
+  "${_src}/testing/RemoteCursorInboxSelfTest.cpp")
+rlink_apply_common(RemoteCursorInboxSelfTest)
+set_target_properties(RemoteCursorInboxSelfTest PROPERTIES
   AUTOMOC OFF AUTOUIC OFF AUTORCC OFF)
 
 add_executable(StreamPreferenceRequestStateSelfTest EXCLUDE_FROM_ALL
