@@ -61,6 +61,9 @@ The list below describes the current source code. For changes included in a part
 
 ### Remote desktop
 
+- [x] AI scene-adaptive streaming
+  - Automatically balances image clarity and frame rate during network fluctuations based on on-screen content, such as code, documents, spreadsheets, videos, and games, with smooth transitions between scenes
+  - Requires enabling the feature and configuring a model API; the local model is still in development
 - [x] View and control another Windows computer
   - Keyboard input, mouse movement, clicks, scrolling, and dragging
   - Remote cursor position and shape synchronization
